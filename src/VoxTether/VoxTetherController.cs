@@ -41,6 +41,11 @@ public class VoxTetherController
     public event EventHandler<string>? ErrorOccurred;
 
     /// <summary>
+    /// Event raised when transcription state changes.
+    /// </summary>
+    public event EventHandler<bool>? TranscribingStateChanged;
+
+    /// <summary>
     /// Gets whether recording is in progress.
     /// </summary>
     public bool IsRecording => _isRecording;
@@ -210,6 +215,7 @@ public class VoxTetherController
         try
         {
             _isTranscribing = true;
+            TranscribingStateChanged?.Invoke(this, true);
             
             var modelPath = _settingsService.GetEffectiveModelPath();
             if (string.IsNullOrEmpty(modelPath))
@@ -325,6 +331,7 @@ public class VoxTetherController
         finally
         {
             _isTranscribing = false;
+            TranscribingStateChanged?.Invoke(this, false);
         }
     }
 

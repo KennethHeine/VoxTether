@@ -31,6 +31,7 @@ public class TrayIconManager : IDisposable
     private NotifyIcon? _notifyIcon;
     private ContextMenuStrip? _contextMenu;
     private ToolStripMenuItem? _startWithWindowsMenuItem;
+    private RecordingOverlayWindow? _overlayWindow;
     private bool _disposed;
 
     private const string AppName = "VoxTether";
@@ -71,8 +72,12 @@ public class TrayIconManager : IDisposable
 
         _notifyIcon.DoubleClick += (_, _) => ShowSettings();
 
+        // Create overlay window (hidden by default)
+        _overlayWindow = new RecordingOverlayWindow();
+
         // Subscribe to controller events
         _controller.RecordingStateChanged += OnRecordingStateChanged;
+        _controller.TranscribingStateChanged += OnTranscribingStateChanged;
         _controller.TranscriptionComplete += OnTranscriptionComplete;
         _controller.ErrorOccurred += OnErrorOccurred;
 
@@ -152,6 +157,34 @@ public class TrayIconManager : IDisposable
                 if (isRecording && _settingsService.Settings.ShowNotifications)
                 {
                     ShowNotification("Recording...", "Release hotkey to stop.");
+                }
+            }
+
+            // Show/hide overlay based on recording indicator setting
+            if (_settingsService.Settings.ShowRecordingIndicator && _overlayWindow != null)
+            {
+                if (isRecording)
+                {
+                    _overlayWindow.ShowRecording();
+                }
+                // Note: Don't hide here - we'll transition to transcribing state
+            }
+        });
+    }
+
+    private void OnTranscribingStateChanged(object? sender, bool isTranscribing)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (_settingsService.Settings.ShowRecordingIndicator && _overlayWindow != null)
+            {
+                if (isTranscribing)
+                {
+                    _overlayWindow.ShowTranscribing();
+                }
+                else
+                {
+                    _overlayWindow.HideOverlay();
                 }
             }
         });
@@ -434,8 +467,15 @@ public class TrayIconManager : IDisposable
         _disposed = true;
 
         _controller.RecordingStateChanged -= OnRecordingStateChanged;
+        _controller.TranscribingStateChanged -= OnTranscribingStateChanged;
         _controller.TranscriptionComplete -= OnTranscriptionComplete;
         _controller.ErrorOccurred -= OnErrorOccurred;
+
+        if (_overlayWindow != null)
+        {
+            _overlayWindow.Close();
+            _overlayWindow = null;
+        }
 
         if (_notifyIcon != null)
         {
