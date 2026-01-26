@@ -14,6 +14,7 @@ namespace VoxTether.Transcription;
 public class BackendSelectionService : IBackendSelectionService
 {
     private readonly ILogger<BackendSelectionService> _logger;
+    private readonly bool _skipRuntimeValidation;
     private readonly object _lock = new();
     
     private TranscriptionBackendMode _activeBackend = TranscriptionBackendMode.CpuOnly;
@@ -35,9 +36,15 @@ public class BackendSelectionService : IBackendSelectionService
         [TranscriptionBackendMode.Cuda] = ["whisper_cuda.exe", "cuda/whisper-cli.exe", "cuda/whisper.exe", "cuda/main.exe"],
     };
 
-    public BackendSelectionService(ILogger<BackendSelectionService> logger)
+    /// <summary>
+    /// Creates a new BackendSelectionService.
+    /// </summary>
+    /// <param name="logger">Logger instance.</param>
+    /// <param name="skipRuntimeValidation">If true, skips runtime validation of executables (for testing only).</param>
+    public BackendSelectionService(ILogger<BackendSelectionService> logger, bool skipRuntimeValidation = false)
     {
         _logger = logger;
+        _skipRuntimeValidation = skipRuntimeValidation;
     }
 
     /// <inheritdoc />
@@ -466,6 +473,13 @@ public class BackendSelectionService : IBackendSelectionService
     /// <returns>A tuple indicating whether the executable can run and any failure reason.</returns>
     private (bool CanRun, string? FailureReason) ValidateExecutableCanRun(string execPath)
     {
+        // Skip runtime validation if configured (for testing)
+        if (_skipRuntimeValidation)
+        {
+            _logger.LogDebug("Skipping runtime validation for: {Path}", execPath);
+            return (true, null);
+        }
+        
         // Check cache first
         lock (_lock)
         {
