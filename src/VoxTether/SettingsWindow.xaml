@@ -247,6 +247,81 @@
                 </ScrollViewer>
             </TabItem>
             
+            <!-- Performance Tab -->
+            <TabItem Header="Performance">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
+                    <StackPanel>
+                        <!-- Hardware Acceleration -->
+                        <GroupBox Header="Hardware Acceleration">
+                            <StackPanel Margin="4">
+                                <CheckBox x:Name="EnableHardwareAccelerationCheckBox" 
+                                          Content="Enable hardware acceleration" 
+                                          Margin="0,0,0,8"/>
+                                <TextBlock Text="When enabled, VoxTether will use GPU acceleration if available for faster transcription." 
+                                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                                
+                                <TextBlock Text="Backend mode:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <ComboBox x:Name="BackendModeComboBox" Margin="0,8,0,0" 
+                                          IsEnabled="{Binding ElementName=EnableHardwareAccelerationCheckBox, Path=IsChecked}">
+                                    <ComboBoxItem Content="Auto (recommended)" Tag="Auto"/>
+                                    <ComboBoxItem Content="NVIDIA CUDA" Tag="Cuda"/>
+                                    <ComboBoxItem Content="Vulkan" Tag="Vulkan"/>
+                                    <ComboBoxItem Content="Intel OpenVINO" Tag="OpenVino"/>
+                                </ComboBox>
+                                <TextBlock Text="Auto will select the best available backend based on your hardware." 
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" FontSize="11"/>
+                                
+                                <!-- Currently Active Backend -->
+                                <Border Background="#1E1E1E" CornerRadius="4" Margin="0,16,0,0" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Current Backend Status" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <TextBlock Text="Active backend: " Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="ActiveBackendText" Text="CPU" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="BackendFallbackText" 
+                                                   Foreground="#FFA500" 
+                                                   FontSize="11" 
+                                                   Visibility="Collapsed" 
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </GroupBox>
+                        
+                        <!-- GPU Diagnostics -->
+                        <GroupBox Header="GPU Diagnostics">
+                            <StackPanel Margin="4">
+                                <TextBlock Text="Detected GPUs:" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                                <ItemsControl x:Name="DetectedGpusList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" Foreground="{StaticResource TextPrimaryBrush}" Margin="8,2,0,2"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                
+                                <TextBlock Text="Available Backends:" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,16,0,8"/>
+                                <ItemsControl x:Name="AvailableBackendsList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="8,2,0,2">
+                                                <TextBlock Text="{Binding StatusIcon}" Width="24" FontFamily="Segoe UI Symbol"/>
+                                                <TextBlock Text="{Binding Name}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                
+                                <Button x:Name="RefreshDiagnosticsButton" Content="Refresh Diagnostics" 
+                                        Width="140" HorizontalAlignment="Left" Margin="0,16,0,0"
+                                        Click="RefreshDiagnosticsButton_Click"/>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
         </TabControl>
 
         <!-- Buttons -->

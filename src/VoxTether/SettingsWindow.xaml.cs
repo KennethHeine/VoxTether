@@ -42,6 +42,16 @@ public class ModelInfoViewModel
 }
 
 /// <summary>
+/// View model for backend status in the UI.
+/// </summary>
+public class BackendStatusViewModel
+{
+    public string Name { get; set; } = string.Empty;
+    public bool IsAvailable { get; set; }
+    public string StatusIcon => IsAvailable ? "✓" : "✗";
+}
+
+/// <summary>
 /// Settings window for VoxTether configuration.
 /// </summary>
 public partial class SettingsWindow : Window
@@ -49,6 +59,7 @@ public partial class SettingsWindow : Window
     private readonly SettingsService _settingsService;
     private readonly ModelDownloadService _downloadService;
     private readonly IAudioRecorder? _audioRecorder;
+    private readonly IBackendSelectionService? _backendService;
     private readonly HashSet<Key> _pressedKeys = new();
     private bool _isCapturingHotkey;
     private bool _isCapturingToggleHotkey;
@@ -56,11 +67,12 @@ public partial class SettingsWindow : Window
     private bool _isTestingMicrophone;
     private System.Windows.Threading.DispatcherTimer? _testTimer;
 
-    public SettingsWindow(SettingsService settingsService, IAudioRecorder? audioRecorder = null)
+    public SettingsWindow(SettingsService settingsService, IAudioRecorder? audioRecorder = null, IBackendSelectionService? backendService = null)
     {
         InitializeComponent();
         _settingsService = settingsService;
         _audioRecorder = audioRecorder;
+        _backendService = backendService;
         _downloadService = new ModelDownloadService();
         _downloadService.DownloadProgressChanged += OnDownloadProgressChanged;
         _downloadService.StatusChanged += OnDownloadStatusChanged;
@@ -73,6 +85,7 @@ public partial class SettingsWindow : Window
         LoadSettings();
         LoadModelCatalog();
         LoadMicrophones();
+        LoadBackendSettings();
         
         // Dispose the download service when the window is closed
         Closed += (s, e) =>
@@ -571,6 +584,23 @@ public partial class SettingsWindow : Window
             {
                 settings.SelectedMicrophoneDeviceId = deviceId;
             }
+
+            // Backend settings
+            settings.EnableHardwareAcceleration = EnableHardwareAccelerationCheckBox.IsChecked ?? true;
+            if (BackendModeComboBox.SelectedItem is ComboBoxItem backendItem)
+            {
+                // Map ComboBox Tag values to enum - Tags are intentionally named to match enum values
+                // Fallback to Auto if parsing fails (e.g., if enum names change in future)
+                var backendTag = backendItem.Tag?.ToString() ?? "Auto";
+                settings.TranscriptionBackend = backendTag switch
+                {
+                    "Auto" => TranscriptionBackendMode.Auto,
+                    "Cuda" => TranscriptionBackendMode.Cuda,
+                    "Vulkan" => TranscriptionBackendMode.Vulkan,
+                    "OpenVino" => TranscriptionBackendMode.OpenVino,
+                    _ => TranscriptionBackendMode.Auto
+                };
+            }
         });
 
         MessageBox.Show(
@@ -716,5 +746,83 @@ public partial class SettingsWindow : Window
         {
             DownloadStatusText.Text = status;
         });
+    }
+
+    private void LoadBackendSettings()
+    {
+        var settings = _settingsService.Settings;
+
+        // Hardware acceleration
+        EnableHardwareAccelerationCheckBox.IsChecked = settings.EnableHardwareAcceleration;
+
+        // Backend mode
+        foreach (ComboBoxItem item in BackendModeComboBox.Items)
+        {
+            if (item.Tag?.ToString() == settings.TranscriptionBackend.ToString())
+            {
+                BackendModeComboBox.SelectedItem = item;
+                break;
+            }
+        }
+
+        if (BackendModeComboBox.SelectedItem == null)
+        {
+            BackendModeComboBox.SelectedIndex = 0; // Default to Auto
+        }
+
+        // Load current backend status
+        RefreshBackendDiagnostics();
+    }
+
+    private void RefreshBackendDiagnostics()
+    {
+        // Current active backend
+        if (_backendService != null)
+        {
+            ActiveBackendText.Text = IBackendSelectionService.GetDisplayName(_backendService.ActiveBackend);
+
+            // Show fallback warning if applicable
+            if (_backendService.FellBackToCpu && _backendService.RequestedBackend.HasValue)
+            {
+                BackendFallbackText.Text = $"Note: Requested backend '{IBackendSelectionService.GetDisplayName(_backendService.RequestedBackend.Value)}' was not available. Using CPU fallback.";
+                BackendFallbackText.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                BackendFallbackText.Visibility = Visibility.Collapsed;
+            }
+
+            // GPU diagnostics
+            var gpuDiagnostics = _backendService.GetGpuDiagnostics();
+            if (gpuDiagnostics.DetectedGpus.Count > 0)
+            {
+                DetectedGpusList.ItemsSource = gpuDiagnostics.DetectedGpus;
+            }
+            else
+            {
+                DetectedGpusList.ItemsSource = new[] { "(No GPUs detected)" };
+            }
+
+            // Available backends
+            var backends = _backendService.GetAvailableBackends();
+            var backendViewModels = backends.Select(b => new BackendStatusViewModel
+            {
+                Name = IBackendSelectionService.GetDisplayName(b.Backend),
+                IsAvailable = b.IsAvailable
+            }).ToList();
+
+            AvailableBackendsList.ItemsSource = backendViewModels;
+        }
+        else
+        {
+            ActiveBackendText.Text = "CPU (service not available)";
+            DetectedGpusList.ItemsSource = new[] { "(Diagnostics unavailable)" };
+            AvailableBackendsList.ItemsSource = new[] { new BackendStatusViewModel { Name = "CPU Only", IsAvailable = true } };
+        }
+    }
+
+    private void RefreshDiagnosticsButton_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshBackendDiagnostics();
     }
 }

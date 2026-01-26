@@ -2,26 +2,65 @@ using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VoxTether.Core.Interfaces;
+using VoxTether.Core.Models;
 
 namespace VoxTether.Transcription;
 
 /// <summary>
 /// Transcription engine that wraps the whisper.cpp CLI.
+/// Supports multiple backend executables (CPU, CUDA, Vulkan, OpenVINO) for hardware acceleration.
 /// </summary>
 public class WhisperCppEngine : ITranscriptionEngine
 {
     private readonly ILogger<WhisperCppEngine> _logger;
+    private readonly IBackendSelectionService? _backendService;
     private readonly string _whisperPath;
 
-    public WhisperCppEngine(ILogger<WhisperCppEngine> logger, string? whisperPath = null)
+    /// <summary>
+    /// Creates a new WhisperCppEngine with automatic backend selection.
+    /// </summary>
+    /// <param name="logger">Logger instance.</param>
+    /// <param name="backendService">Backend selection service for hardware acceleration.</param>
+    public WhisperCppEngine(ILogger<WhisperCppEngine> logger, IBackendSelectionService? backendService = null)
     {
         _logger = logger;
-        _whisperPath = whisperPath ?? FindWhisperPath();
+        _backendService = backendService;
+        _whisperPath = DetermineWhisperPath();
+    }
+
+    /// <summary>
+    /// Creates a new WhisperCppEngine with a specific executable path (for testing).
+    /// </summary>
+    /// <param name="logger">Logger instance.</param>
+    /// <param name="whisperPath">Explicit path to whisper executable.</param>
+    public WhisperCppEngine(ILogger<WhisperCppEngine> logger, string whisperPath)
+    {
+        _logger = logger;
+        _backendService = null;
+        _whisperPath = whisperPath;
+    }
+
+    /// <summary>
+    /// Gets the active backend mode used by this engine.
+    /// </summary>
+    public TranscriptionBackendMode ActiveBackend => _backendService?.ActiveBackend ?? TranscriptionBackendMode.CpuOnly;
+
+    private string DetermineWhisperPath()
+    {
+        // If a backend service is available, use the path it determined
+        if (_backendService?.ActiveWhisperPath != null)
+        {
+            _logger.LogDebug("Using backend-selected whisper path: {Path}", _backendService.ActiveWhisperPath);
+            return _backendService.ActiveWhisperPath;
+        }
+
+        // Fall back to legacy path detection
+        return FindWhisperPath();
     }
 
     private static string FindWhisperPath()
     {
-        // Look for whisper.cpp binary in various locations
+        // Look for whisper.cpp binary in various locations (legacy behavior)
         var possiblePaths = new[]
         {
             Path.Combine(AppContext.BaseDirectory, "whisper", "main.exe"),

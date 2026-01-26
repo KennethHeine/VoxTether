@@ -84,6 +84,24 @@ public partial class App : Application
 #endif
         });
 
+        // Backend selection service - must be registered and initialized before transcription engine
+        services.AddSingleton<IBackendSelectionService>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<BackendSelectionService>>();
+            var settings = sp.GetRequiredService<SettingsService>().Settings;
+            var service = new BackendSelectionService(logger);
+            
+            // Determine effective backend mode based on settings
+            var requestedMode = settings.EnableHardwareAcceleration 
+                ? settings.TranscriptionBackend 
+                : TranscriptionBackendMode.CpuOnly;
+            
+            // Initialize backend selection - this must happen before any transcription
+            service.DetermineBackend(requestedMode);
+            
+            return service;
+        });
+
         // Core services
         services.AddSingleton<IAudioRecorder, NAudioRecorder>();
         services.AddSingleton<IHotkeyService, LowLevelHookHotkeyService>();
@@ -95,13 +113,27 @@ public partial class App : Application
             injector.PasteToFocusedApp = settings.OutputMode == "FocusedApp";
             return injector;
         });
-        services.AddSingleton<ITranscriptionEngine, WhisperCppEngine>();
+        services.AddSingleton<ITranscriptionEngine>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<WhisperCppEngine>>();
+            var backendService = sp.GetRequiredService<IBackendSelectionService>();
+            return new WhisperCppEngine(logger, backendService);
+        });
         services.AddSingleton<ITextPostProcessor, NoOpTextPostProcessor>();
         services.AddSingleton<IUpdateService, GitHubUpdateService>();
 
         // App services
         services.AddSingleton<VoxTetherController>();
-        services.AddSingleton<TrayIconManager>();
+        services.AddSingleton(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<TrayIconManager>>();
+            var settingsService = sp.GetRequiredService<SettingsService>();
+            var controller = sp.GetRequiredService<VoxTetherController>();
+            var updateService = sp.GetRequiredService<IUpdateService>();
+            var audioRecorder = sp.GetRequiredService<IAudioRecorder>();
+            var backendService = sp.GetRequiredService<IBackendSelectionService>();
+            return new TrayIconManager(logger, settingsService, controller, updateService, audioRecorder, backendService);
+        });
     }
 
     private void RunHealthCheck()
@@ -128,11 +160,54 @@ public partial class App : Application
         }
         recorder.Dispose();
 
-        // Check whisper binary
-        var whisperLogger = loggerFactory.CreateLogger<WhisperCppEngine>();
-        var whisper = new WhisperCppEngine(whisperLogger);
-        var whisperPath = whisper.GetWhisperPath();
+        // Check backend selection and whisper binary
+        var backendLogger = loggerFactory.CreateLogger<BackendSelectionService>();
+        var backendService = new BackendSelectionService(backendLogger);
         
+        // Get GPU diagnostics
+        var gpuDiagnostics = backendService.GetGpuDiagnostics();
+        Console.WriteLine();
+        Console.WriteLine("=== GPU Diagnostics ===");
+        if (gpuDiagnostics.DetectedGpus.Count > 0)
+        {
+            foreach (var gpu in gpuDiagnostics.DetectedGpus)
+            {
+                Console.WriteLine($"  GPU: {gpu}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("  No GPUs detected");
+        }
+        
+        // Check available backends
+        Console.WriteLine();
+        Console.WriteLine("=== Available Backends ===");
+        var backends = backendService.GetAvailableBackends();
+        foreach (var backend in backends)
+        {
+            var status = backend.IsAvailable ? "[OK]" : "[--]";
+            var path = backend.IsAvailable ? $" ({backend.ExecutablePath})" : "";
+            Console.WriteLine($"  {status} {IBackendSelectionService.GetDisplayName(backend.Backend)}{path}");
+        }
+        
+        // Determine effective backend
+        var settings = settingsService.Settings;
+        var requestedMode = settings.EnableHardwareAcceleration 
+            ? settings.TranscriptionBackend 
+            : TranscriptionBackendMode.CpuOnly;
+        
+        var selectedBackend = backendService.DetermineBackend(requestedMode);
+        Console.WriteLine();
+        Console.WriteLine($"Requested backend: {IBackendSelectionService.GetDisplayName(requestedMode)}");
+        Console.WriteLine($"Selected backend: {IBackendSelectionService.GetDisplayName(selectedBackend)}");
+        
+        if (backendService.FellBackToCpu)
+        {
+            Console.WriteLine($"[WARN] Fell back to CPU because requested backend was not available");
+        }
+
+        var whisperPath = backendService.ActiveWhisperPath;
         if (whisperPath != null)
         {
             Console.WriteLine($"[OK] Whisper binary found: {whisperPath}");

@@ -25,6 +25,7 @@ public class TrayIconManager : IDisposable
     private readonly VoxTetherController _controller;
     private readonly IUpdateService _updateService;
     private readonly IAudioRecorder _audioRecorder;
+    private readonly IBackendSelectionService? _backendService;
     
     private NotifyIcon? _notifyIcon;
     private ContextMenuStrip? _contextMenu;
@@ -39,13 +40,15 @@ public class TrayIconManager : IDisposable
         SettingsService settingsService,
         VoxTetherController controller,
         IUpdateService updateService,
-        IAudioRecorder audioRecorder)
+        IAudioRecorder audioRecorder,
+        IBackendSelectionService? backendService = null)
     {
         _logger = logger;
         _settingsService = settingsService;
         _controller = controller;
         _updateService = updateService;
         _audioRecorder = audioRecorder;
+        _backendService = backendService;
     }
 
     /// <summary>
@@ -167,7 +170,7 @@ public class TrayIconManager : IDisposable
 
     private void ShowSettings()
     {
-        var window = new SettingsWindow(_settingsService, _audioRecorder);
+        var window = new SettingsWindow(_settingsService, _audioRecorder, _backendService);
         window.ShowDialog();
     }
 
