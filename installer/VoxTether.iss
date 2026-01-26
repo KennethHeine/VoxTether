@@ -55,7 +55,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: startupicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: startupicon
@@ -95,6 +95,14 @@ begin
   
   if IsUpgrade then
   begin
+    // Skip confirmation dialog in silent mode (in-app update already confirmed by user)
+    if WizardSilent() then
+    begin
+      Log('Silent mode upgrade from ' + PreviousVersion + ' to {#MyAppVersion}');
+      Result := True;
+      Exit;
+    end;
+    
     // Inform user about the upgrade
     mRes := MsgBox('VoxTether v' + PreviousVersion + ' is already installed.' + #13#10 + #13#10 +
                    'Do you want to upgrade to v{#MyAppVersion}?' + #13#10 + #13#10 +
