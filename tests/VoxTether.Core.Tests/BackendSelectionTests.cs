@@ -181,7 +181,8 @@ public class BackendSelectionTests
         
         // Arrange
         var logger = CreateTestLogger();
-        var service = new BackendSelectionService(logger);
+        // Skip runtime validation since we're using dummy files
+        var service = new BackendSelectionService(logger, skipRuntimeValidation: true);
         
         // Create a temporary directory structure that mimics the whisper.cpp release
         var baseDir = AppContext.BaseDirectory;
@@ -221,7 +222,8 @@ public class BackendSelectionTests
         
         // Arrange
         var logger = CreateTestLogger();
-        var service = new BackendSelectionService(logger);
+        // Skip runtime validation since we're using dummy files
+        var service = new BackendSelectionService(logger, skipRuntimeValidation: true);
         
         var baseDir = AppContext.BaseDirectory;
         var cudaReleaseDir = Path.Combine(baseDir, "whisper", "cuda", "Release");
@@ -257,7 +259,8 @@ public class BackendSelectionTests
         
         // Arrange
         var logger = CreateTestLogger();
-        var service = new BackendSelectionService(logger);
+        // Skip runtime validation since we're using dummy files
+        var service = new BackendSelectionService(logger, skipRuntimeValidation: true);
         
         var baseDir = AppContext.BaseDirectory;
         var cudaReleaseDir = Path.Combine(baseDir, "whisper", "cuda", "Release");
