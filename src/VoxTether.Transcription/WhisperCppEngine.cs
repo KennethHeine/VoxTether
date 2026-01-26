@@ -147,7 +147,7 @@ public class WhisperCppEngine : ITranscriptionEngine
                 result.Text = (await File.ReadAllTextAsync(txtPath, cancellationToken)).Trim();
                 
                 // Clean up the txt file
-                try { File.Delete(txtPath); } catch { }
+                try { File.Delete(txtPath); } catch (IOException) { /* Ignore cleanup errors */ }
             }
             else
             {

@@ -53,9 +53,14 @@ public class FileLogger : ILogger
 
                 File.AppendAllText(logFile, message + Environment.NewLine);
             }
-            catch
+            catch (IOException)
             {
-                // Logging should never throw
+                // Logging should never throw - file may be locked or inaccessible
+                // This is intentional: logging failures should not crash the application
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Logging should never throw - we may not have permission to write
             }
         }
     }

@@ -278,7 +278,7 @@ public class VoxTetherController
 
             var result = await _transcriptionEngine.TranscribeAsync(wavPath, options);
 
-            try { File.Delete(wavPath); } catch { }
+            try { File.Delete(wavPath); } catch (IOException) { /* Ignore cleanup errors */ }
 
             if (result.Success)
             {
