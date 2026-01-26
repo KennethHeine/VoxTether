@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Windows;
 using Microsoft.Extensions.Logging;
 using VoxTether.Core.Interfaces;
 
