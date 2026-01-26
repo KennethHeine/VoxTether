@@ -175,7 +175,7 @@ public class GitHubUpdateService : IUpdateService
         var plusIndex = version.IndexOf('+');
         if (plusIndex >= 0)
         {
-            version = version.Substring(0, plusIndex);
+            version = version[..plusIndex];
         }
 
         // Remove prerelease suffix for comparison (anything after '-')
@@ -185,7 +185,7 @@ public class GitHubUpdateService : IUpdateService
         var dashIndex = version.IndexOf('-');
         if (dashIndex >= 0)
         {
-            version = version.Substring(0, dashIndex);
+            version = version[..dashIndex];
         }
 
         return version;

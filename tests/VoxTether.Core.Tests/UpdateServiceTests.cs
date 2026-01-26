@@ -118,14 +118,14 @@ public static class TestableUpdateService
         var plusIndex = version.IndexOf('+');
         if (plusIndex >= 0)
         {
-            version = version.Substring(0, plusIndex);
+            version = version[..plusIndex];
         }
 
         // Remove prerelease suffix for comparison (anything after '-')
         var dashIndex = version.IndexOf('-');
         if (dashIndex >= 0)
         {
-            version = version.Substring(0, dashIndex);
+            version = version[..dashIndex];
         }
 
         return version;
