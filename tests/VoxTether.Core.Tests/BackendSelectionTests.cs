@@ -250,6 +250,44 @@ public class BackendSelectionTests
         }
     }
 
+    [Fact]
+    public void PrefersWhisperCliExeOverMainExe_Integration()
+    {
+        // Test that whisper-cli.exe is preferred over main.exe (main.exe is deprecated)
+        
+        // Arrange
+        var logger = CreateTestLogger();
+        var service = new BackendSelectionService(logger);
+        
+        var baseDir = AppContext.BaseDirectory;
+        var cudaReleaseDir = Path.Combine(baseDir, "whisper", "cuda", "Release");
+        
+        try
+        {
+            Directory.CreateDirectory(cudaReleaseDir);
+            
+            // Create both executables
+            var mainExePath = Path.Combine(cudaReleaseDir, "main.exe");
+            var whisperCliPath = Path.Combine(cudaReleaseDir, "whisper-cli.exe");
+            File.WriteAllText(mainExePath, "dummy-main");
+            File.WriteAllText(whisperCliPath, "dummy-whisper-cli");
+            
+            // Act
+            var backends = service.GetAvailableBackends();
+            var cudaBackend = backends.FirstOrDefault(b => b.Backend == TranscriptionBackendMode.Cuda);
+            
+            // Assert - whisper-cli.exe should be preferred over main.exe
+            Assert.NotNull(cudaBackend);
+            Assert.True(cudaBackend.IsAvailable);
+            Assert.NotNull(cudaBackend.ExecutablePath);
+            Assert.EndsWith("whisper-cli.exe", cudaBackend.ExecutablePath, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            CleanupTestBackendDirectory(baseDir);
+        }
+    }
+
     /// <summary>
     /// Cleans up the test CUDA backend directory.
     /// </summary>
