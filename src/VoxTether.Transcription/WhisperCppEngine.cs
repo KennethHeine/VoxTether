@@ -145,11 +145,22 @@ public class WhisperCppEngine : ITranscriptionEngine
             var outputBuilder = new StringBuilder();
             var errorBuilder = new StringBuilder();
 
+            // Use TaskCompletionSource to signal when output/error streams are fully read
+            // This fixes a race condition where WaitForExitAsync() returns before
+            // all async output handlers have finished processing
+            var outputDone = new TaskCompletionSource<bool>();
+            var errorDone = new TaskCompletionSource<bool>();
+
             process.OutputDataReceived += (_, e) =>
             {
                 if (e.Data != null)
                 {
                     outputBuilder.AppendLine(e.Data);
+                }
+                else
+                {
+                    // Null data signals end of stream
+                    outputDone.TrySetResult(true);
                 }
             };
 
@@ -159,15 +170,24 @@ public class WhisperCppEngine : ITranscriptionEngine
                 {
                     errorBuilder.AppendLine(e.Data);
                 }
+                else
+                {
+                    // Null data signals end of stream
+                    errorDone.TrySetResult(true);
+                }
             };
 
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            // Wait for process with cancellation support
-            var completionTask = process.WaitForExitAsync(cancellationToken);
-            await completionTask;
+            // Wait for process exit AND both streams to finish reading
+            // This ensures all stderr/stdout data is captured before we access it
+            await Task.WhenAll(
+                process.WaitForExitAsync(cancellationToken),
+                outputDone.Task,
+                errorDone.Task
+            );
 
             stopwatch.Stop();
             result.Duration = stopwatch.Elapsed;
