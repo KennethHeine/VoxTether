@@ -281,6 +281,7 @@ public class BackendSelectionService : IBackendSelectionService
     private static List<string> EnumerateGpusViaDxgi()
     {
         var gpus = new List<string>();
+        IDXGIFactory? factory = null;
 
         try
         {
@@ -291,7 +292,7 @@ public class BackendSelectionService : IBackendSelectionService
                 return gpus;
             }
 
-            var factory = (IDXGIFactory)Marshal.GetObjectForIUnknown(factoryPtr);
+            factory = (IDXGIFactory)Marshal.GetObjectForIUnknown(factoryPtr);
             
             uint adapterIndex = 0;
             while (true)
@@ -302,27 +303,37 @@ public class BackendSelectionService : IBackendSelectionService
 
                 if (adapter != null)
                 {
-                    var desc = new DXGI_ADAPTER_DESC();
-                    adapter.GetDesc(ref desc);
-                    
-                    var description = desc.Description;
-                    if (!string.IsNullOrWhiteSpace(description) && 
-                        !description.Contains("Microsoft Basic Render Driver", StringComparison.OrdinalIgnoreCase))
+                    try
                     {
-                        gpus.Add(description.Trim());
+                        var desc = new DXGI_ADAPTER_DESC();
+                        adapter.GetDesc(ref desc);
+                        
+                        var description = desc.Description;
+                        if (!string.IsNullOrWhiteSpace(description) && 
+                            !description.Contains("Microsoft Basic Render Driver", StringComparison.OrdinalIgnoreCase))
+                        {
+                            gpus.Add(description.Trim());
+                        }
                     }
-                    
-                    Marshal.ReleaseComObject(adapter);
+                    finally
+                    {
+                        Marshal.ReleaseComObject(adapter);
+                    }
                 }
                 
                 adapterIndex++;
             }
-
-            Marshal.ReleaseComObject(factory);
         }
         catch
         {
             // DXGI may not be available, return empty list
+        }
+        finally
+        {
+            if (factory != null)
+            {
+                Marshal.ReleaseComObject(factory);
+            }
         }
 
         return gpus;
@@ -372,10 +383,13 @@ public class BackendSelectionService : IBackendSelectionService
         public uint DeviceId;
         public uint SubSysId;
         public uint Revision;
-        public nuint DedicatedVideoMemory;
-        public nuint DedicatedSystemMemory;
-        public nuint SharedSystemMemory;
-        public long AdapterLuid;
+        // Use UIntPtr for SIZE_T which is pointer-sized (32-bit on x86, 64-bit on x64)
+        public UIntPtr DedicatedVideoMemory;
+        public UIntPtr DedicatedSystemMemory;
+        public UIntPtr SharedSystemMemory;
+        // LUID structure: two 32-bit values packed together
+        public uint AdapterLuidLowPart;
+        public int AdapterLuidHighPart;
     }
 
     #endregion

@@ -589,10 +589,17 @@ public partial class SettingsWindow : Window
             settings.EnableHardwareAcceleration = EnableHardwareAccelerationCheckBox.IsChecked ?? true;
             if (BackendModeComboBox.SelectedItem is ComboBoxItem backendItem)
             {
+                // Map ComboBox Tag values to enum - Tags are intentionally named to match enum values
+                // Fallback to Auto if parsing fails (e.g., if enum names change in future)
                 var backendTag = backendItem.Tag?.ToString() ?? "Auto";
-                settings.TranscriptionBackend = Enum.TryParse<TranscriptionBackendMode>(backendTag, out var mode) 
-                    ? mode 
-                    : TranscriptionBackendMode.Auto;
+                settings.TranscriptionBackend = backendTag switch
+                {
+                    "Auto" => TranscriptionBackendMode.Auto,
+                    "Cuda" => TranscriptionBackendMode.Cuda,
+                    "Vulkan" => TranscriptionBackendMode.Vulkan,
+                    "OpenVino" => TranscriptionBackendMode.OpenVino,
+                    _ => TranscriptionBackendMode.Auto
+                };
             }
         });
 
