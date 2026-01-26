@@ -61,10 +61,13 @@ public class WhisperCppEngine : ITranscriptionEngine
     private static string FindWhisperPath()
     {
         // Look for whisper.cpp binary in various locations (legacy behavior)
+        // Note: whisper-cli.exe is preferred over main.exe as main.exe is deprecated in whisper.cpp
         var possiblePaths = new[]
         {
-            Path.Combine(AppContext.BaseDirectory, "whisper", "main.exe"),
+            Path.Combine(AppContext.BaseDirectory, "whisper", "whisper-cli.exe"),
             Path.Combine(AppContext.BaseDirectory, "whisper", "whisper.exe"),
+            Path.Combine(AppContext.BaseDirectory, "whisper", "main.exe"),
+            Path.Combine(AppContext.BaseDirectory, "whisper-cli.exe"),
             Path.Combine(AppContext.BaseDirectory, "whisper.exe"),
             Path.Combine(AppContext.BaseDirectory, "main.exe"),
         };
@@ -77,7 +80,7 @@ public class WhisperCppEngine : ITranscriptionEngine
             }
         }
 
-        return Path.Combine(AppContext.BaseDirectory, "whisper", "main.exe");
+        return Path.Combine(AppContext.BaseDirectory, "whisper", "whisper-cli.exe");
     }
 
     public async Task<TranscriptionResult> TranscribeAsync(

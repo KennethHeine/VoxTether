@@ -23,11 +23,12 @@ public class BackendSelectionService : IBackendSelectionService
     private GpuDiagnostics? _cachedGpuDiagnostics;
 
     // Executable name patterns for each backend
-    // The whisper folder structure: whisper/<backend>/main.exe or whisper/whisper_<backend>.exe
+    // The whisper folder structure: whisper/<backend>/whisper-cli.exe or whisper/whisper_<backend>.exe
+    // Note: whisper-cli.exe is preferred over main.exe as main.exe is deprecated in whisper.cpp
     private static readonly Dictionary<TranscriptionBackendMode, string[]> BackendExecutablePatterns = new()
     {
-        [TranscriptionBackendMode.CpuOnly] = ["whisper_cpu.exe", "cpu/main.exe", "cpu/whisper.exe", "main.exe", "whisper.exe"],
-        [TranscriptionBackendMode.Cuda] = ["whisper_cuda.exe", "cuda/main.exe", "cuda/whisper.exe"],
+        [TranscriptionBackendMode.CpuOnly] = ["whisper_cpu.exe", "cpu/whisper-cli.exe", "cpu/whisper.exe", "cpu/main.exe", "whisper-cli.exe", "whisper.exe", "main.exe"],
+        [TranscriptionBackendMode.Cuda] = ["whisper_cuda.exe", "cuda/whisper-cli.exe", "cuda/whisper.exe", "cuda/main.exe"],
     };
 
     public BackendSelectionService(ILogger<BackendSelectionService> logger)
@@ -403,10 +404,10 @@ public class BackendSelectionService : IBackendSelectionService
         }
 
         // Add common whisper.cpp release executable names
-        // whisper-cli.exe is used in newer whisper.cpp releases
-        names.Add("main.exe");
+        // whisper-cli.exe is the new standard in whisper.cpp (main.exe is deprecated)
         names.Add("whisper-cli.exe");
         names.Add("whisper.exe");
+        names.Add("main.exe");
 
         return names.ToArray();
     }
