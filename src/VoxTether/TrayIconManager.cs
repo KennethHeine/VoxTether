@@ -24,6 +24,7 @@ public class TrayIconManager : IDisposable
     private readonly SettingsService _settingsService;
     private readonly VoxTetherController _controller;
     private readonly IUpdateService _updateService;
+    private readonly IAudioRecorder _audioRecorder;
     
     private NotifyIcon? _notifyIcon;
     private ContextMenuStrip? _contextMenu;
@@ -37,12 +38,14 @@ public class TrayIconManager : IDisposable
         ILogger<TrayIconManager> logger,
         SettingsService settingsService,
         VoxTetherController controller,
-        IUpdateService updateService)
+        IUpdateService updateService,
+        IAudioRecorder audioRecorder)
     {
         _logger = logger;
         _settingsService = settingsService;
         _controller = controller;
         _updateService = updateService;
+        _audioRecorder = audioRecorder;
     }
 
     /// <summary>
@@ -164,7 +167,7 @@ public class TrayIconManager : IDisposable
 
     private void ShowSettings()
     {
-        var window = new SettingsWindow(_settingsService);
+        var window = new SettingsWindow(_settingsService, _audioRecorder);
         window.ShowDialog();
     }
 

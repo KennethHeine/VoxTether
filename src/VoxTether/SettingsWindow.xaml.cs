@@ -48,26 +48,42 @@ public partial class SettingsWindow : Window
 {
     private readonly SettingsService _settingsService;
     private readonly ModelDownloadService _downloadService;
+    private readonly IAudioRecorder? _audioRecorder;
     private readonly HashSet<Key> _pressedKeys = new();
     private bool _isCapturingHotkey;
     private bool _isCapturingToggleHotkey;
     private bool _isDownloading;
+    private bool _isTestingMicrophone;
+    private System.Windows.Threading.DispatcherTimer? _testTimer;
 
-    public SettingsWindow(SettingsService settingsService)
+    public SettingsWindow(SettingsService settingsService, IAudioRecorder? audioRecorder = null)
     {
         InitializeComponent();
         _settingsService = settingsService;
+        _audioRecorder = audioRecorder;
         _downloadService = new ModelDownloadService();
         _downloadService.DownloadProgressChanged += OnDownloadProgressChanged;
         _downloadService.StatusChanged += OnDownloadStatusChanged;
+        
+        if (_audioRecorder != null)
+        {
+            _audioRecorder.AudioLevelChanged += OnAudioLevelChanged;
+        }
+        
         LoadSettings();
         LoadModelCatalog();
+        LoadMicrophones();
         
         // Dispose the download service when the window is closed
         Closed += (s, e) =>
         {
+            StopMicrophoneTest();
             _downloadService.DownloadProgressChanged -= OnDownloadProgressChanged;
             _downloadService.StatusChanged -= OnDownloadStatusChanged;
+            if (_audioRecorder != null)
+            {
+                _audioRecorder.AudioLevelChanged -= OnAudioLevelChanged;
+            }
             _downloadService.Dispose();
         };
     }
@@ -305,6 +321,202 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void LoadMicrophones()
+    {
+        MicrophoneComboBox.Items.Clear();
+        
+        if (_audioRecorder == null)
+        {
+            MicrophoneComboBox.Items.Add(new ComboBoxItem
+            {
+                Content = "(Audio recorder not available)",
+                Tag = -1
+            });
+            MicrophoneComboBox.SelectedIndex = 0;
+            TestMicrophoneButton.IsEnabled = false;
+            return;
+        }
+
+        var devices = _audioRecorder.GetAvailableDevices();
+        var settings = _settingsService.Settings;
+
+        if (devices.Count == 0)
+        {
+            MicrophoneComboBox.Items.Add(new ComboBoxItem
+            {
+                Content = "(No microphones found)",
+                Tag = -1
+            });
+            MicrophoneComboBox.SelectedIndex = 0;
+            TestMicrophoneButton.IsEnabled = false;
+            return;
+        }
+
+        // Add default option
+        var defaultItem = new ComboBoxItem
+        {
+            Content = "System Default",
+            Tag = -1
+        };
+        MicrophoneComboBox.Items.Add(defaultItem);
+
+        // Add all devices
+        foreach (var (deviceId, deviceName) in devices)
+        {
+            var item = new ComboBoxItem
+            {
+                Content = deviceName,
+                Tag = deviceId
+            };
+            MicrophoneComboBox.Items.Add(item);
+            
+            if (deviceId == settings.SelectedMicrophoneDeviceId)
+            {
+                MicrophoneComboBox.SelectedItem = item;
+            }
+        }
+
+        // Select default if nothing matched
+        if (MicrophoneComboBox.SelectedItem == null)
+        {
+            MicrophoneComboBox.SelectedIndex = 0;
+        }
+    }
+
+    private void TestMicrophoneButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_audioRecorder == null) return;
+        
+        if (_isTestingMicrophone)
+        {
+            StopMicrophoneTest();
+            return;
+        }
+
+        StartMicrophoneTest();
+    }
+
+    private void StopTestButton_Click(object sender, RoutedEventArgs e)
+    {
+        StopMicrophoneTest();
+    }
+
+    private void StartMicrophoneTest()
+    {
+        if (_audioRecorder == null) return;
+
+        try
+        {
+            _isTestingMicrophone = true;
+            
+            // Set the selected device
+            if (MicrophoneComboBox.SelectedItem is ComboBoxItem micItem && micItem.Tag is int deviceId)
+            {
+                _audioRecorder.SelectedDeviceId = deviceId;
+            }
+
+            // Show UI
+            TestMicrophoneButton.Content = "Testing...";
+            TestMicrophoneButton.IsEnabled = false;
+            StopTestButton.Visibility = Visibility.Visible;
+            AudioLevelPanel.Visibility = Visibility.Visible;
+            AudioLevelMeter.Value = 0;
+            AudioLevelText.Text = "Speak into the microphone...";
+
+            // Create a temp file for recording
+            var tempPath = Path.Combine(SettingsService.TempPath, $"mic_test_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+            _audioRecorder.StartRecording(tempPath);
+
+            // Auto-stop after 10 seconds
+            _testTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(10)
+            };
+            _testTimer.Tick += (s, e) => StopMicrophoneTest();
+            _testTimer.Start();
+        }
+        catch (Exception ex)
+        {
+            _isTestingMicrophone = false;
+            MessageBox.Show($"Failed to test microphone: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            ResetMicrophoneTestUI();
+        }
+    }
+
+    private void StopMicrophoneTest()
+    {
+        if (!_isTestingMicrophone) return;
+
+        _isTestingMicrophone = false;
+        _testTimer?.Stop();
+        _testTimer = null;
+
+        try
+        {
+            if (_audioRecorder?.IsRecording == true)
+            {
+                var path = _audioRecorder.StopRecording();
+                
+                // Delete the temp file
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    try
+                    {
+                        File.Delete(path);
+                    }
+                    catch
+                    {
+                        // Ignore cleanup errors
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors during stop
+        }
+
+        ResetMicrophoneTestUI();
+    }
+
+    private void ResetMicrophoneTestUI()
+    {
+        TestMicrophoneButton.Content = "Test Microphone";
+        TestMicrophoneButton.IsEnabled = true;
+        StopTestButton.Visibility = Visibility.Collapsed;
+        AudioLevelPanel.Visibility = Visibility.Collapsed;
+        AudioLevelMeter.Value = 0;
+    }
+
+    private void OnAudioLevelChanged(object? sender, int level)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (_isTestingMicrophone)
+            {
+                AudioLevelMeter.Value = level;
+                
+                // Update text based on level
+                if (level < 5)
+                {
+                    AudioLevelText.Text = "Speak into the microphone...";
+                }
+                else if (level < 30)
+                {
+                    AudioLevelText.Text = "Detecting audio ▪";
+                }
+                else if (level < 60)
+                {
+                    AudioLevelText.Text = "Good level ▪▪";
+                }
+                else
+                {
+                    AudioLevelText.Text = "Strong signal ▪▪▪";
+                }
+            }
+        });
+    }
+
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         _settingsService.Update(settings =>
@@ -332,6 +544,12 @@ public partial class SettingsWindow : Window
             settings.AudioSavePath = string.IsNullOrWhiteSpace(AudioSavePathTextBox.Text) 
                 ? null 
                 : AudioSavePathTextBox.Text;
+            
+            // Microphone selection
+            if (MicrophoneComboBox.SelectedItem is ComboBoxItem micItem && micItem.Tag is int deviceId)
+            {
+                settings.SelectedMicrophoneDeviceId = deviceId;
+            }
         });
 
         MessageBox.Show(

@@ -43,4 +43,22 @@ public interface IAudioRecorder : IDisposable
     /// </summary>
     /// <returns>The device name or null if not available.</returns>
     string? GetDefaultDeviceName();
+
+    /// <summary>
+    /// Gets all available recording devices.
+    /// </summary>
+    /// <returns>A list of tuples containing device ID and device name.</returns>
+    List<(int DeviceId, string DeviceName)> GetAvailableDevices();
+
+    /// <summary>
+    /// Gets or sets the selected device ID for recording.
+    /// -1 means use the default device.
+    /// </summary>
+    int SelectedDeviceId { get; set; }
+
+    /// <summary>
+    /// Event raised when audio data is available during recording.
+    /// Provides the audio level (0-100) for visualization.
+    /// </summary>
+    event EventHandler<int>? AudioLevelChanged;
 }

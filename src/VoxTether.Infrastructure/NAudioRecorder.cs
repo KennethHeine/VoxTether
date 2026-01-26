@@ -22,9 +22,16 @@ public class NAudioRecorder : IAudioRecorder
     private const int BitsPerSample = 16;
 
     public bool IsRecording => _waveIn != null && _writer != null;
+    
+    /// <summary>
+    /// Gets or sets the selected device ID for recording.
+    /// -1 means use the default device (device 0).
+    /// </summary>
+    public int SelectedDeviceId { get; set; } = -1;
 
     public event EventHandler? RecordingStarted;
     public event EventHandler<string>? RecordingStopped;
+    public event EventHandler<int>? AudioLevelChanged;
 
     public NAudioRecorder(ILogger<NAudioRecorder> logger)
     {
@@ -50,8 +57,12 @@ public class NAudioRecorder : IAudioRecorder
                 Directory.CreateDirectory(directory);
             }
 
+            // Use selected device or default (0)
+            var deviceId = SelectedDeviceId >= 0 ? SelectedDeviceId : 0;
+            
             _waveIn = new WaveInEvent
             {
+                DeviceNumber = deviceId,
                 WaveFormat = new WaveFormat(SampleRate, BitsPerSample, Channels),
                 BufferMilliseconds = 50
             };
@@ -62,7 +73,7 @@ public class NAudioRecorder : IAudioRecorder
             _waveIn.RecordingStopped += OnRecordingStopped;
 
             _waveIn.StartRecording();
-            _logger.LogInformation("Recording started: {Path}", outputWavPath);
+            _logger.LogInformation("Recording started: {Path} with device {DeviceId}", outputWavPath, deviceId);
             RecordingStarted?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
@@ -131,16 +142,61 @@ public class NAudioRecorder : IAudioRecorder
         return null;
     }
 
+    public List<(int DeviceId, string DeviceName)> GetAvailableDevices()
+    {
+        var devices = new List<(int DeviceId, string DeviceName)>();
+        try
+        {
+            for (var i = 0; i < WaveInEvent.DeviceCount; i++)
+            {
+                var capabilities = WaveInEvent.GetCapabilities(i);
+                devices.Add((i, capabilities.ProductName));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting available devices");
+        }
+        return devices;
+    }
+
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
     {
         try
         {
             _writer?.Write(e.Buffer, 0, e.BytesRecorded);
+            
+            // Calculate audio level for visualization
+            if (e.BytesRecorded > 0 && AudioLevelChanged != null)
+            {
+                var level = CalculateAudioLevel(e.Buffer, e.BytesRecorded);
+                AudioLevelChanged.Invoke(this, level);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error writing audio data");
         }
+    }
+
+    /// <summary>
+    /// Calculates the audio level (0-100) from the buffer.
+    /// </summary>
+    private static int CalculateAudioLevel(byte[] buffer, int bytesRecorded)
+    {
+        // 16-bit audio samples
+        var maxValue = 0;
+        for (var i = 0; i < bytesRecorded; i += 2)
+        {
+            var sample = Math.Abs(BitConverter.ToInt16(buffer, i));
+            if (sample > maxValue)
+            {
+                maxValue = sample;
+            }
+        }
+        
+        // Convert to percentage (0-100)
+        return (int)(maxValue * 100.0 / short.MaxValue);
     }
 
     private void OnRecordingStopped(object? sender, StoppedEventArgs e)

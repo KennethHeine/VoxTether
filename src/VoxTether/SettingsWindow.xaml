@@ -150,6 +150,36 @@
                         </ComboBox>
                     </StackPanel>
                 </GroupBox>
+
+                <!-- Microphone Selection -->
+                <GroupBox Header="Microphone">
+                    <StackPanel Margin="4">
+                        <TextBlock Text="Select microphone device:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <ComboBox x:Name="MicrophoneComboBox" Margin="0,8,0,0"/>
+                        <TextBlock Text="Choose which microphone to use for recording" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" FontSize="11"/>
+                        
+                        <!-- Test Microphone -->
+                        <DockPanel Margin="0,12,0,0">
+                            <Button x:Name="TestMicrophoneButton" Content="Test Microphone" 
+                                    Width="130" Click="TestMicrophoneButton_Click"/>
+                            <Button x:Name="StopTestButton" Content="Stop" Width="60" Margin="8,0,0,0" 
+                                    Visibility="Collapsed" Click="StopTestButton_Click"/>
+                        </DockPanel>
+                        
+                        <!-- Audio Level Meter -->
+                        <StackPanel x:Name="AudioLevelPanel" Visibility="Collapsed" Margin="0,12,0,0">
+                            <TextBlock x:Name="AudioLevelText" Text="Speak into the microphone..." 
+                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                            <Border Background="#1E1E1E" CornerRadius="3" Height="20">
+                                <ProgressBar x:Name="AudioLevelMeter" 
+                                             Minimum="0" Maximum="100" Value="0"
+                                             Height="14" Margin="3"
+                                             Foreground="{StaticResource AccentBrush}"/>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </GroupBox>
                 
                 <!-- Options -->
                 <GroupBox Header="Options">
