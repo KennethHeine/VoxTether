@@ -284,13 +284,11 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
             recommended.Add("cuda");
         }
 
-        if (gpuDiagnostics.HasAmdGpu || gpuDiagnostics.HasIntelGpu || gpuDiagnostics.HasNvidiaGpu)
+        if ((gpuDiagnostics.HasAmdGpu || gpuDiagnostics.HasIntelGpu || gpuDiagnostics.HasNvidiaGpu) &&
+            !recommended.Contains("vulkan"))
         {
             // Vulkan is cross-vendor
-            if (!recommended.Contains("vulkan"))
-            {
-                recommended.Add("vulkan");
-            }
+            recommended.Add("vulkan");
         }
 
         if (gpuDiagnostics.HasIntelGpu)
@@ -345,8 +343,8 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
             var parts = expectedChecksum.Split(':', 2);
             if (parts.Length != 2 || !parts[0].Equals("sha256", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogWarning("Invalid checksum format: {Checksum}", expectedChecksum);
-                return true; // Skip validation if format is wrong
+                _logger.LogError("Invalid checksum format: {Checksum}", expectedChecksum);
+                return false;
             }
 
             var expectedHash = parts[1].ToLowerInvariant();

@@ -89,6 +89,10 @@ public partial class App : Application
             if (!settings.EnableHardwareAcceleration)
                 return;
 
+            // Check if we've already shown the recommendation dialog
+            if (settings.BackendRecommendationShown)
+                return;
+
             // Check if any GPU backend is already installed
             if (backendSelection.IsBackendAvailable(TranscriptionBackendMode.Cuda) ||
                 backendSelection.IsBackendAvailable(TranscriptionBackendMode.Vulkan) ||
@@ -121,6 +125,9 @@ public partial class App : Application
                 "GPU Acceleration Available",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Information);
+
+            // Mark that we've shown the recommendation dialog
+            settingsService.Update(s => s.BackendRecommendationShown = true);
 
             if (result == MessageBoxResult.Yes)
             {

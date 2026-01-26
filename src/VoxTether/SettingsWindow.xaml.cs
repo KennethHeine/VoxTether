@@ -931,7 +931,7 @@ public partial class SettingsWindow : Window
         {
             // Remove backend
             var result = MessageBox.Show(
-                $"Remove {viewModel.Name} backend? This will free up approximately {viewModel.SizeText.Replace("Download size: ", "")} of disk space.",
+                $"Remove {viewModel.Name} backend? This will free up approximately {FormatUtility.FormatBytes(viewModel.Size)} of disk space.",
                 "Remove Backend",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);

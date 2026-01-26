@@ -106,6 +106,12 @@ public class VoxTetherSettings
     /// When false, forces CpuOnly mode regardless of TranscriptionBackend setting.
     /// </summary>
     public bool EnableHardwareAcceleration { get; set; } = true;
+
+    /// <summary>
+    /// Whether the backend recommendation dialog has been shown to the user.
+    /// Used to prevent showing the first-run backend recommendation dialog on every startup.
+    /// </summary>
+    public bool BackendRecommendationShown { get; set; } = false;
 }
 
 /// <summary>
