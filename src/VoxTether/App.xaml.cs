@@ -164,7 +164,7 @@ public partial class App : Application
         services.AddLogging(builder =>
         {
             builder.SetMinimumLevel(LogLevel.Debug);
-            builder.AddFileLogger(SettingsService.LogsPath);
+            builder.AddFileLogger(SettingsService.LogsPath, GetVersion());
 #if DEBUG
             builder.AddDebug();
 #endif
