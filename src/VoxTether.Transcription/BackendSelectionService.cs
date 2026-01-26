@@ -596,8 +596,10 @@ public class BackendSelectionService : IBackendSelectionService
                 else
                 {
                     // Process stuck without output - likely a Windows error dialog for missing DLLs
-                    const string TimeoutReason = "Process timed out without producing output (possible missing DLL or system error dialog)";
-                    _logger.LogWarning("Executable appears blocked (no output after timeout), likely missing DLL: {Path}", execPath);
+                    const string TimeoutReason = "Process timed out - likely missing CUDA 11.8 runtime DLLs (cublas64_11.dll). " +
+                        "Install CUDA Toolkit 11.8 from nvidia.com or see docs/cuda-troubleshooting.md for help.";
+                    _logger.LogWarning("Executable appears blocked (no output after timeout), likely missing CUDA 11.8 DLLs. " +
+                        "Path: {Path}. Install CUDA Toolkit 11.8 from https://developer.nvidia.com/cuda-11-8-0-download-archive", execPath);
                     return (false, TimeoutReason);
                 }
             }
@@ -609,8 +611,10 @@ public class BackendSelectionService : IBackendSelectionService
             
             if (process.ExitCode == STATUS_DLL_NOT_FOUND)
             {
-                var reason = "Required DLL not found (missing CUDA runtime or other dependencies)";
-                _logger.LogWarning("Executable cannot run due to missing DLL: {Path}", execPath);
+                var reason = "Missing CUDA 11.8 runtime DLLs (cublas64_11.dll, cudart64_110.dll). " +
+                    "Install CUDA Toolkit 11.8 from nvidia.com or see docs/cuda-troubleshooting.md for help.";
+                _logger.LogWarning("Executable cannot run due to missing CUDA 11.8 DLLs: {Path}. " +
+                    "Install CUDA Toolkit 11.8 from https://developer.nvidia.com/cuda-11-8-0-download-archive", execPath);
                 return (false, reason);
             }
             
