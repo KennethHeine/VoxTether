@@ -45,23 +45,26 @@ This is the most reliable solution:
 
 4. **Restart VoxTether** to pick up the new PATH
 
-### Option 2: Manual DLL Installation
+### Option 2: Download CUDA DLLs from NVIDIA Redistribution Site
 
-If you don't want to install the full CUDA Toolkit:
+NVIDIA provides redistributable CUDA DLLs that can be downloaded separately (without installing the full toolkit):
 
-1. Obtain the required DLLs from an existing CUDA 11.8 installation or from NVIDIA's redistribution packages
+1. Download the required packages from NVIDIA's redistribution site:
+   - **CUDA Runtime** (~3MB): [cuda_cudart-windows-x86_64-11.8.89-archive.zip](https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-11.8.89-archive.zip)
+   - **cuBLAS** (~400MB): [libcublas-windows-x86_64-11.11.3.6-archive.zip](https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/libcublas-windows-x86_64-11.11.3.6-archive.zip)
 
-2. Place the following DLLs in the VoxTether whisper directory:
+2. Extract the zip files and copy the DLLs from the `bin` folder to VoxTether's whisper directory:
    ```
    <VoxTether Install Dir>\whisper\cuda\Release\
    ```
    
    Required files:
-   - `cudart64_110.dll`
-   - `cublas64_11.dll`
-   - `cublasLt64_11.dll`
+   - From cuda_cudart: `cudart64_110.dll`
+   - From libcublas: `cublas64_11.dll`, `cublasLt64_11.dll`
 
 3. **Restart VoxTether**
+
+> **Note**: These downloads are from NVIDIA's official redistribution site and are licensed for redistribution per NVIDIA's CUDA EULA.
 
 ### Option 3: Use CPU-Only Mode
 
@@ -223,12 +226,28 @@ The pre-built whisper.cpp CUDA binaries from [ggml-org/whisper.cpp releases](htt
 
 **Workarounds:**
 1. Install CUDA Toolkit 11.8 (recommended)
-2. Build whisper.cpp from source with your CUDA version (advanced)
-3. Use CPU mode as a reliable fallback
+2. Download CUDA DLLs from NVIDIA's redistribution site (see Option 2 above)
+3. Build whisper.cpp from source with your CUDA version (advanced)
+4. Use CPU mode as a reliable fallback
 
 ### Multiple CUDA Versions
 
 If you have multiple CUDA versions installed, ensure CUDA 11.8 bin directory appears first in your PATH, or place the required DLLs directly in the whisper\cuda\Release\ folder.
+
+## Future Improvements
+
+### Automatic CUDA DLL Download (Planned)
+
+NVIDIA provides redistributable CUDA DLLs at stable URLs that can be programmatically downloaded:
+- CUDA Runtime: https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/
+- cuBLAS: https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/
+
+VoxTether could automatically download these DLLs when the CUDA backend is installed but runtime DLLs are missing. This would eliminate the need for users to manually install CUDA Toolkit 11.8.
+
+**Considerations:**
+- cuBLAS is ~400MB, which is a significant download
+- CUDA Runtime is only ~3MB
+- Files are licensed for redistribution per NVIDIA's CUDA EULA
 
 ## Getting Help
 
@@ -239,6 +258,8 @@ If you have multiple CUDA versions installed, ensure CUDA 11.8 bin directory app
 ## References
 
 - [NVIDIA CUDA Toolkit 11.8 Download](https://developer.nvidia.com/cuda-11-8-0-download-archive)
+- [NVIDIA CUDA Redistributable Packages](https://developer.download.nvidia.com/compute/cuda/redist/) - Official DLL downloads
+- [NVIDIA CUDA EULA](https://docs.nvidia.com/cuda/eula/index.html) - Redistribution license terms
 - [whisper.cpp GitHub Repository](https://github.com/ggml-org/whisper.cpp)
 - [NVIDIA Driver Downloads](https://www.nvidia.com/Download/index.aspx)
 - [VoxTether Backend Download System](backend-download-system.md)
