@@ -94,4 +94,25 @@ public class HotkeyTests
         Assert.Contains(Key.LWin, combo.Modifiers);
         Assert.Equal(Key.D, combo.MainKey);
     }
+
+    [Fact]
+    public void HotkeyCombination_DefaultToggle_IsCtrlAltT()
+    {
+        var combo = HotkeyCombination.DefaultToggle;
+        
+        Assert.Contains(Key.LeftCtrl, combo.Modifiers);
+        Assert.Contains(Key.LeftAlt, combo.Modifiers);
+        Assert.Equal(Key.T, combo.MainKey);
+    }
+
+    [Fact]
+    public void HotkeyCombination_DefaultToggle_ToString_ReturnsFormattedString()
+    {
+        var combo = HotkeyCombination.DefaultToggle;
+        var result = combo.ToString();
+        
+        Assert.Contains("Ctrl", result);
+        Assert.Contains("Alt", result);
+        Assert.Contains("T", result);
+    }
 }

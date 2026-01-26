@@ -11,6 +11,7 @@ public class SettingsTests
         var settings = new VoxTetherSettings();
         
         Assert.Equal("Ctrl + Alt + Space", settings.Hotkey);
+        Assert.Equal("Ctrl + Alt + T", settings.ToggleHotkey);
         Assert.Equal("auto", settings.Language);
         Assert.False(settings.StartWithWindows);
         Assert.True(settings.ShowNotifications);
@@ -18,6 +19,8 @@ public class SettingsTests
         Assert.True(settings.CopyToClipboard);
         Assert.True(settings.FallbackToTyping);
         Assert.Equal(100, settings.ClipboardDelayMs);
+        Assert.False(settings.SaveAudioRecordings);
+        Assert.Null(settings.AudioSavePath);
     }
 
     [Fact]
@@ -107,6 +110,16 @@ public class SettingsTests
         
         Assert.NotNull(path);
         Assert.Contains("temp", path);
+        Assert.True(Directory.Exists(path));
+    }
+
+    [Fact]
+    public void SettingsService_AudioRecordingsPath_ReturnsValidPath()
+    {
+        var path = SettingsService.AudioRecordingsPath;
+        
+        Assert.NotNull(path);
+        Assert.Contains("recordings", path);
         Assert.True(Directory.Exists(path));
     }
 

@@ -20,11 +20,22 @@
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,16">
             <StackPanel>
                 <!-- Hotkey -->
-                <GroupBox Header="Hotkey">
+                <GroupBox Header="Hotkey (Hold-to-Talk)">
                     <StackPanel Margin="4">
                         <TextBlock Text="Press and hold this hotkey to record:" Foreground="{StaticResource TextSecondaryBrush}"/>
                         <TextBox x:Name="HotkeyTextBox" Margin="0,8,0,0" IsReadOnly="True" 
                                  Text="Ctrl + Alt + Space" FontSize="14"/>
+                        <TextBlock Text="Click and press new key combination to change" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" FontSize="11"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Toggle Hotkey -->
+                <GroupBox Header="Toggle Hotkey (Press-to-Start/Stop)">
+                    <StackPanel Margin="4">
+                        <TextBlock Text="Press once to start, press again to stop recording:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBox x:Name="ToggleHotkeyTextBox" Margin="0,8,0,0" IsReadOnly="True" 
+                                 Text="Ctrl + Alt + T" FontSize="14"/>
                         <TextBlock Text="Click and press new key combination to change" 
                                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" FontSize="11"/>
                     </StackPanel>
@@ -146,6 +157,20 @@
                         <CheckBox x:Name="ShowNotificationsCheckBox" Content="Show notifications" Margin="0,0,0,8"/>
                         <CheckBox x:Name="ShowRecordingIndicatorCheckBox" Content="Show recording indicator" Margin="0,0,0,8"/>
                         <CheckBox x:Name="FallbackToTypingCheckBox" Content="Fall back to typing if paste fails"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Audio Recording -->
+                <GroupBox Header="Audio Recording">
+                    <StackPanel Margin="4">
+                        <CheckBox x:Name="SaveAudioRecordingsCheckBox" Content="Save audio recordings to folder" Margin="0,0,0,8"/>
+                        <DockPanel Margin="0,0,0,4">
+                            <Button x:Name="BrowseFolderButton" DockPanel.Dock="Right" Content="Browse..." 
+                                    Width="80" Margin="8,0,0,0" Click="BrowseFolderButton_Click"/>
+                            <TextBox x:Name="AudioSavePathTextBox" IsEnabled="{Binding ElementName=SaveAudioRecordingsCheckBox, Path=IsChecked}"/>
+                        </DockPanel>
+                        <TextBlock Text="Audio files will be saved as WAV format. Leave empty to use default folder." 
+                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>

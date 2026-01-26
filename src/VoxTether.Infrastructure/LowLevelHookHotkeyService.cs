@@ -20,13 +20,17 @@ public class LowLevelHookHotkeyService : IHotkeyService
     private LowLevelKeyboardProc? _proc;
     private bool _disposed;
     private bool _isPressed;
+    private bool _toggleHotkeyWasPressed;
     private DateTime _lastPressTime = DateTime.MinValue;
+    private DateTime _lastTogglePressTime = DateTime.MinValue;
     private readonly TimeSpan _debounceTime = TimeSpan.FromMilliseconds(50);
 
     public event EventHandler? HotkeyPressed;
     public event EventHandler? HotkeyReleased;
+    public event EventHandler? ToggleHotkeyPressed;
     
     public HotkeyCombination Hotkey { get; set; } = HotkeyCombination.Default;
+    public HotkeyCombination ToggleHotkey { get; set; } = HotkeyCombination.DefaultToggle;
     public bool IsPressed => _isPressed;
 
     private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
@@ -145,6 +149,19 @@ public class LowLevelHookHotkeyService : IHotkeyService
             _pressedKeys.Add(normalizedKey);
             _pressedKeys.Add(key);
 
+            // Check if toggle hotkey combo is fully pressed
+            if (!_toggleHotkeyWasPressed && IsToggleHotkeyComboPressed())
+            {
+                var now = DateTime.UtcNow;
+                if (now - _lastTogglePressTime >= _debounceTime)
+                {
+                    _toggleHotkeyWasPressed = true;
+                    _lastTogglePressTime = now;
+                    _logger.LogDebug("Toggle hotkey pressed");
+                    Task.Run(() => ToggleHotkeyPressed?.Invoke(this, EventArgs.Empty));
+                }
+            }
+
             // Check if hotkey combo is fully pressed
             if (!_isPressed && IsHotkeyComboPressed())
             {
@@ -168,6 +185,12 @@ public class LowLevelHookHotkeyService : IHotkeyService
             _pressedKeys.Remove(normalizedKey);
             _pressedKeys.Remove(key);
 
+            // Reset toggle hotkey state when keys are released
+            if (_toggleHotkeyWasPressed && !IsToggleHotkeyComboPressed())
+            {
+                _toggleHotkeyWasPressed = false;
+            }
+
             // If we were pressed and combo is no longer fully pressed
             if (_isPressed && !IsHotkeyComboPressed())
             {
@@ -180,8 +203,18 @@ public class LowLevelHookHotkeyService : IHotkeyService
 
     private bool IsHotkeyComboPressed()
     {
+        return IsComboPressed(Hotkey);
+    }
+
+    private bool IsToggleHotkeyComboPressed()
+    {
+        return IsComboPressed(ToggleHotkey);
+    }
+
+    private bool IsComboPressed(HotkeyCombination combo)
+    {
         // Check if all keys in the hotkey are pressed
-        var allKeys = Hotkey.AllKeys;
+        var allKeys = combo.AllKeys;
         
         foreach (var requiredKey in allKeys)
         {

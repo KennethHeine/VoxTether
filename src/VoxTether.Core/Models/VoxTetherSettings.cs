@@ -58,6 +58,23 @@ public class VoxTetherSettings
     /// The delay in milliseconds between clipboard operations.
     /// </summary>
     public int ClipboardDelayMs { get; set; } = 100;
+
+    /// <summary>
+    /// The toggle hotkey combination string (e.g., "Ctrl + Alt + T").
+    /// Press once to start recording, press again to stop.
+    /// </summary>
+    public string ToggleHotkey { get; set; } = "Ctrl + Alt + T";
+
+    /// <summary>
+    /// Whether to save audio recordings to a default folder.
+    /// </summary>
+    public bool SaveAudioRecordings { get; set; } = false;
+
+    /// <summary>
+    /// The path where audio recordings are saved.
+    /// If null or empty, uses the default AudioRecordingsPath.
+    /// </summary>
+    public string? AudioSavePath { get; set; }
 }
 
 /// <summary>
@@ -143,6 +160,19 @@ public class SettingsService
         get
         {
             var path = Path.Combine(AppDataPath, "temp");
+            Directory.CreateDirectory(path);
+            return path;
+        }
+    }
+
+    /// <summary>
+    /// Gets the default audio recordings folder path.
+    /// </summary>
+    public static string AudioRecordingsPath
+    {
+        get
+        {
+            var path = Path.Combine(AppDataPath, "recordings");
             Directory.CreateDirectory(path);
             return path;
         }

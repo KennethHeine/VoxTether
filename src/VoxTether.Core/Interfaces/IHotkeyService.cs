@@ -27,6 +27,15 @@ public class HotkeyCombination
     };
 
     /// <summary>
+    /// Creates a default toggle hotkey (Ctrl + Alt + T).
+    /// </summary>
+    public static HotkeyCombination DefaultToggle => new()
+    {
+        Modifiers = new HashSet<Key> { Key.LeftCtrl, Key.LeftAlt },
+        MainKey = Key.T
+    };
+
+    /// <summary>
     /// Gets all keys in this combination.
     /// </summary>
     public HashSet<Key> AllKeys
@@ -115,9 +124,19 @@ public interface IHotkeyService : IDisposable
     event EventHandler? HotkeyReleased;
 
     /// <summary>
+    /// Event raised when the toggle hotkey is pressed (toggle recording mode).
+    /// </summary>
+    event EventHandler? ToggleHotkeyPressed;
+
+    /// <summary>
     /// Gets or sets the hotkey combination.
     /// </summary>
     HotkeyCombination Hotkey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the toggle hotkey combination for toggle recording mode.
+    /// </summary>
+    HotkeyCombination ToggleHotkey { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the hotkey is currently pressed.

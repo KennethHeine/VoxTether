@@ -50,6 +50,7 @@ public partial class SettingsWindow : Window
     private readonly ModelDownloadService _downloadService;
     private readonly HashSet<Key> _pressedKeys = new();
     private bool _isCapturingHotkey;
+    private bool _isCapturingToggleHotkey;
     private bool _isDownloading;
 
     public SettingsWindow(SettingsService settingsService)
@@ -82,6 +83,13 @@ public partial class SettingsWindow : Window
         HotkeyTextBox.PreviewKeyDown += HotkeyTextBox_PreviewKeyDown;
         HotkeyTextBox.PreviewKeyUp += HotkeyTextBox_PreviewKeyUp;
 
+        // Toggle Hotkey
+        ToggleHotkeyTextBox.Text = settings.ToggleHotkey;
+        ToggleHotkeyTextBox.GotFocus += ToggleHotkeyTextBox_GotFocus;
+        ToggleHotkeyTextBox.LostFocus += ToggleHotkeyTextBox_LostFocus;
+        ToggleHotkeyTextBox.PreviewKeyDown += ToggleHotkeyTextBox_PreviewKeyDown;
+        ToggleHotkeyTextBox.PreviewKeyUp += ToggleHotkeyTextBox_PreviewKeyUp;
+
         // Models
         LoadModels();
 
@@ -99,6 +107,10 @@ public partial class SettingsWindow : Window
         ShowNotificationsCheckBox.IsChecked = settings.ShowNotifications;
         ShowRecordingIndicatorCheckBox.IsChecked = settings.ShowRecordingIndicator;
         FallbackToTypingCheckBox.IsChecked = settings.FallbackToTyping;
+
+        // Audio Recording
+        SaveAudioRecordingsCheckBox.IsChecked = settings.SaveAudioRecordings;
+        AudioSavePathTextBox.Text = settings.AudioSavePath ?? SettingsService.AudioRecordingsPath;
     }
 
     private void LoadModels()
@@ -209,11 +221,96 @@ public partial class SettingsWindow : Window
         HotkeyTextBox.Text = string.Join(" + ", parts);
     }
 
+    private void ToggleHotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+        _isCapturingToggleHotkey = true;
+        _pressedKeys.Clear();
+        ToggleHotkeyTextBox.Text = "Press keys...";
+    }
+
+    private void ToggleHotkeyTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        _isCapturingToggleHotkey = false;
+        if (ToggleHotkeyTextBox.Text == "Press keys...")
+        {
+            ToggleHotkeyTextBox.Text = _settingsService.Settings.ToggleHotkey;
+        }
+    }
+
+    private void ToggleHotkeyTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (!_isCapturingToggleHotkey) return;
+
+        e.Handled = true;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        
+        _pressedKeys.Add(key);
+        UpdateToggleHotkeyDisplay();
+    }
+
+    private void ToggleHotkeyTextBox_PreviewKeyUp(object sender, KeyEventArgs e)
+    {
+        if (!_isCapturingToggleHotkey) return;
+
+        e.Handled = true;
+
+        // When user releases keys, finalize the hotkey
+        if (_pressedKeys.Count > 0)
+        {
+            _isCapturingToggleHotkey = false;
+            Keyboard.ClearFocus();
+        }
+    }
+
+    private void UpdateToggleHotkeyDisplay()
+    {
+        var parts = new List<string>();
+
+        if (_pressedKeys.Any(k => k == Key.LeftCtrl || k == Key.RightCtrl))
+            parts.Add("Ctrl");
+        if (_pressedKeys.Any(k => k == Key.LeftAlt || k == Key.RightAlt))
+            parts.Add("Alt");
+        if (_pressedKeys.Any(k => k == Key.LeftShift || k == Key.RightShift))
+            parts.Add("Shift");
+        if (_pressedKeys.Any(k => k == Key.LWin || k == Key.RWin))
+            parts.Add("Win");
+
+        // Add non-modifier keys
+        foreach (var key in _pressedKeys)
+        {
+            if (key != Key.LeftCtrl && key != Key.RightCtrl &&
+                key != Key.LeftAlt && key != Key.RightAlt &&
+                key != Key.LeftShift && key != Key.RightShift &&
+                key != Key.LWin && key != Key.RWin)
+            {
+                parts.Add(key.ToString());
+            }
+        }
+
+        ToggleHotkeyTextBox.Text = string.Join(" + ", parts);
+    }
+
+    private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "Select folder to save audio recordings",
+            UseDescriptionForTitle = true,
+            SelectedPath = AudioSavePathTextBox.Text
+        };
+
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            AudioSavePathTextBox.Text = dialog.SelectedPath;
+        }
+    }
+
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         _settingsService.Update(settings =>
         {
             settings.Hotkey = HotkeyTextBox.Text;
+            settings.ToggleHotkey = ToggleHotkeyTextBox.Text;
             
             if (ModelComboBox.SelectedItem is ComboBoxItem modelItem)
             {
@@ -229,6 +326,12 @@ public partial class SettingsWindow : Window
             settings.ShowNotifications = ShowNotificationsCheckBox.IsChecked ?? true;
             settings.ShowRecordingIndicator = ShowRecordingIndicatorCheckBox.IsChecked ?? true;
             settings.FallbackToTyping = FallbackToTypingCheckBox.IsChecked ?? true;
+
+            // Audio recording settings
+            settings.SaveAudioRecordings = SaveAudioRecordingsCheckBox.IsChecked ?? false;
+            settings.AudioSavePath = string.IsNullOrWhiteSpace(AudioSavePathTextBox.Text) 
+                ? null 
+                : AudioSavePathTextBox.Text;
         });
 
         MessageBox.Show(
