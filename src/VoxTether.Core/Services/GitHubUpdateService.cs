@@ -9,11 +9,13 @@ namespace VoxTether.Core.Services;
 /// <summary>
 /// Service for checking updates from GitHub releases.
 /// </summary>
-public class GitHubUpdateService : IUpdateService, IDisposable
+public class GitHubUpdateService : IUpdateService
 {
     private readonly ILogger<GitHubUpdateService> _logger;
-    private readonly HttpClient _httpClient;
-    private bool _disposed;
+    
+    // Use static HttpClient to prevent socket exhaustion
+    // See: https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines
+    private static readonly HttpClient SharedHttpClient;
     
     private const string GitHubApiUrl = "https://api.github.com/repos/KennethHeine/VoxTether/releases/latest";
     
@@ -23,12 +25,18 @@ public class GitHubUpdateService : IUpdateService, IDisposable
     private const string PortableExtension = ".zip";
     private const string PortablePattern = "portable";
 
+    static GitHubUpdateService()
+    {
+        SharedHttpClient = new HttpClient();
+        SharedHttpClient.DefaultRequestHeaders.Add("User-Agent", "VoxTether");
+        SharedHttpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+        // Set a reasonable timeout for update checks
+        SharedHttpClient.Timeout = TimeSpan.FromSeconds(30);
+    }
+
     public GitHubUpdateService(ILogger<GitHubUpdateService> logger)
     {
         _logger = logger;
-        _httpClient = new HttpClient();
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "VoxTether");
-        _httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
     }
 
     public async Task<UpdateInfo?> CheckForUpdatesAsync(string currentVersion, CancellationToken cancellationToken = default)
@@ -37,7 +45,7 @@ public class GitHubUpdateService : IUpdateService, IDisposable
         {
             _logger.LogInformation("Checking for updates. Current version: {CurrentVersion}", currentVersion);
 
-            var response = await _httpClient.GetAsync(GitHubApiUrl, cancellationToken);
+            var response = await SharedHttpClient.GetAsync(GitHubApiUrl, cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -171,7 +179,9 @@ public class GitHubUpdateService : IUpdateService, IDisposable
         }
 
         // Remove prerelease suffix for comparison (anything after '-')
-        // But we should handle this more carefully in a real implementation
+        // Note: This means prerelease versions like '2.0.0-beta' are compared as '2.0.0'.
+        // This is intentional for VoxTether since we typically release stable versions only.
+        // If prerelease support is needed, this should be enhanced with proper semver comparison.
         var dashIndex = version.IndexOf('-');
         if (dashIndex >= 0)
         {
@@ -179,14 +189,5 @@ public class GitHubUpdateService : IUpdateService, IDisposable
         }
 
         return version;
-    }
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        
-        _httpClient.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

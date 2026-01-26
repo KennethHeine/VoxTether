@@ -3,6 +3,7 @@
 #define MyAppPublisher "VoxTether"
 #define MyAppURL "https://github.com/KennethHeine/VoxTether"
 #define MyAppExeName "VoxTether.exe"
+#define MyAppMutex "VoxTether_SingleInstance_Mutex"
 
 [Setup]
 AppId={{8F3D4B2A-1C5E-4F7D-9E8A-2B6C3D4E5F6A}
@@ -28,8 +29,9 @@ PrivilegesRequired=admin
 UsePreviousAppDir=yes
 UsePreviousGroup=yes
 UsePreviousTasks=yes
-CloseApplications=yes
-CloseApplicationsFilter=*.exe
+; Use Inno Setup's built-in application closure for VoxTether.exe
+CloseApplications=force
+CloseApplicationsFilter={#MyAppExeName}
 RestartApplications=yes
 
 [Languages]
@@ -75,33 +77,6 @@ begin
     Result := DisplayVersion;
 end;
 
-function IsVoxTetherRunning(): Boolean;
-var
-  ResultCode: Integer;
-begin
-  // Use tasklist to check if VoxTether is running
-  Result := False;
-  if Exec('cmd.exe', '/c tasklist /FI "IMAGENAME eq {#MyAppExeName}" 2>NUL | find /I "{#MyAppExeName}" >NUL', 
-          '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-  begin
-    Result := (ResultCode = 0);
-  end;
-end;
-
-function CloseVoxTether(): Boolean;
-var
-  ResultCode: Integer;
-begin
-  Result := True;
-  // Try to gracefully close VoxTether using taskkill
-  if Exec('taskkill.exe', '/IM {#MyAppExeName} /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-  begin
-    // Wait a moment for the process to fully close
-    Sleep(1000);
-    Result := not IsVoxTetherRunning();
-  end;
-end;
-
 function InitializeSetup(): Boolean;
 var
   mRes: Integer;
@@ -117,7 +92,8 @@ begin
     // Inform user about the upgrade
     mRes := MsgBox('VoxTether v' + PreviousVersion + ' is already installed.' + #13#10 + #13#10 +
                    'Do you want to upgrade to v{#MyAppVersion}?' + #13#10 + #13#10 +
-                   'Your settings and user data will be preserved.',
+                   'Your settings and user data will be preserved.' + #13#10 +
+                   'If VoxTether is running, it will be closed automatically.',
                    mbConfirmation, MB_YESNO);
     if mRes = IDNO then
     begin
@@ -126,31 +102,8 @@ begin
     end;
   end;
   
-  // Check if VoxTether is currently running
-  if IsVoxTetherRunning() then
-  begin
-    mRes := MsgBox('VoxTether is currently running.' + #13#10 + #13#10 +
-                   'The installer needs to close it before continuing.' + #13#10 +
-                   'Do you want to close VoxTether now?',
-                   mbConfirmation, MB_YESNO);
-    if mRes = IDYES then
-    begin
-      if not CloseVoxTether() then
-      begin
-        MsgBox('Failed to close VoxTether. Please close it manually and run the installer again.',
-               mbError, MB_OK);
-        Result := False;
-        Exit;
-      end;
-    end
-    else
-    begin
-      MsgBox('Please close VoxTether manually and run the installer again.',
-             mbInformation, MB_OK);
-      Result := False;
-      Exit;
-    end;
-  end;
+  // Note: Running application will be closed automatically by Inno Setup
+  // via CloseApplications=force setting
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -171,14 +124,13 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   mRes: Integer;
+  ResultCode: Integer;
 begin
   if CurUninstallStep = usUninstall then
   begin
-    // Close VoxTether if running before uninstall
-    if IsVoxTetherRunning() then
-    begin
-      CloseVoxTether();
-    end;
+    // Try to close VoxTether if running before uninstall
+    Exec('taskkill.exe', '/IM {#MyAppExeName} /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Sleep(500);
   end;
   
   if CurUninstallStep = usPostUninstall then
