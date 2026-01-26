@@ -228,8 +228,8 @@ public class WhisperCppEngine : ITranscriptionEngine
                     // and what whisper.cpp was compiled against. The downloaded redistribution DLLs
                     // may not be fully compatible with the pre-built whisper.cpp binary.
                     result.Error = "CUDA runtime error during transcription. This is often caused by CUDA DLL version mismatch. " +
-                        "Please install the full NVIDIA CUDA Toolkit 11.8 from nvidia.com, or switch to CPU backend in Settings. " +
-                        "See docs/cuda-troubleshooting.md for more information.";
+                        "Please install the full NVIDIA CUDA Toolkit 11.8 from https://developer.nvidia.com/cuda-11-8-0-download-archive, " +
+                        "or switch to CPU backend in Settings. See docs/cuda-troubleshooting.md for more information.";
                     _logger.LogError("Whisper transcription failed with STATUS_STACK_BUFFER_OVERRUN (0xC0000409). " +
                         "This typically indicates CUDA DLL version mismatch. The auto-downloaded CUDA DLLs may not be fully compatible " +
                         "with this whisper.cpp build. Install the full CUDA Toolkit 11.8 from https://developer.nvidia.com/cuda-11-8-0-download-archive " +

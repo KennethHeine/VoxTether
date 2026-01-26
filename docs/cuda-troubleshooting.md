@@ -283,7 +283,7 @@ If you have multiple CUDA versions installed, ensure CUDA 11.8 bin directory app
 
 VoxTether can automatically download the required CUDA 11.8 runtime DLLs from NVIDIA's redistribution site. This eliminates the need for users to manually install the full CUDA Toolkit.
 
-> **Important Compatibility Note:** The auto-downloaded DLLs are from NVIDIA's redistribution packages, which may be from a slightly different cuBLAS patch version than what the whisper.cpp binary was compiled against. In rare cases, this can cause a crash during transcription (exit code -1073740791). If you experience this issue, please install the full CUDA Toolkit 11.8.0 instead. See the troubleshooting section "Error: CUDA runtime error or Exit Code -1073740791" for details.
+> **Important Compatibility Note:** The auto-downloaded DLLs are from NVIDIA's redistribution packages, which may be from a slightly different cuBLAS patch version than what the whisper.cpp binary was compiled against. In rare cases, this can cause a crash during transcription (exit code -1073740791). If you experience this issue, please install the full CUDA Toolkit 11.8.0 instead. See the troubleshooting section ["Error: CUDA runtime error or Exit Code -1073740791 (0xC0000409)"](#error-cuda-runtime-error-or-exit-code--1073740791-0xc0000409) for details.
 
 ### How to Download CUDA DLLs via Settings UI
 
