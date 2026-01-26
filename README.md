@@ -187,6 +187,16 @@ VoxTether includes built-in update checking:
 
 **Note**: Update checking requires an internet connection to reach GitHub.
 
+### Upgrading via Installer
+
+The VoxTether installer automatically handles upgrades:
+
+- **Detects existing installation**: The installer checks if VoxTether is already installed
+- **Version notification**: Shows the currently installed version and the new version
+- **Automatic app closure**: Prompts to close VoxTether if it's running before upgrading
+- **Settings preserved**: Your settings, models, and logs are preserved during upgrade
+- **Same location**: Uses the same installation directory as the previous version
+
 ## Privacy
 
 - **No network calls**: All processing is done locally (except optional update checks)
