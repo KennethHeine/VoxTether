@@ -227,7 +227,8 @@ public partial class App : Application
             var audioRecorder = sp.GetRequiredService<IAudioRecorder>();
             var backendService = sp.GetRequiredService<IBackendSelectionService>();
             var backendDownloadService = sp.GetRequiredService<IBackendDownloadService>();
-            return new TrayIconManager(logger, settingsService, controller, updateService, audioRecorder, backendService, backendDownloadService);
+            var transcriptionEngine = sp.GetRequiredService<ITranscriptionEngine>();
+            return new TrayIconManager(logger, settingsService, controller, updateService, audioRecorder, backendService, backendDownloadService, transcriptionEngine);
         });
     }
 
