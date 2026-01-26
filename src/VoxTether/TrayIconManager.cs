@@ -373,7 +373,8 @@ public class TrayIconManager : IDisposable
             var resourceStream = Application.GetResourceStream(resourceUri);
             if (resourceStream != null)
             {
-                return new Icon(resourceStream.Stream);
+                using var stream = resourceStream.Stream;
+                return new Icon(stream);
             }
         }
         catch

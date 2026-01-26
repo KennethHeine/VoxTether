@@ -19,6 +19,9 @@
             <Color x:Key="CardBackgroundColor">#FFFFFF</Color>
             <Color x:Key="BorderColor">#E0E0E0</Color>
             <Color x:Key="BorderHoverColor">#BDBDBD</Color>
+            <Color x:Key="SurfaceHoverColor">#F1F3F4</Color>
+            <Color x:Key="SurfacePressedColor">#E8EAED</Color>
+            <Color x:Key="SurfaceHeaderColor">#F8F9FA</Color>
             
             <!-- Text Colors -->
             <Color x:Key="TextPrimaryColor">#202124</Color>
@@ -39,6 +42,9 @@
             <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackgroundColor}"/>
             <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
             <SolidColorBrush x:Key="BorderHoverBrush" Color="{StaticResource BorderHoverColor}"/>
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="{StaticResource SurfaceHoverColor}"/>
+            <SolidColorBrush x:Key="SurfacePressedBrush" Color="{StaticResource SurfacePressedColor}"/>
+            <SolidColorBrush x:Key="SurfaceHeaderBrush" Color="{StaticResource SurfaceHeaderColor}"/>
             
             <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
             <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
@@ -114,11 +120,11 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#F1F3F4"/>
+                                    <Setter Property="Background" Value="{StaticResource SurfaceHoverBrush}"/>
                                     <Setter Property="BorderBrush" Value="{StaticResource BorderHoverBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter Property="Background" Value="#E8EAED"/>
+                                    <Setter Property="Background" Value="{StaticResource SurfacePressedBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}"/>
@@ -161,7 +167,7 @@
                                     <Setter TargetName="border" Property="BorderThickness" Value="2"/>
                                 </Trigger>
                                 <Trigger Property="IsReadOnly" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#F8F9FA"/>
+                                    <Setter TargetName="border" Property="Background" Value="{StaticResource SurfaceHeaderBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -211,7 +217,7 @@
                                 
                                 <Border Grid.Row="0" 
                                         Padding="16,12"
-                                        Background="#F8F9FA"
+                                        Background="{StaticResource SurfaceHeaderBrush}"
                                         CornerRadius="8,8,0,0">
                                     <ContentPresenter ContentSource="Header" 
                                                       TextBlock.FontWeight="SemiBold"
@@ -229,7 +235,7 @@
             
             <!-- Modern ProgressBar Style -->
             <Style TargetType="ProgressBar">
-                <Setter Property="Background" Value="#E8EAED"/>
+                <Setter Property="Background" Value="{StaticResource SurfacePressedBrush}"/>
                 <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Height" Value="8"/>
