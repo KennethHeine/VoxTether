@@ -8,42 +8,43 @@
         Height="650" Width="600"
         MinHeight="500" MinWidth="500"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanResizeWithGrip">
-    <Grid Margin="20">
+        ResizeMode="CanResizeWithGrip"
+        Icon="Resources/VoxTether.ico">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
         <!-- Scrollable Content -->
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,16">
             <StackPanel>
                 <!-- Hotkey -->
-                <GroupBox Header="Hotkey" Margin="0,0,0,10">
-                    <StackPanel Margin="10">
-                        <TextBlock Text="Press and hold this hotkey to record:"/>
-                        <TextBox x:Name="HotkeyTextBox" Margin="0,5,0,0" IsReadOnly="True" 
-                                 Text="Ctrl + Alt + Space" FontSize="14" Padding="5"/>
+                <GroupBox Header="Hotkey">
+                    <StackPanel Margin="4">
+                        <TextBlock Text="Press and hold this hotkey to record:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBox x:Name="HotkeyTextBox" Margin="0,8,0,0" IsReadOnly="True" 
+                                 Text="Ctrl + Alt + Space" FontSize="14"/>
                         <TextBlock Text="Click and press new key combination to change" 
-                                   Foreground="Gray" Margin="0,5,0,0" FontSize="11"/>
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" FontSize="11"/>
                     </StackPanel>
                 </GroupBox>
                 
                 <!-- Model Selection -->
-                <GroupBox Header="Current Model" Margin="0,0,0,10">
-                    <StackPanel Margin="10">
-                        <TextBlock Text="Speech recognition model:"/>
-                        <ComboBox x:Name="ModelComboBox" Margin="0,5,0,0"/>
+                <GroupBox Header="Current Model">
+                    <StackPanel Margin="4">
+                        <TextBlock Text="Speech recognition model:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <ComboBox x:Name="ModelComboBox" Margin="0,8,0,0"/>
                         <TextBlock Text="Place .bin model files in the models folder or download from below" 
-                                   Foreground="Gray" Margin="0,5,0,0" FontSize="11"/>
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" FontSize="11"/>
                     </StackPanel>
                 </GroupBox>
                 
                 <!-- Download Models -->
-                <GroupBox Header="Download Models" Margin="0,0,0,10">
-                    <StackPanel Margin="10">
-                        <DockPanel Margin="0,0,0,10">
-                            <TextBlock Text="Top 5 Speech-to-Text Models" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <GroupBox Header="Download Models">
+                    <StackPanel Margin="4">
+                        <DockPanel Margin="0,0,0,12">
+                            <TextBlock Text="Top 5 Speech-to-Text Models" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
                             <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right">
                                 <Hyperlink x:Name="AllModelsLink" Click="AllModelsLink_Click">
                                     View all models on Hugging Face
@@ -55,23 +56,23 @@
                         <ItemsControl x:Name="ModelCatalogList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border BorderBrush="#DDDDDD" BorderThickness="1" Margin="0,0,0,8" Padding="10" CornerRadius="4">
+                                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,10">
                                         <StackPanel>
                                             <DockPanel>
                                                 <StackPanel DockPanel.Dock="Left">
-                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
-                                                    <TextBlock Text="{Binding Description}" Foreground="Gray" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding Description}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                                                 </StackPanel>
                                                 <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top">
                                                     <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="Quality: " Foreground="Gray" FontSize="11"/>
-                                                        <TextBlock Text="{Binding Quality}" FontSize="11" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="Quality: " Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
+                                                        <TextBlock Text="{Binding Quality}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
                                                     </StackPanel>
                                                     <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="Speed: " Foreground="Gray" FontSize="11"/>
-                                                        <TextBlock Text="{Binding Speed}" FontSize="11" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="Speed: " Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
+                                                        <TextBlock Text="{Binding Speed}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}"/>
                                                     </StackPanel>
-                                                    <TextBlock FontSize="11" Margin="0,2,0,0">
+                                                    <TextBlock FontSize="11" Margin="0,4,0,0">
                                                         <Hyperlink NavigateUri="{Binding InfoUrl}" RequestNavigate="Hyperlink_RequestNavigate">
                                                             More Info
                                                         </Hyperlink>
@@ -80,22 +81,22 @@
                                             </DockPanel>
                                             
                                             <!-- Versions -->
-                                            <TextBlock Text="Versions:" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                                            <TextBlock Text="Versions:" FontWeight="SemiBold" Margin="0,12,0,6" Foreground="{StaticResource TextPrimaryBrush}"/>
                                             <ItemsControl ItemsSource="{Binding Versions}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <DockPanel Margin="0,2,0,2">
+                                                        <DockPanel Margin="0,4,0,4">
                                                             <Button DockPanel.Dock="Right" 
                                                                     Content="{Binding ButtonText}" 
-                                                                    Width="80" 
+                                                                    Width="90" 
                                                                     IsEnabled="{Binding IsEnabled}"
                                                                     Tag="{Binding}"
                                                                     Click="DownloadButton_Click"
-                                                                    Margin="5,0,0,0"/>
+                                                                    Margin="8,0,0,0"/>
                                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                                <TextBlock Text="{Binding Version}" FontWeight="SemiBold" Width="120"/>
-                                                                <TextBlock Text="{Binding FileName}" Foreground="Gray" Width="180"/>
-                                                                <TextBlock Text="{Binding SizeText}" Foreground="Gray"/>
+                                                                <TextBlock Text="{Binding Version}" FontWeight="SemiBold" Width="120" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                                <TextBlock Text="{Binding FileName}" Foreground="{StaticResource TextSecondaryBrush}" Width="180"/>
+                                                                <TextBlock Text="{Binding SizeText}" Foreground="{StaticResource TextSecondaryBrush}"/>
                                                             </StackPanel>
                                                         </DockPanel>
                                                     </DataTemplate>
@@ -108,21 +109,21 @@
                         </ItemsControl>
                         
                         <!-- Download Progress -->
-                        <StackPanel x:Name="DownloadProgressPanel" Visibility="Collapsed" Margin="0,10,0,0">
-                            <TextBlock x:Name="DownloadStatusText" Text="Downloading..." Margin="0,0,0,5"/>
-                            <ProgressBar x:Name="DownloadProgressBar" Height="20" Minimum="0" Maximum="100"/>
+                        <StackPanel x:Name="DownloadProgressPanel" Visibility="Collapsed" Margin="0,12,0,0">
+                            <TextBlock x:Name="DownloadStatusText" Text="Downloading..." Margin="0,0,0,8" FontWeight="Medium"/>
+                            <ProgressBar x:Name="DownloadProgressBar" Height="8" Minimum="0" Maximum="100"/>
                             <Button x:Name="CancelDownloadButton" Content="Cancel Download" 
-                                    HorizontalAlignment="Left" Margin="0,5,0,0"
+                                    HorizontalAlignment="Left" Margin="0,8,0,0"
                                     Click="CancelDownloadButton_Click"/>
                         </StackPanel>
                     </StackPanel>
                 </GroupBox>
                 
                 <!-- Language -->
-                <GroupBox Header="Language" Margin="0,0,0,10">
-                    <StackPanel Margin="10">
-                        <TextBlock Text="Recognition language:"/>
-                        <ComboBox x:Name="LanguageComboBox" Margin="0,5,0,0" SelectedIndex="0">
+                <GroupBox Header="Language">
+                    <StackPanel Margin="4">
+                        <TextBlock Text="Recognition language:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <ComboBox x:Name="LanguageComboBox" Margin="0,8,0,0" SelectedIndex="0">
                             <ComboBoxItem Content="Auto-detect" Tag="auto"/>
                             <ComboBoxItem Content="English" Tag="en"/>
                             <ComboBoxItem Content="Spanish" Tag="es"/>
@@ -140,10 +141,10 @@
                 </GroupBox>
                 
                 <!-- Options -->
-                <GroupBox Header="Options" Margin="0,0,0,10">
-                    <StackPanel Margin="10">
-                        <CheckBox x:Name="ShowNotificationsCheckBox" Content="Show notifications" Margin="0,0,0,5"/>
-                        <CheckBox x:Name="ShowRecordingIndicatorCheckBox" Content="Show recording indicator" Margin="0,0,0,5"/>
+                <GroupBox Header="Options">
+                    <StackPanel Margin="4">
+                        <CheckBox x:Name="ShowNotificationsCheckBox" Content="Show notifications" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ShowRecordingIndicatorCheckBox" Content="Show recording indicator" Margin="0,0,0,8"/>
                         <CheckBox x:Name="FallbackToTypingCheckBox" Content="Fall back to typing if paste fails"/>
                     </StackPanel>
                 </GroupBox>
@@ -152,8 +153,9 @@
 
         <!-- Buttons -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="SaveButton" Content="Save" Width="80" Margin="0,0,10,0" Click="SaveButton_Click"/>
-            <Button x:Name="CancelButton" Content="Cancel" Width="80" Click="CancelButton_Click"/>
+            <Button x:Name="SaveButton" Content="Save" Width="100" Margin="0,0,12,0" 
+                    Style="{StaticResource PrimaryButtonStyle}" Click="SaveButton_Click"/>
+            <Button x:Name="CancelButton" Content="Cancel" Width="100" Click="CancelButton_Click"/>
         </StackPanel>
     </Grid>
 </Window>

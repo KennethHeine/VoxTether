@@ -366,7 +366,23 @@ public class TrayIconManager : IDisposable
 
     private static Icon CreateDefaultIcon()
     {
-        // Create a simple blue microphone-like icon
+        // Try to load the embedded icon resource
+        try
+        {
+            var resourceUri = new Uri("pack://application:,,,/Resources/VoxTether.ico", UriKind.Absolute);
+            var resourceStream = Application.GetResourceStream(resourceUri);
+            if (resourceStream != null)
+            {
+                using var stream = resourceStream.Stream;
+                return new Icon(stream);
+            }
+        }
+        catch
+        {
+            // Fall back to creating icon programmatically
+        }
+        
+        // Fallback: Create a simple blue microphone-like icon
         var bitmap = new Bitmap(32, 32);
         using var g = Graphics.FromImage(bitmap);
         g.Clear(Color.Transparent);
