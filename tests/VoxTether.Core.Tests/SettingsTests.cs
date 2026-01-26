@@ -19,6 +19,7 @@ public class SettingsTests
         Assert.True(settings.CopyToClipboard);
         Assert.True(settings.FallbackToTyping);
         Assert.Equal(100, settings.ClipboardDelayMs);
+        Assert.Equal("Clipboard", settings.OutputMode);
         Assert.False(settings.SaveAudioRecordings);
         Assert.False(settings.SaveTranscripts);
         Assert.Null(settings.AudioSavePath);

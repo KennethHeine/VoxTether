@@ -248,12 +248,12 @@ public class VoxTetherController
             _logger.LogInformation("Transcription result: {Text}", processedText);
             TranscriptionComplete?.Invoke(this, processedText);
 
-            // Inject the text
-            var injected = await _textInjector.InjectAsync(processedText, cancellationToken);
+            // Output the text (clipboard or paste to focused app based on settings)
+            var outputSuccess = await _textInjector.InjectAsync(processedText, cancellationToken);
             
-            if (!injected)
+            if (!outputSuccess)
             {
-                _logger.LogWarning("Text injection failed or was skipped");
+                _logger.LogWarning("Failed to output transcript");
             }
 
             // Save audio file and optionally transcript if enabled

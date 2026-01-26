@@ -60,6 +60,13 @@ public class VoxTetherSettings
     public int ClipboardDelayMs { get; set; } = 100;
 
     /// <summary>
+    /// How to output the transcript after transcription.
+    /// "Clipboard" = Copy to clipboard only (user pastes manually)
+    /// "FocusedApp" = Paste directly into the focused application
+    /// </summary>
+    public string OutputMode { get; set; } = "Clipboard";
+
+    /// <summary>
     /// The toggle hotkey combination string (e.g., "Ctrl + Alt + T").
     /// Press once to start recording, press again to stop.
     /// </summary>
