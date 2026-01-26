@@ -535,9 +535,17 @@ public class BackendSelectionService : IBackendSelectionService
                         break;
                     }
                 }
-                catch
+                catch (ArgumentException)
                 {
-                    // Ignore invalid path entries
+                    // Invalid path entry in PATH (e.g., contains invalid characters)
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Access denied to directory
+                }
+                catch (IOException)
+                {
+                    // I/O error checking path
                 }
             }
 
