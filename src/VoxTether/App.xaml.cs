@@ -73,6 +73,7 @@ public partial class App : Application
         });
         services.AddSingleton<ITranscriptionEngine, WhisperCppEngine>();
         services.AddSingleton<ITextPostProcessor, NoOpTextPostProcessor>();
+        services.AddSingleton<IUpdateService, GitHubUpdateService>();
 
         // App services
         services.AddSingleton<VoxTetherController>();

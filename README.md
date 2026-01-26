@@ -19,6 +19,8 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
    - **Installer**: `VoxTether-Setup-x.x.x.exe` - Full installation with Start Menu shortcuts
    - **Portable**: `VoxTether-x.x.x-win-x64-portable.zip` - Extract and run anywhere
 
+**Note**: The installer does not require admin privileges and installs to your user profile by default. You can also choose to install for all users if you have admin rights.
+
 ### Building from Source
 
 ```bash
@@ -60,6 +62,7 @@ Right-click the VoxTether tray icon to access:
 - **Open Models Folder** - Access user models directory
 - **Open Logs** - Access log files for troubleshooting
 - **Test Microphone** - Record a 2-second test and show the transcription
+- **Check for Updates...** - Check for new versions on GitHub
 - **About** - Show version and configuration info
 - **Exit** - Close VoxTether
 
@@ -174,9 +177,32 @@ This will verify:
 - Whisper binary presence
 - Model file availability
 
+## Updates
+
+VoxTether includes built-in update checking:
+
+1. Right-click the tray icon
+2. Select "Check for Updates..."
+3. If a new version is available, you'll be prompted to open the download page
+4. Download the latest installer or portable version
+5. Install over the existing installation (settings are preserved)
+
+**Note**: Update checking requires an internet connection to reach GitHub.
+
+### Upgrading via Installer
+
+The VoxTether installer automatically handles upgrades:
+
+- **No admin required**: Installs to user profile by default, no elevation needed
+- **Detects existing installation**: The installer checks if VoxTether is already installed
+- **Version notification**: Shows the currently installed version and the new version
+- **Automatic app closure**: Closes VoxTether if it's running before upgrading
+- **Settings preserved**: Your settings, models, and logs are preserved during upgrade
+- **Same location**: Uses the same installation directory as the previous version
+
 ## Privacy
 
-- **No network calls**: All processing is done locally
+- **No network calls**: All processing is done locally (except optional update checks)
 - **No telemetry**: No usage data is collected
 - **No cloud**: Your voice recordings never leave your computer
 - Recordings are temporary and deleted after transcription
