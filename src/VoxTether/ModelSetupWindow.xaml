@@ -8,8 +8,9 @@
         Height="600" Width="650"
         MinHeight="500" MinWidth="550"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanResizeWithGrip">
-    <Grid Margin="20">
+        ResizeMode="CanResizeWithGrip"
+        Icon="Resources/VoxTether.ico">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -18,9 +19,9 @@
         </Grid.RowDefinitions>
         
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="Welcome to VoxTether!" FontSize="24" FontWeight="Bold" Margin="0,0,0,10"/>
-            <TextBlock TextWrapping="Wrap" Foreground="Gray">
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Welcome to VoxTether!" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,12" Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="14" LineHeight="22">
                 VoxTether needs a speech recognition model to transcribe your voice. 
                 Please select and download a model below. Models are stored in your user folder 
                 and will persist across application updates.
@@ -28,46 +29,46 @@
         </StackPanel>
         
         <!-- Model List -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,12">
             <ItemsControl x:Name="ModelCatalogList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border BorderBrush="#DDDDDD" BorderThickness="1" Margin="0,0,0,8" Padding="10" CornerRadius="4">
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
                             <StackPanel>
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Left">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
-                                        <TextBlock Text="{Binding Description}" Foreground="Gray" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding Description}" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                                     </StackPanel>
                                     <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="Quality: " Foreground="Gray" FontSize="11"/>
-                                            <TextBlock Text="{Binding Quality}" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Quality: " Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
+                                            <TextBlock Text="{Binding Quality}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="Speed: " Foreground="Gray" FontSize="11"/>
-                                            <TextBlock Text="{Binding Speed}" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Speed: " Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
+                                            <TextBlock Text="{Binding Speed}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </DockPanel>
                                 
                                 <!-- Versions -->
-                                <TextBlock Text="Versions:" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                                <TextBlock Text="Versions:" FontWeight="SemiBold" Margin="0,12,0,6" Foreground="{StaticResource TextPrimaryBrush}"/>
                                 <ItemsControl ItemsSource="{Binding Versions}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <DockPanel Margin="0,2,0,2">
+                                            <DockPanel Margin="0,4,0,4">
                                                 <Button DockPanel.Dock="Right" 
                                                         Content="{Binding ButtonText}" 
-                                                        Width="80" 
+                                                        Width="90" 
                                                         IsEnabled="{Binding IsEnabled}"
                                                         Tag="{Binding}"
                                                         Click="DownloadButton_Click"
-                                                        Margin="5,0,0,0"/>
+                                                        Margin="8,0,0,0"/>
                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Version}" FontWeight="SemiBold" Width="120"/>
-                                                    <TextBlock Text="{Binding FileName}" Foreground="Gray" Width="180"/>
-                                                    <TextBlock Text="{Binding SizeText}" Foreground="Gray"/>
+                                                    <TextBlock Text="{Binding Version}" FontWeight="SemiBold" Width="120" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding FileName}" Foreground="{StaticResource TextSecondaryBrush}" Width="180"/>
+                                                    <TextBlock Text="{Binding SizeText}" Foreground="{StaticResource TextSecondaryBrush}"/>
                                                 </StackPanel>
                                             </DockPanel>
                                         </DataTemplate>
@@ -81,21 +82,22 @@
         </ScrollViewer>
         
         <!-- Download Progress -->
-        <StackPanel x:Name="DownloadProgressPanel" Grid.Row="2" Visibility="Collapsed" Margin="0,0,0,10">
-            <TextBlock x:Name="DownloadStatusText" Text="Downloading..." Margin="0,0,0,5"/>
-            <ProgressBar x:Name="DownloadProgressBar" Height="20" Minimum="0" Maximum="100"/>
+        <StackPanel x:Name="DownloadProgressPanel" Grid.Row="2" Visibility="Collapsed" Margin="0,0,0,12">
+            <TextBlock x:Name="DownloadStatusText" Text="Downloading..." Margin="0,0,0,8" FontWeight="Medium"/>
+            <ProgressBar x:Name="DownloadProgressBar" Height="8" Minimum="0" Maximum="100"/>
             <Button x:Name="CancelDownloadButton" Content="Cancel Download" 
-                    HorizontalAlignment="Left" Margin="0,5,0,0"
+                    HorizontalAlignment="Left" Margin="0,10,0,0"
                     Click="CancelDownloadButton_Click"/>
         </StackPanel>
         
         <!-- Footer -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <TextBlock VerticalAlignment="Center" Margin="0,0,20,0" Foreground="Gray" FontSize="11">
+            <TextBlock VerticalAlignment="Center" Margin="0,0,24,0" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12">
                 <Run Text="Tip: The 'Whisper Base' model is recommended for most users."/>
             </TextBlock>
-            <Button x:Name="ContinueButton" Content="Continue" Width="100" Height="30" 
-                    IsEnabled="False" Click="ContinueButton_Click"/>
+            <Button x:Name="ContinueButton" Content="Continue" Width="120" Height="36" 
+                    IsEnabled="False" Click="ContinueButton_Click"
+                    Style="{StaticResource PrimaryButtonStyle}"/>
         </StackPanel>
     </Grid>
 </Window>
