@@ -423,8 +423,8 @@ public partial class SettingsWindow : Window
             AudioLevelMeter.Value = 0;
             AudioLevelText.Text = "Speak into the microphone...";
 
-            // Create a temp file for recording
-            var tempPath = Path.Combine(SettingsService.TempPath, $"mic_test_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+            // Create a temp file for recording with unique name
+            var tempPath = Path.Combine(SettingsService.TempPath, $"mic_test_{Guid.NewGuid():N}.wav");
             _audioRecorder.StartRecording(tempPath);
 
             // Auto-stop after 10 seconds
@@ -464,9 +464,13 @@ public partial class SettingsWindow : Window
                     {
                         File.Delete(path);
                     }
-                    catch
+                    catch (IOException)
                     {
-                        // Ignore cleanup errors
+                        // Ignore file cleanup errors - file may still be in use
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Ignore permission errors during cleanup
                     }
                 }
             }

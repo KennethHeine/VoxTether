@@ -184,9 +184,9 @@ public class NAudioRecorder : IAudioRecorder
     /// </summary>
     private static int CalculateAudioLevel(byte[] buffer, int bytesRecorded)
     {
-        // 16-bit audio samples
+        // 16-bit audio samples (2 bytes per sample)
         var maxValue = 0;
-        for (var i = 0; i < bytesRecorded; i += 2)
+        for (var i = 0; i + 1 < bytesRecorded; i += 2)
         {
             var sample = Math.Abs(BitConverter.ToInt16(buffer, i));
             if (sample > maxValue)
