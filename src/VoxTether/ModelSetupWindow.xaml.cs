@@ -91,12 +91,9 @@ public partial class ModelSetupWindow : Window
 
     private void UpdateContinueButtonState()
     {
-        // Check if any model exists in user folder
-        var hasModel = System.IO.Directory.Exists(SettingsService.UserModelsPath) &&
-                       System.IO.Directory.GetFiles(SettingsService.UserModelsPath, "*.bin").Length > 0;
-        
-        _hasDownloadedModel = hasModel;
-        ContinueButton.IsEnabled = hasModel;
+        // Use the shared method from SettingsService
+        _hasDownloadedModel = SettingsService.HasAnyModel();
+        ContinueButton.IsEnabled = _hasDownloadedModel;
     }
 
     private async void DownloadButton_Click(object sender, RoutedEventArgs e)

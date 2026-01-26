@@ -36,12 +36,13 @@ public partial class App : Application
         }
 
         // Check if a model is available, prompt user to download if not
-        if (!HasModel())
+        if (!SettingsService.HasAnyModel())
         {
             var setupWindow = new ModelSetupWindow();
             var result = setupWindow.ShowDialog();
             
             // If user closed without downloading a model, exit the application
+            // We check ModelDownloaded because the user might close the window without clicking Continue
             if (result != true || !setupWindow.ModelDownloaded)
             {
                 MessageBox.Show(
@@ -66,34 +67,6 @@ public partial class App : Application
 
         _trayIconManager.Initialize();
         _controller.Start();
-    }
-
-    /// <summary>
-    /// Checks if a speech recognition model is available.
-    /// </summary>
-    private static bool HasModel()
-    {
-        // Check user models folder first (this persists across updates)
-        if (Directory.Exists(SettingsService.UserModelsPath))
-        {
-            var userModels = Directory.GetFiles(SettingsService.UserModelsPath, "*.bin");
-            if (userModels.Length > 0)
-            {
-                return true;
-            }
-        }
-
-        // Check installed models folder (bundled with app, if any)
-        if (Directory.Exists(SettingsService.InstalledModelsPath))
-        {
-            var installedModels = Directory.GetFiles(SettingsService.InstalledModelsPath, "*.bin");
-            if (installedModels.Length > 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private void ConfigureServices(IServiceCollection services)

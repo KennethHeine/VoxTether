@@ -173,7 +173,7 @@ public class GitHubUpdateService : IUpdateService
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1L;
-            var totalMb = totalBytes > 0 ? totalBytes / BytesToMb : 0;
+            var totalMb = totalBytes > 0 ? (double)totalBytes / BytesToMb : 0;
 
             StatusChanged?.Invoke($"Downloading VoxTether v{updateInfo.Version} ({totalMb:F1} MB)...");
 
