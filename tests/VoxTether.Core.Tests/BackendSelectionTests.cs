@@ -196,6 +196,12 @@ public class BackendSelectionTests
             // Create a dummy executable file
             File.WriteAllText(mainExePath, "dummy");
             
+            // Create required CUDA DLLs so the backend is considered available
+            foreach (var dll in BackendSelectionService.RequiredCudaDlls)
+            {
+                File.WriteAllText(Path.Combine(cudaReleaseDir, dll), "dummy");
+            }
+            
             // Act - Check if the backend is now available
             var isAvailable = service.IsBackendAvailable(TranscriptionBackendMode.Cuda);
             var backends = service.GetAvailableBackends();
@@ -236,6 +242,12 @@ public class BackendSelectionTests
             // Create a dummy executable file
             File.WriteAllText(whisperCliPath, "dummy");
             
+            // Create required CUDA DLLs so the backend is considered available
+            foreach (var dll in BackendSelectionService.RequiredCudaDlls)
+            {
+                File.WriteAllText(Path.Combine(cudaReleaseDir, dll), "dummy");
+            }
+            
             // Act
             var isAvailable = service.IsBackendAvailable(TranscriptionBackendMode.Cuda);
             var backends = service.GetAvailableBackends();
@@ -274,6 +286,12 @@ public class BackendSelectionTests
             var whisperCliPath = Path.Combine(cudaReleaseDir, "whisper-cli.exe");
             File.WriteAllText(mainExePath, "dummy-main");
             File.WriteAllText(whisperCliPath, "dummy-whisper-cli");
+            
+            // Create required CUDA DLLs so the backend is considered available
+            foreach (var dll in BackendSelectionService.RequiredCudaDlls)
+            {
+                File.WriteAllText(Path.Combine(cudaReleaseDir, dll), "dummy");
+            }
             
             // Act
             var backends = service.GetAvailableBackends();
