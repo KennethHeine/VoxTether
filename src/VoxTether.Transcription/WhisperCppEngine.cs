@@ -219,7 +219,7 @@ public class WhisperCppEngine : ITranscriptionEngine
                 result.Error = $"Whisper exited with code {process.ExitCode}";
                 if (errorDetails.Length > 0)
                 {
-                    result.Error += $"\n{errorDetails.ToString().Trim()}";
+                    result.Error += $"\n{errorDetails.ToString().TrimEnd()}";
                 }
                 
                 _logger.LogError("Whisper transcription failed. Exit code: {ExitCode}, stderr: {StdErr}, stdout: {StdOut}", 
