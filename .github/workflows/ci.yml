@@ -26,13 +26,30 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release
 
-    - name: Test
-      run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+    - name: Run Unit Tests
+      run: |
+        dotnet test --no-build --configuration Release `
+          --verbosity normal `
+          --logger "console;verbosity=detailed" `
+          --logger "trx;LogFileName=unit-test-results.trx" `
+          --filter "Category!=Integration"
+      continue-on-error: false
+
+    - name: Run Integration Tests
+      run: |
+        dotnet test --no-build --configuration Release `
+          --verbosity normal `
+          --logger "console;verbosity=detailed" `
+          --logger "trx;LogFileName=integration-test-results.trx" `
+          --filter "Category=Integration"
+      continue-on-error: false
 
     - name: Upload test results
       uses: actions/upload-artifact@v6
       if: always()
       with:
         name: test-results
-        path: '**/test-results.trx'
+        path: |
+          **/unit-test-results.trx
+          **/integration-test-results.trx
         retention-days: 7
