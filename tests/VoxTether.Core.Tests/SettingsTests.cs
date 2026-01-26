@@ -134,4 +134,50 @@ public class SettingsTests
         Assert.NotNull(settings);
         Assert.Equal("Ctrl + Alt + Space", settings.Hotkey);
     }
+
+    [Fact]
+    public void VoxTetherSettings_Backend_DefaultValues_AreCorrect()
+    {
+        var settings = new VoxTetherSettings();
+        
+        Assert.Equal(TranscriptionBackendMode.Auto, settings.TranscriptionBackend);
+        Assert.True(settings.EnableHardwareAcceleration);
+    }
+
+    [Fact]
+    public void VoxTetherSettings_Backend_CanSerializeToJson()
+    {
+        var settings = new VoxTetherSettings
+        {
+            TranscriptionBackend = TranscriptionBackendMode.Cuda,
+            EnableHardwareAcceleration = false
+        };
+
+        var json = JsonSerializer.Serialize(settings);
+        
+        Assert.Contains("TranscriptionBackend", json);
+        // Verify roundtrip
+        var deserialized = JsonSerializer.Deserialize<VoxTetherSettings>(json);
+        Assert.NotNull(deserialized);
+        Assert.Equal(TranscriptionBackendMode.Cuda, deserialized.TranscriptionBackend);
+        Assert.False(deserialized.EnableHardwareAcceleration);
+    }
+
+    [Fact]
+    public void VoxTetherSettings_Backend_CanDeserializeFromJson()
+    {
+        var json = """
+        {
+            "transcriptionBackend": 2,
+            "enableHardwareAcceleration": true
+        }
+        """;
+
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        var settings = JsonSerializer.Deserialize<VoxTetherSettings>(json, options);
+        
+        Assert.NotNull(settings);
+        Assert.Equal(TranscriptionBackendMode.Cuda, settings.TranscriptionBackend);
+        Assert.True(settings.EnableHardwareAcceleration);
+    }
 }

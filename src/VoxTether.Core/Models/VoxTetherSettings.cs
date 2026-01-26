@@ -95,6 +95,17 @@ public class VoxTetherSettings
     /// -1 means use the default system microphone.
     /// </summary>
     public int SelectedMicrophoneDeviceId { get; set; } = -1;
+
+    /// <summary>
+    /// The transcription backend mode (Auto, CpuOnly, Cuda, Vulkan, OpenVino).
+    /// </summary>
+    public TranscriptionBackendMode TranscriptionBackend { get; set; } = TranscriptionBackendMode.Auto;
+
+    /// <summary>
+    /// Whether hardware acceleration is enabled.
+    /// When false, forces CpuOnly mode regardless of TranscriptionBackend setting.
+    /// </summary>
+    public bool EnableHardwareAcceleration { get; set; } = true;
 }
 
 /// <summary>
