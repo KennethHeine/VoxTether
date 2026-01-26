@@ -61,6 +61,14 @@ public partial class SettingsWindow : Window
         _downloadService.StatusChanged += OnDownloadStatusChanged;
         LoadSettings();
         LoadModelCatalog();
+        
+        // Dispose the download service when the window is closed
+        Closed += (s, e) =>
+        {
+            _downloadService.DownloadProgressChanged -= OnDownloadProgressChanged;
+            _downloadService.StatusChanged -= OnDownloadStatusChanged;
+            _downloadService.Dispose();
+        };
     }
 
     private void LoadSettings()

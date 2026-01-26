@@ -7,10 +7,14 @@ namespace VoxTether.Core.Services;
 /// <summary>
 /// Service for downloading speech-to-text models.
 /// </summary>
-public class ModelDownloadService
+public class ModelDownloadService : IDisposable
 {
+    private const int BufferSize = 8192;
+    private const double BytesToMb = 1024.0 * 1024.0;
+    
     private readonly HttpClient _httpClient;
     private CancellationTokenSource? _cancellationTokenSource;
+    private bool _disposed;
 
     public ModelDownloadService()
     {
@@ -73,14 +77,14 @@ public class ModelDownloadService
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1L;
-            var totalMb = totalBytes > 0 ? totalBytes / (1024.0 * 1024.0) : modelVersion.SizeMb;
+            var totalMb = totalBytes > 0 ? totalBytes / BytesToMb : modelVersion.SizeMb;
 
             StatusChanged?.Invoke($"Downloading {modelVersion.FileName} ({totalMb:F1} MB)...");
 
             using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
+            using var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true);
 
-            var buffer = new byte[8192];
+            var buffer = new byte[BufferSize];
             var totalBytesRead = 0L;
             var lastReportedProgress = 0;
             int bytesRead;
@@ -161,5 +165,34 @@ public class ModelDownloadService
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Disposes the HTTP client and cancellation token source.
+    /// </summary>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Disposes managed and unmanaged resources.
+    /// </summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            _httpClient.Dispose();
+        }
+
+        _disposed = true;
     }
 }
