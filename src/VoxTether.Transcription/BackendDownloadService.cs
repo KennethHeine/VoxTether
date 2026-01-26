@@ -35,11 +35,11 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
     {
       ""id"": ""cuda"",
       ""name"": ""NVIDIA CUDA"",
-      ""description"": ""GPU acceleration for NVIDIA graphics cards (CUDA 11.8)"",
+      ""description"": ""GPU acceleration for NVIDIA graphics cards. Requires CUDA Toolkit 11.8 to be installed separately."",
       ""downloadUrl"": ""https://github.com/ggml-org/whisper.cpp/releases/download/v1.8.3/whisper-cublas-11.8.0-bin-x64.zip"",
       ""size"": 61582231,
       ""checksum"": ""sha256:a5ef69599305bdf3e135047b1a2151dcea79bc0fa201e3ea8681069c2abc7a8c"",
-      ""requirements"": ""NVIDIA GPU with CUDA support and up-to-date drivers""
+      ""requirements"": ""NVIDIA GPU with CUDA support, up-to-date drivers, and CUDA Toolkit 11.8 (download from nvidia.com)""
     }
   ]
 }";

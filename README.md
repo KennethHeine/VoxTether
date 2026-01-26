@@ -171,9 +171,11 @@ Use "auto" for automatic detection, or specify a language code:
 ### GPU Acceleration Not Working
 
 1. Ensure you have downloaded the CUDA backend for your NVIDIA GPU
-2. Check that GPU drivers are up to date
-3. Check logs for backend-specific errors
-4. Fall back to CPU mode if GPU acceleration issues persist
+2. **CUDA 11.8 Required**: The CUDA backend requires CUDA Toolkit 11.8 to be installed. Download from [NVIDIA CUDA 11.8 Archive](https://developer.nvidia.com/cuda-11-8-0-download-archive)
+3. Check that GPU drivers are up to date
+4. Check logs for backend-specific errors (look for "missing DLL" messages)
+5. See [CUDA Troubleshooting Guide](docs/cuda-troubleshooting.md) for detailed help
+6. Fall back to CPU mode if GPU acceleration issues persist
 
 ### Microphone Not Working
 

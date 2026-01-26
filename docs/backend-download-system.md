@@ -20,10 +20,15 @@ The backend download system allows users to:
 
 ### NVIDIA CUDA (Downloadable)
 - **Recommended for:** Systems with NVIDIA graphics cards
-- **Requirements:** NVIDIA GPU with CUDA support and up-to-date drivers
+- **Requirements:** 
+  - NVIDIA GPU with CUDA support
+  - **CUDA Toolkit 11.8** installed (provides cublas64_11.dll, cudart64_110.dll)
+  - Up-to-date NVIDIA drivers
 - **Download size:** ~60 MB
 - **Performance:** Fastest option for NVIDIA GPUs
 - **Source:** Pre-built binaries from [ggml-org/whisper.cpp](https://github.com/ggml-org/whisper.cpp/releases)
+
+> **Important:** The CUDA backend requires CUDA 11.8 runtime DLLs. If you have a newer CUDA version (12.x), you still need to install CUDA 11.8 alongside it. See [cuda-troubleshooting.md](cuda-troubleshooting.md) for detailed setup instructions.
 
 ## How It Works
 
@@ -173,6 +178,14 @@ whisper/
 ```
 
 ## Troubleshooting
+
+### CUDA Backend Not Working (Missing DLLs)
+
+If the CUDA backend is downloaded but VoxTether falls back to CPU mode, you likely need to install CUDA 11.8 runtime:
+
+1. **Check logs**: Look for messages like "missing CUDA 11.8 runtime DLLs" or "cublas64_11.dll"
+2. **Install CUDA Toolkit 11.8**: Download from [NVIDIA CUDA 11.8 Archive](https://developer.nvidia.com/cuda-11-8-0-download-archive)
+3. **See detailed guide**: [cuda-troubleshooting.md](cuda-troubleshooting.md)
 
 ### Backend Download Fails
 
