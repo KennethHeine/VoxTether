@@ -28,9 +28,22 @@ The whisper.cpp CUDA binaries (v1.8.3) require **CUDA 11.8 runtime** components:
 
 ## Installation Options
 
-### Option 1: Install CUDA Toolkit 11.8 (Recommended)
+### Option 1: Use VoxTether Built-in Download (Easiest)
 
-This is the most reliable solution:
+VoxTether can automatically download the required CUDA runtime DLLs for you:
+
+1. Open VoxTether Settings (right-click tray icon → Settings)
+2. Go to the **Performance** tab
+3. Download the **NVIDIA CUDA** backend if not already installed
+4. If the status shows **"Missing CUDA DLLs"** (in orange), click **"Get CUDA DLLs"**
+5. Wait for the download to complete (~403 MB)
+6. **Restart VoxTether** to use GPU acceleration
+
+This is the easiest option as VoxTether handles all the file placement automatically.
+
+### Option 2: Install CUDA Toolkit 11.8
+
+This is a reliable alternative if you prefer having the full CUDA toolkit:
 
 1. Download **CUDA Toolkit 11.8** from NVIDIA:
    - [CUDA Toolkit 11.8 Downloads](https://developer.nvidia.com/cuda-11-8-0-download-archive)
@@ -45,7 +58,7 @@ This is the most reliable solution:
 
 4. **Restart VoxTether** to pick up the new PATH
 
-### Option 2: Download CUDA DLLs from NVIDIA Redistribution Site
+### Option 3: Manual Download from NVIDIA Redistribution Site
 
 NVIDIA provides redistributable CUDA DLLs that can be downloaded separately (without installing the full toolkit):
 
@@ -66,7 +79,7 @@ NVIDIA provides redistributable CUDA DLLs that can be downloaded separately (wit
 
 > **Note**: These downloads are from NVIDIA's official redistribution site and are licensed for redistribution per NVIDIA's CUDA EULA.
 
-### Option 3: Use CPU-Only Mode
+### Option 4: Use CPU-Only Mode
 
 If you cannot install CUDA or prefer not to use GPU acceleration:
 
@@ -238,6 +251,20 @@ If you have multiple CUDA versions installed, ensure CUDA 11.8 bin directory app
 
 VoxTether can automatically download the required CUDA 11.8 runtime DLLs from NVIDIA's redistribution site. This eliminates the need for users to manually install the full CUDA Toolkit.
 
+### How to Download CUDA DLLs via Settings UI
+
+The easiest way to get the required CUDA runtime DLLs is through the Settings window:
+
+1. Open VoxTether Settings (right-click tray icon → Settings)
+2. Go to the **Performance** tab
+3. Under "Backend Management", you'll see the NVIDIA CUDA backend
+4. If CUDA DLLs are missing, the status will show **"Missing CUDA DLLs"** in orange
+5. Click the **"Get CUDA DLLs"** button to download the required files (~403 MB)
+6. Wait for the download to complete
+7. **Restart VoxTether** to use GPU acceleration
+
+> **Note:** After downloading the CUDA backend, VoxTether will automatically detect if the runtime DLLs are missing and display the "Get CUDA DLLs" button.
+
 ### How It Works
 
 When the CUDA backend is installed but the runtime DLLs are missing, VoxTether can download them directly from NVIDIA:
@@ -249,9 +276,9 @@ The following DLLs are downloaded and placed in the `whisper\cuda\Release\` dire
 - `cublas64_11.dll` (cuBLAS)
 - `cublasLt64_11.dll` (cuBLAS Lightweight)
 
-### API Usage
+### API Usage (For Developers)
 
-The automatic download is available through the `IBackendDownloadService` interface:
+The automatic download is also available programmatically through the `IBackendDownloadService` interface:
 
 ```csharp
 // Check if CUDA DLLs are already installed

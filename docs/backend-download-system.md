@@ -22,13 +22,13 @@ The backend download system allows users to:
 - **Recommended for:** Systems with NVIDIA graphics cards
 - **Requirements:** 
   - NVIDIA GPU with CUDA support
-  - **CUDA Toolkit 11.8** installed (provides cublas64_11.dll, cudart64_110.dll)
+  - **CUDA 11.8 runtime DLLs** (cublas64_11.dll, cudart64_110.dll) - can be downloaded via the Settings UI
   - Up-to-date NVIDIA drivers
-- **Download size:** ~60 MB
+- **Download size:** ~60 MB (backend) + ~403 MB (CUDA DLLs if needed)
 - **Performance:** Fastest option for NVIDIA GPUs
 - **Source:** Pre-built binaries from [ggml-org/whisper.cpp](https://github.com/ggml-org/whisper.cpp/releases)
 
-> **Important:** The CUDA backend requires CUDA 11.8 runtime DLLs. If you have a newer CUDA version (12.x), you still need to install CUDA 11.8 alongside it. See [cuda-troubleshooting.md](cuda-troubleshooting.md) for detailed setup instructions.
+> **Note:** The CUDA backend requires CUDA 11.8 runtime DLLs. VoxTether can download these automatically via Settings → Performance → "Get CUDA DLLs" button. Alternatively, you can install CUDA Toolkit 11.8 manually. See [cuda-troubleshooting.md](cuda-troubleshooting.md) for detailed setup instructions.
 
 ## How It Works
 
@@ -181,7 +181,17 @@ whisper/
 
 ### CUDA Backend Not Working (Missing DLLs)
 
-If the CUDA backend is downloaded but VoxTether falls back to CPU mode, you likely need to install CUDA 11.8 runtime:
+If the CUDA backend is downloaded but VoxTether falls back to CPU mode, you likely need the CUDA 11.8 runtime DLLs.
+
+**Easiest Solution - Use Built-in Download:**
+
+1. Open VoxTether Settings (right-click tray icon → Settings)
+2. Go to the **Performance** tab
+3. Look for "Missing CUDA DLLs" status (shown in orange) under the NVIDIA CUDA backend
+4. Click the **"Get CUDA DLLs"** button to download the required files (~403 MB)
+5. Restart VoxTether
+
+**Alternative Solutions:**
 
 1. **Check logs**: Look for messages like "missing CUDA 11.8 runtime DLLs" or "cublas64_11.dll"
 2. **Install CUDA Toolkit 11.8**: Download from [NVIDIA CUDA 11.8 Archive](https://developer.nvidia.com/cuda-11-8-0-download-archive)
