@@ -73,7 +73,15 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
 
         var baseDir = AppContext.BaseDirectory;
         _whisperDirectory = Path.Combine(baseDir, "whisper");
-        Directory.CreateDirectory(_whisperDirectory);
+        
+        try
+        {
+            Directory.CreateDirectory(_whisperDirectory);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to create whisper directory in constructor. Will retry on demand.");
+        }
     }
 
     /// <inheritdoc />
@@ -83,7 +91,12 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
         {
             // For now, use the embedded manifest
             // In the future, this could fetch from a remote URL with fallback to embedded
-            var manifest = JsonSerializer.Deserialize<BackendManifest>(DefaultManifestJson);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            
+            var manifest = JsonSerializer.Deserialize<BackendManifest>(DefaultManifestJson, options);
             if (manifest == null)
             {
                 throw new InvalidOperationException("Failed to parse backend manifest");
@@ -306,7 +319,14 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
     {
         try
         {
-            var driveInfo = new DriveInfo(Path.GetPathRoot(_whisperDirectory)!);
+            var pathRoot = Path.GetPathRoot(_whisperDirectory);
+            if (string.IsNullOrEmpty(pathRoot))
+            {
+                _logger.LogWarning("Unable to determine path root for {Path}", _whisperDirectory);
+                return long.MaxValue;
+            }
+            
+            var driveInfo = new DriveInfo(pathRoot);
             return driveInfo.AvailableFreeSpace;
         }
         catch (Exception ex)
