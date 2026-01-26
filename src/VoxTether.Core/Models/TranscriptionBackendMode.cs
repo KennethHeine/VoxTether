@@ -7,7 +7,7 @@ public enum TranscriptionBackendMode
 {
     /// <summary>
     /// Automatically select the best available backend based on hardware detection.
-    /// Order of preference: CUDA > Vulkan > OpenVINO > CPU.
+    /// Order of preference: CUDA > CPU.
     /// </summary>
     Auto = 0,
 
@@ -19,15 +19,5 @@ public enum TranscriptionBackendMode
     /// <summary>
     /// Force NVIDIA CUDA backend (fastest if NVIDIA GPU present).
     /// </summary>
-    Cuda = 2,
-
-    /// <summary>
-    /// Force Vulkan backend (cross-vendor GPU acceleration).
-    /// </summary>
-    Vulkan = 3,
-
-    /// <summary>
-    /// Force Intel OpenVINO backend (Intel NPU/iGPU acceleration).
-    /// </summary>
-    OpenVino = 4
+    Cuda = 2
 }

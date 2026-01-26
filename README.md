@@ -93,21 +93,19 @@ VoxTether comes with a default speech recognition model (ggml-base.bin). You can
 
 ## GPU Acceleration
 
-VoxTether supports GPU acceleration for faster transcription using various backends. The application ships with a CPU backend by default and offers on-demand downloads of GPU-accelerated backends.
+VoxTether supports GPU acceleration for faster transcription. The application ships with a CPU backend by default and offers on-demand download of the NVIDIA CUDA backend.
 
 ### Available Backends
 
 - **CPU Only** (included) - Works on any system, no additional downloads required
-- **NVIDIA CUDA** - For NVIDIA graphics cards (fastest for NVIDIA GPUs)
-- **Vulkan** - Cross-vendor GPU acceleration (AMD, NVIDIA, Intel)
-- **Intel OpenVINO** - Optimized for Intel CPUs, integrated GPUs, and NPUs
+- **NVIDIA CUDA** (downloadable) - For NVIDIA graphics cards (fastest for NVIDIA GPUs)
 
 ### First-Run Experience
 
 On first launch, VoxTether will:
 1. Detect your GPU hardware
-2. Recommend appropriate backends for your system
-3. Offer to download the recommended backend(s)
+2. Recommend CUDA backend if an NVIDIA GPU is detected
+3. Offer to download the CUDA backend
 
 You can skip this and use CPU-only mode, or download backends later from Settings.
 
@@ -116,17 +114,15 @@ You can skip this and use CPU-only mode, or download backends later from Setting
 1. Open Settings from the tray menu
 2. Navigate to the **Performance** tab
 3. Scroll to **Backend Management**
-4. Click **Download** next to the backend you want to install
+4. Click **Download** next to the CUDA backend
 
 Download sizes:
-- CUDA: ~50 MB
-- Vulkan: ~30 MB
-- OpenVINO: ~40 MB
+- CUDA: ~60 MB
 
 ### Managing Backends
 
 In Settings → Performance → Backend Management, you can:
-- Download additional backends
+- Download the CUDA backend
 - Remove installed backends to free disk space
 - View backend status and requirements
 
@@ -174,11 +170,10 @@ Use "auto" for automatic detection, or specify a language code:
 
 ### GPU Acceleration Not Working
 
-1. Ensure you have downloaded the appropriate backend for your GPU
+1. Ensure you have downloaded the CUDA backend for your NVIDIA GPU
 2. Check that GPU drivers are up to date
-3. Try different backends (Vulkan often works well across vendors)
-4. Check logs for backend-specific errors
-5. Fall back to CPU mode if GPU acceleration issues persist
+3. Check logs for backend-specific errors
+4. Fall back to CPU mode if GPU acceleration issues persist
 
 ### Microphone Not Working
 

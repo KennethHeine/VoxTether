@@ -27,35 +27,19 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
     private readonly string _whisperDirectory;
 
     // Embedded manifest as fallback
+    // Note: Only CUDA is available as a pre-built binary from ggml-org/whisper.cpp
+    // Vulkan and OpenVINO require compilation from source and are not offered for download
     private const string DefaultManifestJson = @"{
   ""version"": ""1.0"",
   ""backends"": [
     {
       ""id"": ""cuda"",
       ""name"": ""NVIDIA CUDA"",
-      ""description"": ""GPU acceleration for NVIDIA graphics cards"",
-      ""downloadUrl"": ""https://github.com/KennethHeine/VoxTether/releases/download/backends/whisper-cuda.zip"",
-      ""size"": 52428800,
-      ""checksum"": ""sha256:pending"",
+      ""description"": ""GPU acceleration for NVIDIA graphics cards (CUDA 11.8)"",
+      ""downloadUrl"": ""https://github.com/ggml-org/whisper.cpp/releases/download/v1.8.3/whisper-cublas-11.8.0-bin-x64.zip"",
+      ""size"": 61582231,
+      ""checksum"": ""sha256:a5ef69599305bdf3e135047b1a2151dcea79bc0fa201e3ea8681069c2abc7a8c"",
       ""requirements"": ""NVIDIA GPU with CUDA support and up-to-date drivers""
-    },
-    {
-      ""id"": ""vulkan"",
-      ""name"": ""Vulkan"",
-      ""description"": ""Cross-vendor GPU acceleration (AMD, NVIDIA, Intel)"",
-      ""downloadUrl"": ""https://github.com/KennethHeine/VoxTether/releases/download/backends/whisper-vulkan.zip"",
-      ""size"": 31457280,
-      ""checksum"": ""sha256:pending"",
-      ""requirements"": ""GPU with Vulkan support and Vulkan runtime installed""
-    },
-    {
-      ""id"": ""openvino"",
-      ""name"": ""Intel OpenVINO"",
-      ""description"": ""Hardware acceleration for Intel NPU and integrated graphics"",
-      ""downloadUrl"": ""https://github.com/KennethHeine/VoxTether/releases/download/backends/whisper-openvino.zip"",
-      ""size"": 41943040,
-      ""checksum"": ""sha256:pending"",
-      ""requirements"": ""Intel CPU/GPU with OpenVINO runtime installed""
     }
   ]
 }";
@@ -278,25 +262,14 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
         var recommended = new List<string>();
         var gpuDiagnostics = _backendSelection.GetGpuDiagnostics();
 
-        // Recommend based on detected hardware
+        // Only CUDA is available as a downloadable pre-built binary
+        // Vulkan and OpenVINO require compilation from source
         if (gpuDiagnostics.HasNvidiaGpu)
         {
             recommended.Add("cuda");
         }
 
-        if ((gpuDiagnostics.HasAmdGpu || gpuDiagnostics.HasIntelGpu || gpuDiagnostics.HasNvidiaGpu) &&
-            !recommended.Contains("vulkan"))
-        {
-            // Vulkan is cross-vendor
-            recommended.Add("vulkan");
-        }
-
-        if (gpuDiagnostics.HasIntelGpu)
-        {
-            recommended.Add("openvino");
-        }
-
-        // If no GPU detected, no recommendations (user can use CPU)
+        // If no NVIDIA GPU detected, no recommendations (user can use CPU)
         _logger.LogDebug("Recommended backends: {Backends}", string.Join(", ", recommended));
         return recommended;
     }

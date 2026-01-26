@@ -118,8 +118,6 @@ public interface IBackendSelectionService
         TranscriptionBackendMode.Auto => "Auto",
         TranscriptionBackendMode.CpuOnly => "CPU Only",
         TranscriptionBackendMode.Cuda => "NVIDIA CUDA",
-        TranscriptionBackendMode.Vulkan => "Vulkan",
-        TranscriptionBackendMode.OpenVino => "Intel OpenVINO",
         _ => backend.ToString()
     };
 }

@@ -28,8 +28,6 @@ public class BackendSelectionService : IBackendSelectionService
     {
         [TranscriptionBackendMode.CpuOnly] = ["whisper_cpu.exe", "cpu/main.exe", "cpu/whisper.exe", "main.exe", "whisper.exe"],
         [TranscriptionBackendMode.Cuda] = ["whisper_cuda.exe", "cuda/main.exe", "cuda/whisper.exe"],
-        [TranscriptionBackendMode.Vulkan] = ["whisper_vulkan.exe", "vulkan/main.exe", "vulkan/whisper.exe"],
-        [TranscriptionBackendMode.OpenVino] = ["whisper_openvino.exe", "openvino/main.exe", "openvino/whisper.exe"],
     };
 
     public BackendSelectionService(ILogger<BackendSelectionService> logger)
@@ -158,24 +156,6 @@ public class BackendSelectionService : IBackendSelectionService
                 }
             }
 
-            if (IsBackendAvailable(TranscriptionBackendMode.OpenVino))
-            {
-                if (!diagnostics.HasIntelGpu)
-                {
-                    diagnostics.HasIntelGpu = true;
-                    diagnostics.DetectedGpus.Add("Intel GPU/NPU (inferred from OpenVINO backend availability)");
-                }
-            }
-
-            if (IsBackendAvailable(TranscriptionBackendMode.Vulkan))
-            {
-                if (diagnostics.DetectedGpus.Count == 0 || 
-                    diagnostics.DetectedGpus.All(g => !g.Contains("Vulkan")))
-                {
-                    diagnostics.DetectedGpus.Add("Vulkan-capable GPU (inferred from Vulkan backend availability)");
-                }
-            }
-
             // If no accelerated backends found, just note that CPU is available
             if (diagnostics.DetectedGpus.Count == 0)
             {
@@ -241,18 +221,6 @@ public class BackendSelectionService : IBackendSelectionService
                 diagnostics.DetectedGpus.Add("AMD GPU (detected from driver files)");
                 _logger.LogDebug("Detected AMD GPU from driver files");
             }
-
-            // Check for Vulkan runtime
-            var vulkanPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "vulkan-1.dll");
-            if (File.Exists(vulkanPath))
-            {
-                if (diagnostics.DetectedGpus.Count == 0 || 
-                    diagnostics.DetectedGpus.All(g => !g.Contains("Vulkan")))
-                {
-                    diagnostics.DetectedGpus.Add("Vulkan runtime detected");
-                }
-                _logger.LogDebug("Detected Vulkan runtime");
-            }
         }
         catch (Exception ex)
         {
@@ -272,18 +240,16 @@ public class BackendSelectionService : IBackendSelectionService
 
     /// <summary>
     /// Determines the best available backend based on executable availability.
-    /// Order of preference: CUDA > Vulkan > OpenVINO > CPU.
+    /// Order of preference: CUDA > CPU.
     /// Uses a simple "try-load" approach by checking for backend executables.
     /// </summary>
     private TranscriptionBackendMode DetermineBestAvailableBackend()
     {
-        // Standard priority order for acceleration: CUDA > Vulkan > OpenVINO > CPU
+        // Standard priority order for acceleration: CUDA > CPU
         // This order is based on typical performance characteristics.
         var priorityOrder = new List<TranscriptionBackendMode>
         {
             TranscriptionBackendMode.Cuda,
-            TranscriptionBackendMode.Vulkan,
-            TranscriptionBackendMode.OpenVino,
             TranscriptionBackendMode.CpuOnly
         };
 
