@@ -19,6 +19,8 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
    - **Installer**: `VoxTether-Setup-x.x.x.exe` - Full installation with Start Menu shortcuts
    - **Portable**: `VoxTether-x.x.x-win-x64-portable.zip` - Extract and run anywhere
 
+**Note**: The installer does not require admin privileges and installs to your user profile by default. You can also choose to install for all users if you have admin rights.
+
 ### Building from Source
 
 ```bash
@@ -191,9 +193,10 @@ VoxTether includes built-in update checking:
 
 The VoxTether installer automatically handles upgrades:
 
+- **No admin required**: Installs to user profile by default, no elevation needed
 - **Detects existing installation**: The installer checks if VoxTether is already installed
 - **Version notification**: Shows the currently installed version and the new version
-- **Automatic app closure**: Prompts to close VoxTether if it's running before upgrading
+- **Automatic app closure**: Closes VoxTether if it's running before upgrading
 - **Settings preserved**: Your settings, models, and logs are preserved during upgrade
 - **Same location**: Uses the same installation directory as the previous version
 
