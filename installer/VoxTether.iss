@@ -61,6 +61,8 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: startupicon
 
 [UninstallDelete]
+; Note: User models in {userappdata}\{#MyAppName}\models are PRESERVED during updates
+; They are only deleted during uninstall if the user chooses "Yes" in the cleanup prompt
 Type: filesandordirs; Name: "{userappdata}\{#MyAppName}"
 
 [Code]
@@ -139,7 +141,7 @@ begin
   
   if CurUninstallStep = usPostUninstall then
   begin
-    mRes := MsgBox('Do you want to delete user settings and logs?', mbConfirmation, MB_YESNO or MB_DEFBUTTON2);
+    mRes := MsgBox('Do you want to delete user data (settings, logs, and downloaded models)?', mbConfirmation, MB_YESNO or MB_DEFBUTTON2);
     if mRes = IDYES then
     begin
       DelTree(ExpandConstant('{userappdata}\{#MyAppName}'), True, True, True);

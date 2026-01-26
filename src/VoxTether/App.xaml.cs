@@ -10,6 +10,7 @@ using VoxTether.Core.Services;
 using VoxTether.Infrastructure;
 using VoxTether.Transcription;
 using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
 
 namespace VoxTether;
 
@@ -34,6 +35,26 @@ public partial class App : Application
             return;
         }
 
+        // Check if a model is available, prompt user to download if not
+        if (!HasModel())
+        {
+            var setupWindow = new ModelSetupWindow();
+            var result = setupWindow.ShowDialog();
+            
+            // If user closed without downloading a model, exit the application
+            if (result != true || !setupWindow.ModelDownloaded)
+            {
+                MessageBox.Show(
+                    "VoxTether requires a speech recognition model to function.\n\n" +
+                    "Please restart the application and download a model to continue.",
+                    "Model Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                Shutdown(0);
+                return;
+            }
+        }
+
         // Configure services
         var services = new ServiceCollection();
         ConfigureServices(services);
@@ -45,6 +66,34 @@ public partial class App : Application
 
         _trayIconManager.Initialize();
         _controller.Start();
+    }
+
+    /// <summary>
+    /// Checks if a speech recognition model is available.
+    /// </summary>
+    private static bool HasModel()
+    {
+        // Check user models folder first (this persists across updates)
+        if (Directory.Exists(SettingsService.UserModelsPath))
+        {
+            var userModels = Directory.GetFiles(SettingsService.UserModelsPath, "*.bin");
+            if (userModels.Length > 0)
+            {
+                return true;
+            }
+        }
+
+        // Check installed models folder (bundled with app, if any)
+        if (Directory.Exists(SettingsService.InstalledModelsPath))
+        {
+            var installedModels = Directory.GetFiles(SettingsService.InstalledModelsPath, "*.bin");
+            if (installedModels.Length > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ConfigureServices(IServiceCollection services)

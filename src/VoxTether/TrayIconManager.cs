@@ -216,18 +216,40 @@ public class TrayIconManager : IDisposable
 
             if (updateInfo.IsNewerVersion)
             {
-                var result = MessageBox.Show(
-                    $"A new version of VoxTether is available!\n\n" +
-                    $"Current version: v{currentVersion}\n" +
-                    $"Latest version: v{updateInfo.Version}\n\n" +
-                    "Would you like to open the download page?",
-                    "Update Available",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Information);
-
-                if (result == MessageBoxResult.Yes)
+                // Check if installer is available for in-app update
+                if (!string.IsNullOrEmpty(updateInfo.InstallerUrl))
                 {
-                    _updateService.OpenReleasePage(updateInfo);
+                    var result = MessageBox.Show(
+                        $"A new version of VoxTether is available!\n\n" +
+                        $"Current version: v{currentVersion}\n" +
+                        $"Latest version: v{updateInfo.Version}\n\n" +
+                        "Would you like to download and install the update now?\n\n" +
+                        "(VoxTether will restart after the update)",
+                        "Update Available",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        await DownloadAndInstallUpdate(updateInfo);
+                    }
+                }
+                else
+                {
+                    // Fallback to opening release page if no installer available
+                    var result = MessageBox.Show(
+                        $"A new version of VoxTether is available!\n\n" +
+                        $"Current version: v{currentVersion}\n" +
+                        $"Latest version: v{updateInfo.Version}\n\n" +
+                        "Would you like to open the download page?",
+                        "Update Available",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        _updateService.OpenReleasePage(updateInfo);
+                    }
                 }
             }
             else
@@ -245,6 +267,41 @@ public class TrayIconManager : IDisposable
             MessageBox.Show(
                 "An error occurred while checking for updates.",
                 "Update Check Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private async Task DownloadAndInstallUpdate(UpdateInfo updateInfo)
+    {
+        ShowNotification("Downloading Update", $"Downloading VoxTether v{updateInfo.Version}...");
+        
+        try
+        {
+            var success = await _updateService.DownloadAndInstallUpdateAsync(updateInfo);
+            
+            if (success)
+            {
+                // The installer will close the app and restart it
+                // Exit gracefully to allow the installer to proceed
+                _logger.LogInformation("Update installer launched, shutting down for update");
+                Application.Current.Shutdown();
+            }
+            else
+            {
+                MessageBox.Show(
+                    "Failed to download the update. Please try again later or download manually from the release page.",
+                    "Update Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error downloading update");
+            MessageBox.Show(
+                $"An error occurred while downloading the update: {ex.Message}",
+                "Update Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }

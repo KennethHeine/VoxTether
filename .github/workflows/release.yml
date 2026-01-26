@@ -72,15 +72,9 @@ jobs:
         Remove-Item whisper-bin.zip
       shell: pwsh
 
-    - name: Download default model
-      run: |
-        # Create models directory
-        New-Item -ItemType Directory -Force -Path ./publish/models
-        
-        # Download ggml-base model (good balance of quality and size)
-        $modelUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
-        Invoke-WebRequest -Uri $modelUrl -OutFile ./publish/models/ggml-base.bin
-      shell: pwsh
+    # Note: Models are NOT bundled with the installer/portable package
+    # Users will be prompted to download a model on first launch
+    # This keeps the installer small and allows users to choose their preferred model
 
     - name: Create portable ZIP
       run: |

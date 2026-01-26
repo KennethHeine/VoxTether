@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VoxTether.Core.Interfaces;
+using VoxTether.Core.Models;
 
 namespace VoxTether.Core.Services;
 
@@ -24,6 +26,14 @@ public class GitHubUpdateService : IUpdateService
     private const string InstallerPattern = "Setup";
     private const string PortableExtension = ".zip";
     private const string PortablePattern = "portable";
+    
+    private const int BufferSize = 8192;
+    private const double BytesToMb = 1024.0 * 1024.0;
+
+    /// <summary>
+    /// Event raised when download status changes.
+    /// </summary>
+    public event Action<string>? StatusChanged;
 
     static GitHubUpdateService()
     {
@@ -126,6 +136,103 @@ public class GitHubUpdateService : IUpdateService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open release page");
+        }
+    }
+
+    public async Task<bool> DownloadAndInstallUpdateAsync(
+        UpdateInfo updateInfo,
+        IProgress<int>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(updateInfo.InstallerUrl))
+        {
+            _logger.LogWarning("Cannot download update: Installer URL is empty");
+            StatusChanged?.Invoke("No installer available for this update.");
+            return false;
+        }
+
+        try
+        {
+            StatusChanged?.Invoke($"Downloading VoxTether v{updateInfo.Version}...");
+            _logger.LogInformation("Downloading update from: {Url}", updateInfo.InstallerUrl);
+
+            // Download to temp folder
+            var tempPath = SettingsService.TempPath;
+            var installerFileName = $"VoxTether-Setup-{updateInfo.Version}.exe";
+            var installerPath = Path.Combine(tempPath, installerFileName);
+
+            // Create a new HttpClient with longer timeout for downloads
+            using var downloadClient = new HttpClient();
+            downloadClient.Timeout = TimeSpan.FromMinutes(10);
+
+            using var response = await downloadClient.GetAsync(
+                updateInfo.InstallerUrl,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+
+            var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+            var totalMb = totalBytes > 0 ? totalBytes / BytesToMb : 0;
+
+            StatusChanged?.Invoke($"Downloading VoxTether v{updateInfo.Version} ({totalMb:F1} MB)...");
+
+            using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var fileStream = new FileStream(installerPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true);
+
+            var buffer = new byte[BufferSize];
+            var totalBytesRead = 0L;
+            var lastReportedProgress = 0;
+            int bytesRead;
+
+            while ((bytesRead = await contentStream.ReadAsync(buffer, cancellationToken)) > 0)
+            {
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                totalBytesRead += bytesRead;
+
+                if (totalBytes > 0)
+                {
+                    var progressPercent = (int)((totalBytesRead * 100) / totalBytes);
+                    if (progressPercent != lastReportedProgress)
+                    {
+                        lastReportedProgress = progressPercent;
+                        progress?.Report(progressPercent);
+                        StatusChanged?.Invoke($"Downloading VoxTether v{updateInfo.Version}: {progressPercent}%");
+                    }
+                }
+            }
+
+            // Close the file stream before launching
+            await fileStream.FlushAsync(cancellationToken);
+            fileStream.Close();
+
+            StatusChanged?.Invoke("Download complete. Launching installer...");
+            _logger.LogInformation("Update downloaded to: {Path}", installerPath);
+
+            // Launch the installer with silent/automatic upgrade flag
+            // The /SILENT flag performs a silent install with progress display
+            // The /CLOSEAPPLICATIONS flag will close VoxTether if running
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = installerPath,
+                Arguments = "/SILENT /CLOSEAPPLICATIONS",
+                UseShellExecute = true
+            });
+
+            _logger.LogInformation("Installer launched, application will be updated");
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            StatusChanged?.Invoke("Download cancelled.");
+            _logger.LogInformation("Update download was cancelled");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            StatusChanged?.Invoke($"Download failed: {ex.Message}");
+            _logger.LogError(ex, "Failed to download and install update");
+            return false;
         }
     }
 
