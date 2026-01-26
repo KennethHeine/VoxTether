@@ -31,12 +31,20 @@ public class VoxTetherControllerIntegrationTests : TestBase, IDisposable
         var testAudioPath = Path.Combine(_tempDir, "test.wav");
         TestResources.CreateDummyWavFile(testAudioPath);
 
+        // Create a dummy model file for testing (controller checks for model existence)
+        var modelsDir = Path.Combine(_tempDir, "models");
+        Directory.CreateDirectory(modelsDir);
+        var testModelPath = Path.Combine(modelsDir, "test-model.bin");
+        File.WriteAllBytes(testModelPath, [0x00]); // Minimal dummy file
+
         _hotkeyService = new MockHotkeyService();
         _recorder = new MockAudioRecorder(testAudioPath);
         _transcriptionEngine = new MockTranscriptionEngine("Hello, this is a test transcription.");
         _textInjector = new MockTextInjector();
 
         _settingsService = new SettingsService();
+        // Configure settings to use the test model
+        _settingsService.Settings.ModelPath = testModelPath;
         var postProcessor = new NoOpTextPostProcessor();
 
         _controller = new VoxTetherController(
