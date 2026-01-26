@@ -377,25 +377,30 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
     /// <inheritdoc />
     public bool AreCudaDllsInstalled()
     {
+        // First check the directory where the CUDA executable is located
         var cudaReleaseDir = GetCudaReleaseDirectory();
-        if (!Directory.Exists(cudaReleaseDir))
+        if (Directory.Exists(cudaReleaseDir))
         {
-            _logger.LogDebug("CUDA release directory does not exist: {Path}", cudaReleaseDir);
-            return false;
-        }
-
-        foreach (var dll in RequiredCudaDlls)
-        {
-            var dllPath = Path.Combine(cudaReleaseDir, dll);
-            if (!File.Exists(dllPath))
+            if (BackendSelectionService.AreCudaDllsInDirectory(cudaReleaseDir))
             {
-                _logger.LogDebug("Required CUDA DLL not found: {DllPath}", dllPath);
-                return false;
+                _logger.LogDebug("All required CUDA DLLs found in: {Path}", cudaReleaseDir);
+                return true;
             }
         }
+        else
+        {
+            _logger.LogDebug("CUDA release directory does not exist: {Path}", cudaReleaseDir);
+        }
 
-        _logger.LogDebug("All required CUDA DLLs are installed");
-        return true;
+        // Also check the system PATH as a fallback
+        if (BackendSelectionService.AreCudaDllsInPath())
+        {
+            _logger.LogDebug("All required CUDA DLLs found in system PATH");
+            return true;
+        }
+
+        _logger.LogDebug("Required CUDA DLLs not found in {Dir} or PATH", cudaReleaseDir);
+        return false;
     }
 
     /// <inheritdoc />
@@ -536,12 +541,72 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
     }
 
     /// <summary>
-    /// Gets the path to the CUDA backend's Release directory where DLLs should be placed.
+    /// Gets the path to the CUDA backend's directory where DLLs should be placed.
+    /// This is the same directory as the CUDA whisper executable.
+    /// If the CUDA executable is found, returns its directory.
+    /// Otherwise falls back to the default whisper/cuda/Release/ path.
     /// </summary>
     private string GetCudaReleaseDirectory()
     {
-        // The whisper.cpp CUDA release extracts to whisper/cuda/Release/
-        return Path.Combine(_whisperDirectory, "cuda", "Release");
+        // Try to find the CUDA executable and use its directory
+        var cudaExePath = FindCudaExecutable();
+        if (!string.IsNullOrEmpty(cudaExePath))
+        {
+            var exeDir = Path.GetDirectoryName(cudaExePath);
+            if (!string.IsNullOrEmpty(exeDir) && Directory.Exists(exeDir))
+            {
+                _logger.LogDebug("Using CUDA executable directory for DLLs: {Path}", exeDir);
+                return exeDir;
+            }
+        }
+
+        // Fallback: The whisper.cpp CUDA release typically extracts to whisper/cuda/Release/
+        var fallbackDir = Path.Combine(_whisperDirectory, "cuda", "Release");
+        _logger.LogDebug("Using fallback CUDA DLL directory: {Path}", fallbackDir);
+        return fallbackDir;
+    }
+
+    /// <summary>
+    /// Finds the CUDA whisper executable path.
+    /// Searches in common locations where the CUDA backend might be installed.
+    /// </summary>
+    private string? FindCudaExecutable()
+    {
+        var executableNames = new[] { "whisper-cli.exe", "whisper.exe", "main.exe" };
+        var searchPaths = new[]
+        {
+            Path.Combine(_whisperDirectory, "cuda", "Release"),
+            Path.Combine(_whisperDirectory, "cuda", "bin"),
+            Path.Combine(_whisperDirectory, "cuda"),
+            _whisperDirectory
+        };
+
+        foreach (var searchPath in searchPaths)
+        {
+            if (!Directory.Exists(searchPath))
+                continue;
+
+            foreach (var exeName in executableNames)
+            {
+                var fullPath = Path.Combine(searchPath, exeName);
+                if (File.Exists(fullPath))
+                {
+                    _logger.LogDebug("Found CUDA executable at: {Path}", fullPath);
+                    return fullPath;
+                }
+            }
+        }
+
+        // Also check for whisper_cuda.exe at the whisper directory level
+        var cudaExePath = Path.Combine(_whisperDirectory, "whisper_cuda.exe");
+        if (File.Exists(cudaExePath))
+        {
+            _logger.LogDebug("Found CUDA executable at: {Path}", cudaExePath);
+            return cudaExePath;
+        }
+
+        _logger.LogDebug("CUDA executable not found");
+        return null;
     }
 
     /// <summary>

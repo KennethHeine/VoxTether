@@ -215,9 +215,10 @@ public class WhisperCppEngine : ITranscriptionEngine
                 
                 if (process.ExitCode == STATUS_DLL_NOT_FOUND)
                 {
-                    result.Error = "Missing required DLLs. If using CUDA backend, please install the NVIDIA CUDA Toolkit 11.8 or switch to CPU backend in Settings.";
+                    result.Error = "Missing required DLLs. If using CUDA backend: Settings → Performance → Get CUDA DLLs (CUDA 11.8). " +
+                        "If that fails, install NVIDIA CUDA Toolkit 11.8, or switch to CPU backend in Settings.";
                     _logger.LogError("Whisper transcription failed due to missing DLLs (likely CUDA runtime). " +
-                        "Exit code: {ExitCode}. Consider switching to CPU backend or installing CUDA Toolkit 11.8.", 
+                        "Exit code: {ExitCode}. Use Settings → Performance → Get CUDA DLLs, or install CUDA Toolkit 11.8.", 
                         process.ExitCode);
                     return result;
                 }

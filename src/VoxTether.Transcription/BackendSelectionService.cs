@@ -37,6 +37,11 @@ public class BackendSelectionService : IBackendSelectionService
     };
 
     /// <summary>
+    /// Required CUDA 11.8 runtime DLLs for the CUDA backend.
+    /// </summary>
+    public static readonly string[] RequiredCudaDlls = ["cublas64_11.dll", "cublasLt64_11.dll", "cudart64_110.dll"];
+
+    /// <summary>
     /// Creates a new BackendSelectionService.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
@@ -138,10 +143,21 @@ public class BackendSelectionService : IBackendSelectionService
             }
             else
             {
-                // Validate the executable can actually run
-                var (canRun, reason) = ValidateExecutableCanRun(execPath);
-                isAvailable = canRun;
-                unavailableReason = reason;
+                // For CUDA backend, first check if required DLLs are present
+                // before attempting runtime validation (which may not detect missing DLLs due to delay-loading)
+                if (backend == TranscriptionBackendMode.Cuda && !AreCudaDllsAvailable(execPath))
+                {
+                    isAvailable = false;
+                    unavailableReason = "Missing CUDA 11.8 runtime DLLs. Click 'Get CUDA DLLs' in Settings → Performance to download them.";
+                    _logger.LogDebug("CUDA backend has executable but missing DLLs: {Path}", execPath);
+                }
+                else
+                {
+                    // Validate the executable can actually run
+                    var (canRun, reason) = ValidateExecutableCanRun(execPath);
+                    isAvailable = canRun;
+                    unavailableReason = reason;
+                }
             }
 
             backends.Add(new BackendInfo
@@ -277,6 +293,14 @@ public class BackendSelectionService : IBackendSelectionService
         if (string.IsNullOrEmpty(execPath))
         {
             failureReason = "Executable not found";
+            return false;
+        }
+        
+        // For CUDA backend, first check if required DLLs are present
+        if (backend == TranscriptionBackendMode.Cuda && !AreCudaDllsAvailable(execPath))
+        {
+            failureReason = "Missing CUDA 11.8 runtime DLLs. Click 'Get CUDA DLLs' in Settings → Performance to download them.";
+            _logger.LogWarning("Backend {Backend} executable exists but CUDA DLLs are missing", backend);
             return false;
         }
         
@@ -466,6 +490,113 @@ public class BackendSelectionService : IBackendSelectionService
     }
     
     /// <summary>
+    /// Checks if the required CUDA 11.8 runtime DLLs are present in a specific directory.
+    /// </summary>
+    /// <param name="directory">Directory to check for CUDA DLLs.</param>
+    /// <returns>True if all required CUDA DLLs are present in the directory.</returns>
+    public static bool AreCudaDllsInDirectory(string directory)
+    {
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            return false;
+
+        foreach (var dll in RequiredCudaDlls)
+        {
+            var dllPath = Path.Combine(directory, dll);
+            if (!File.Exists(dllPath))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Checks if the required CUDA 11.8 runtime DLLs are discoverable via the system PATH.
+    /// </summary>
+    /// <returns>True if all required CUDA DLLs are found in any PATH directory.</returns>
+    public static bool AreCudaDllsInPath()
+    {
+        var pathEnv = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(pathEnv))
+            return false;
+
+        var pathDirs = pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (var dll in RequiredCudaDlls)
+        {
+            var found = false;
+            foreach (var dir in pathDirs)
+            {
+                try
+                {
+                    var dllPath = Path.Combine(dir, dll);
+                    if (File.Exists(dllPath))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    // Invalid path entry in PATH (e.g., contains invalid characters)
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Access denied to directory
+                }
+                catch (IOException)
+                {
+                    // I/O error checking path
+                }
+            }
+
+            if (!found)
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Gets the directory where the CUDA executable is located.
+    /// This is the directory where CUDA runtime DLLs should be placed.
+    /// </summary>
+    /// <param name="cudaExePath">Path to the CUDA whisper executable.</param>
+    /// <returns>Directory containing the CUDA executable, or null if path is invalid.</returns>
+    public static string? GetCudaExecutableDirectory(string? cudaExePath)
+    {
+        if (string.IsNullOrEmpty(cudaExePath))
+            return null;
+
+        return Path.GetDirectoryName(cudaExePath);
+    }
+
+    /// <summary>
+    /// Checks if CUDA DLLs are available for a given CUDA executable.
+    /// First checks the executable's directory, then falls back to checking PATH.
+    /// </summary>
+    /// <param name="cudaExePath">Path to the CUDA whisper executable.</param>
+    /// <returns>True if CUDA DLLs are available (either locally or via PATH).</returns>
+    public bool AreCudaDllsAvailable(string? cudaExePath)
+    {
+        var exeDir = GetCudaExecutableDirectory(cudaExePath);
+        
+        if (exeDir != null && AreCudaDllsInDirectory(exeDir))
+        {
+            _logger.LogDebug("CUDA DLLs found next to executable in: {Directory}", exeDir);
+            return true;
+        }
+
+        if (AreCudaDllsInPath())
+        {
+            _logger.LogDebug("CUDA DLLs found in system PATH");
+            return true;
+        }
+
+        _logger.LogDebug("CUDA DLLs not found (checked {Directory} and PATH)", exeDir ?? "(no exe dir)");
+        return false;
+    }
+    
+    /// <summary>
     /// Validates that an executable can actually run (i.e., all required DLLs are present).
     /// Uses a cache to avoid repeatedly validating the same executable.
     /// </summary>
@@ -596,10 +727,10 @@ public class BackendSelectionService : IBackendSelectionService
                 else
                 {
                     // Process stuck without output - likely a Windows error dialog for missing DLLs
-                    const string TimeoutReason = "Process timed out - likely missing CUDA 11.8 runtime DLLs (cublas64_11.dll). " +
-                        "Install CUDA Toolkit 11.8 from nvidia.com or see docs/cuda-troubleshooting.md for help.";
+                    const string TimeoutReason = "Process timed out - likely missing CUDA 11.8 runtime DLLs. " +
+                        "Download them in Settings → Performance → Get CUDA DLLs, or install CUDA Toolkit 11.8 from nvidia.com.";
                     _logger.LogWarning("Executable appears blocked (no output after timeout), likely missing CUDA 11.8 DLLs. " +
-                        "Path: {Path}. Install CUDA Toolkit 11.8 from https://developer.nvidia.com/cuda-11-8-0-download-archive", execPath);
+                        "Path: {Path}. Use Settings → Performance → Get CUDA DLLs or install CUDA Toolkit 11.8.", execPath);
                     return (false, TimeoutReason);
                 }
             }
@@ -612,9 +743,9 @@ public class BackendSelectionService : IBackendSelectionService
             if (process.ExitCode == STATUS_DLL_NOT_FOUND)
             {
                 var reason = "Missing CUDA 11.8 runtime DLLs (cublas64_11.dll, cudart64_110.dll). " +
-                    "Install CUDA Toolkit 11.8 from nvidia.com or see docs/cuda-troubleshooting.md for help.";
+                    "Download them in Settings → Performance → Get CUDA DLLs, or install CUDA Toolkit 11.8 from nvidia.com.";
                 _logger.LogWarning("Executable cannot run due to missing CUDA 11.8 DLLs: {Path}. " +
-                    "Install CUDA Toolkit 11.8 from https://developer.nvidia.com/cuda-11-8-0-download-archive", execPath);
+                    "Use Settings → Performance → Get CUDA DLLs or install CUDA Toolkit 11.8.", execPath);
                 return (false, reason);
             }
             
