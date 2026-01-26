@@ -84,6 +84,8 @@ New implementations should follow the interface-based architecture:
 | `IHotkeyService` | Global hotkey detection | VoxTether.Infrastructure |
 | `ITextPostProcessor` | Post-processing hook | VoxTether.Transcription |
 | `IBackendDownloadService` | Backend management | VoxTether.Transcription |
+| `IBackendSelectionService` | GPU/CPU backend selection | VoxTether.Transcription |
+| `IUpdateService` | Update checking | VoxTether.Core.Services |
 
 ## CI/CD Pipeline
 
@@ -123,9 +125,10 @@ Manually triggered with version input. Builds, tests, creates portable ZIP and i
 
 Dependencies are declared in `.csproj` files:
 - **VoxTether**: Microsoft.Extensions.Logging, Microsoft.Extensions.DependencyInjection
-- **VoxTether.Core**: Microsoft.Extensions.Logging.Abstractions, System.Text.Json
+- **VoxTether.Core**: Microsoft.Extensions.Logging, Microsoft.Extensions.Logging.Abstractions, System.Text.Json
 - **VoxTether.Infrastructure**: NAudio
-- **Tests**: xUnit, coverlet.collector
+- **VoxTether.Transcription**: (no external packages, references Core only)
+- **Tests**: xUnit, Microsoft.NET.Test.Sdk, coverlet.collector
 
 ## Testing
 
