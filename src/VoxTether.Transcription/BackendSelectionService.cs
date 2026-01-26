@@ -341,14 +341,14 @@ public class BackendSelectionService : IBackendSelectionService
 
     /// <summary>
     /// Searches a directory and its subdirectories for a whisper executable.
-    /// Prefers main.exe or whisper-cli.exe for transcription.
+    /// Uses executable names from BackendExecutablePatterns plus common whisper.cpp release names.
     /// </summary>
     private string? SearchDirectoryForExecutable(string directory, TranscriptionBackendMode backend)
     {
         try
         {
-            // Preferred executable names in order of preference
-            var preferredNames = new[] { "main.exe", "whisper-cli.exe", "whisper.exe" };
+            // Get executable names from patterns, extracting just the filename part
+            var preferredNames = GetPreferredExecutableNames(backend);
 
             // Search in immediate subdirectories (e.g., "Release/")
             foreach (var subdir in Directory.GetDirectories(directory))
@@ -381,5 +381,33 @@ public class BackendSelectionService : IBackendSelectionService
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Gets the preferred executable names for a backend, extracted from patterns.
+    /// Also includes whisper-cli.exe which is used in newer whisper.cpp releases.
+    /// </summary>
+    private static string[] GetPreferredExecutableNames(TranscriptionBackendMode backend)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Extract filenames from existing patterns
+        if (BackendExecutablePatterns.TryGetValue(backend, out var patterns))
+        {
+            foreach (var pattern in patterns)
+            {
+                // Extract just the filename from patterns like "cuda/main.exe"
+                var filename = Path.GetFileName(pattern);
+                names.Add(filename);
+            }
+        }
+
+        // Add common whisper.cpp release executable names
+        // whisper-cli.exe is used in newer whisper.cpp releases
+        names.Add("main.exe");
+        names.Add("whisper-cli.exe");
+        names.Add("whisper.exe");
+
+        return names.ToArray();
     }
 }

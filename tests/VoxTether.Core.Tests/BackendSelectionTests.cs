@@ -210,11 +210,7 @@ public class BackendSelectionTests
         }
         finally
         {
-            // Cleanup
-            if (Directory.Exists(Path.Combine(baseDir, "whisper", "cuda")))
-            {
-                Directory.Delete(Path.Combine(baseDir, "whisper", "cuda"), true);
-            }
+            CleanupTestBackendDirectory(baseDir);
         }
     }
 
@@ -250,11 +246,19 @@ public class BackendSelectionTests
         }
         finally
         {
-            // Cleanup
-            if (Directory.Exists(Path.Combine(baseDir, "whisper", "cuda")))
-            {
-                Directory.Delete(Path.Combine(baseDir, "whisper", "cuda"), true);
-            }
+            CleanupTestBackendDirectory(baseDir);
+        }
+    }
+
+    /// <summary>
+    /// Cleans up the test CUDA backend directory.
+    /// </summary>
+    private static void CleanupTestBackendDirectory(string baseDir)
+    {
+        var cudaDir = Path.Combine(baseDir, "whisper", "cuda");
+        if (Directory.Exists(cudaDir))
+        {
+            Directory.Delete(cudaDir, true);
         }
     }
 }
