@@ -42,7 +42,7 @@ jobs:
           --logger "console;verbosity=detailed" `
           --logger "trx;LogFileName=integration-test-results.trx" `
           --filter "Category=Integration"
-      continue-on-error: true
+      continue-on-error: false
 
     - name: Upload test results
       uses: actions/upload-artifact@v6

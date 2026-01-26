@@ -142,9 +142,13 @@ public class VoxTetherControllerIntegrationTests : TestBase, IDisposable
     public async Task TranscriptionFailure_RaisesErrorEvent()
     {
         // Arrange with failing transcription engine
+        // Use fresh instances to avoid interference from other tests
         var failingEngine = new MockTranscriptionEngine(
             shouldFail: true,
             errorMessage: "Model not found");
+
+        var hotkeyService = new MockHotkeyService();
+        var textInjector = new MockTextInjector();
 
         var errorOccurred = new TaskCompletionSource<string>();
 
@@ -152,9 +156,9 @@ public class VoxTetherControllerIntegrationTests : TestBase, IDisposable
             LoggerFactory.CreateLogger<VoxTetherController>(),
             _settingsService,
             _recorder,
-            _hotkeyService,
+            hotkeyService,
             failingEngine,
-            _textInjector,
+            textInjector,
             new NoOpTextPostProcessor()
         );
 
@@ -164,18 +168,19 @@ public class VoxTetherControllerIntegrationTests : TestBase, IDisposable
         Logger.LogInformation("Starting transcription failure test");
 
         // Act
-        _hotkeyService.SimulatePushToTalkPress();
+        hotkeyService.SimulatePushToTalkPress();
         await Task.Delay(50);
-        _hotkeyService.SimulatePushToTalkRelease();
+        hotkeyService.SimulatePushToTalkRelease();
 
         // Assert
         var error = await errorOccurred.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Contains("Model not found", error);
-        Assert.Empty(_textInjector.InjectedTexts); // No text should be injected on failure
+        Assert.Empty(textInjector.InjectedTexts); // No text should be injected on failure
 
         Logger.LogInformation("Transcription failure test completed successfully");
 
         controller.Stop();
+        hotkeyService.Dispose();
     }
 
     [Fact]
