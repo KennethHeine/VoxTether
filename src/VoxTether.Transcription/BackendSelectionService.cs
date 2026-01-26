@@ -493,6 +493,9 @@ public class BackendSelectionService : IBackendSelectionService
     /// </summary>
     private (bool CanRun, string? FailureReason) PerformRuntimeValidation(string execPath)
     {
+        // Timeout for validation - --help should return almost instantly
+        const int ValidationTimeoutMs = 5000;
+        
         try
         {
             _logger.LogDebug("Validating executable can run: {Path}", execPath);
@@ -512,13 +515,21 @@ public class BackendSelectionService : IBackendSelectionService
             process.Start();
             
             // Wait for the process to complete with a short timeout
-            // --help should return almost instantly
-            var completed = process.WaitForExit(5000);
+            var completed = process.WaitForExit(ValidationTimeoutMs);
             
             if (!completed)
             {
                 // Process is still running, which means it at least started successfully
-                try { process.Kill(); } catch { /* Ignore */ }
+                // Kill the process tree to ensure no orphaned processes
+                try 
+                { 
+                    process.Kill(entireProcessTree: true); 
+                } 
+                catch 
+                { 
+                    // Fallback to simple kill if tree kill fails
+                    try { process.Kill(); } catch { /* Ignore */ }
+                }
                 _logger.LogDebug("Executable validation passed (process started): {Path}", execPath);
                 return (true, null);
             }
@@ -553,9 +564,11 @@ public class BackendSelectionService : IBackendSelectionService
         }
         catch (Exception ex)
         {
-            // Unexpected errors - assume the executable can run to avoid false negatives
-            _logger.LogWarning(ex, "Unexpected error validating executable, assuming it can run: {Path}", execPath);
-            return (true, null);
+            // For unexpected errors, we err on the side of caution and report a validation failure
+            // rather than assuming the executable can run, as this prevents potential runtime errors
+            var reason = $"Validation failed: {ex.Message}";
+            _logger.LogWarning(ex, "Unexpected error validating executable: {Path}", execPath);
+            return (false, reason);
         }
     }
 }
