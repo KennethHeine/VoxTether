@@ -275,4 +275,32 @@ public class SettingsService
 
         return models;
     }
+
+    /// <summary>
+    /// Checks if any speech recognition model is available.
+    /// </summary>
+    public static bool HasAnyModel()
+    {
+        // Check user models folder first (this persists across updates)
+        if (Directory.Exists(UserModelsPath))
+        {
+            var userModels = Directory.GetFiles(UserModelsPath, "*.bin");
+            if (userModels.Length > 0)
+            {
+                return true;
+            }
+        }
+
+        // Check installed models folder (bundled with app, if any)
+        if (Directory.Exists(InstalledModelsPath))
+        {
+            var installedModels = Directory.GetFiles(InstalledModelsPath, "*.bin");
+            if (installedModels.Length > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

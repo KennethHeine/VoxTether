@@ -10,6 +10,7 @@ using VoxTether.Core.Services;
 using VoxTether.Infrastructure;
 using VoxTether.Transcription;
 using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
 
 namespace VoxTether;
 
@@ -32,6 +33,27 @@ public partial class App : Application
             RunHealthCheck();
             Shutdown(0);
             return;
+        }
+
+        // Check if a model is available, prompt user to download if not
+        if (!SettingsService.HasAnyModel())
+        {
+            var setupWindow = new ModelSetupWindow();
+            var result = setupWindow.ShowDialog();
+            
+            // If user closed without downloading a model, exit the application
+            // We check ModelDownloaded because the user might close the window without clicking Continue
+            if (result != true || !setupWindow.ModelDownloaded)
+            {
+                MessageBox.Show(
+                    "VoxTether requires a speech recognition model to function.\n\n" +
+                    "Please restart the application and download a model to continue.",
+                    "Model Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                Shutdown(0);
+                return;
+            }
         }
 
         // Configure services

@@ -54,4 +54,21 @@ public interface IUpdateService
     /// </summary>
     /// <param name="updateInfo">The update information containing the release URL.</param>
     void OpenReleasePage(UpdateInfo updateInfo);
+
+    /// <summary>
+    /// Downloads and installs an update from the specified URL.
+    /// </summary>
+    /// <param name="updateInfo">The update information containing the installer URL.</param>
+    /// <param name="progress">Optional progress reporter (0-100).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the download was successful and installer was launched, false otherwise.</returns>
+    Task<bool> DownloadAndInstallUpdateAsync(
+        UpdateInfo updateInfo,
+        IProgress<int>? progress = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Event raised when download status changes.
+    /// </summary>
+    event Action<string>? StatusChanged;
 }
