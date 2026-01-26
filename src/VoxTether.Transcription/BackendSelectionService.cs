@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VoxTether.Core.Interfaces;
 using VoxTether.Core.Models;
@@ -21,6 +22,9 @@ public class BackendSelectionService : IBackendSelectionService
     private bool _fellBackToCpu;
     private TranscriptionBackendMode? _requestedBackend;
     private GpuDiagnostics? _cachedGpuDiagnostics;
+    
+    // Cache for runtime validation results (executable path -> (canRun, failureReason))
+    private readonly Dictionary<string, (bool CanRun, string? FailureReason)> _runtimeValidationCache = new();
 
     // Executable name patterns for each backend
     // The whisper folder structure: whisper/<backend>/whisper-cli.exe or whisper/whisper_<backend>.exe
@@ -117,14 +121,28 @@ public class BackendSelectionService : IBackendSelectionService
                 continue;
 
             var execPath = FindExecutableForBackend(backend);
-            var isAvailable = !string.IsNullOrEmpty(execPath);
+            string? unavailableReason = null;
+            bool isAvailable;
+            
+            if (string.IsNullOrEmpty(execPath))
+            {
+                isAvailable = false;
+                unavailableReason = "Executable not found";
+            }
+            else
+            {
+                // Validate the executable can actually run
+                var (canRun, reason) = ValidateExecutableCanRun(execPath);
+                isAvailable = canRun;
+                unavailableReason = reason;
+            }
 
             backends.Add(new BackendInfo
             {
                 Backend = backend,
                 IsAvailable = isAvailable,
                 ExecutablePath = execPath,
-                UnavailableReason = isAvailable ? null : "Executable not found"
+                UnavailableReason = unavailableReason
             });
         }
 
@@ -232,11 +250,39 @@ public class BackendSelectionService : IBackendSelectionService
     /// <inheritdoc />
     public bool IsBackendAvailable(TranscriptionBackendMode backend)
     {
+        return IsBackendAvailable(backend, out _);
+    }
+    
+    /// <summary>
+    /// Checks if a backend is available, returning the failure reason if not.
+    /// </summary>
+    /// <param name="backend">The backend to check.</param>
+    /// <param name="failureReason">The reason the backend is not available, if any.</param>
+    /// <returns>True if the backend is available and can run.</returns>
+    private bool IsBackendAvailable(TranscriptionBackendMode backend, out string? failureReason)
+    {
+        failureReason = null;
+        
         if (backend == TranscriptionBackendMode.Auto)
             return true;
 
         var execPath = FindExecutableForBackend(backend);
-        return !string.IsNullOrEmpty(execPath);
+        if (string.IsNullOrEmpty(execPath))
+        {
+            failureReason = "Executable not found";
+            return false;
+        }
+        
+        // Validate the executable can actually run (check for missing DLLs, etc.)
+        var (canRun, reason) = ValidateExecutableCanRun(execPath);
+        if (!canRun)
+        {
+            failureReason = reason;
+            _logger.LogWarning("Backend {Backend} executable exists but cannot run: {Reason}", backend, reason);
+            return false;
+        }
+        
+        return true;
     }
 
     /// <summary>
@@ -410,5 +456,106 @@ public class BackendSelectionService : IBackendSelectionService
         names.Add("main.exe");
 
         return names.ToArray();
+    }
+    
+    /// <summary>
+    /// Validates that an executable can actually run (i.e., all required DLLs are present).
+    /// Uses a cache to avoid repeatedly validating the same executable.
+    /// </summary>
+    /// <param name="execPath">Path to the executable to validate.</param>
+    /// <returns>A tuple indicating whether the executable can run and any failure reason.</returns>
+    private (bool CanRun, string? FailureReason) ValidateExecutableCanRun(string execPath)
+    {
+        // Check cache first
+        lock (_lock)
+        {
+            if (_runtimeValidationCache.TryGetValue(execPath, out var cached))
+            {
+                return cached;
+            }
+        }
+        
+        // Validate by attempting to start the executable with --help
+        // This will fail fast if DLLs are missing (exit code 0xC0000135 = -1073741515)
+        var result = PerformRuntimeValidation(execPath);
+        
+        // Cache the result
+        lock (_lock)
+        {
+            _runtimeValidationCache[execPath] = result;
+        }
+        
+        return result;
+    }
+    
+    /// <summary>
+    /// Performs the actual runtime validation by attempting to start the executable.
+    /// </summary>
+    private (bool CanRun, string? FailureReason) PerformRuntimeValidation(string execPath)
+    {
+        try
+        {
+            _logger.LogDebug("Validating executable can run: {Path}", execPath);
+            
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = execPath,
+                Arguments = "--help",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                WorkingDirectory = Path.GetDirectoryName(execPath) ?? AppContext.BaseDirectory
+            };
+            
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+            
+            // Wait for the process to complete with a short timeout
+            // --help should return almost instantly
+            var completed = process.WaitForExit(5000);
+            
+            if (!completed)
+            {
+                // Process is still running, which means it at least started successfully
+                try { process.Kill(); } catch { /* Ignore */ }
+                _logger.LogDebug("Executable validation passed (process started): {Path}", execPath);
+                return (true, null);
+            }
+            
+            // Check for DLL_NOT_FOUND errors
+            // 0xC0000135 = -1073741515 = STATUS_DLL_NOT_FOUND
+            const int STATUS_DLL_NOT_FOUND = unchecked((int)0xC0000135);
+            
+            if (process.ExitCode == STATUS_DLL_NOT_FOUND)
+            {
+                var reason = "Required DLL not found (missing CUDA runtime or other dependencies)";
+                _logger.LogWarning("Executable cannot run due to missing DLL: {Path}", execPath);
+                return (false, reason);
+            }
+            
+            // Any other exit code (including non-zero from --help) means the executable at least runs
+            // whisper --help returns 0 on success
+            _logger.LogDebug("Executable validation passed (exit code {ExitCode}): {Path}", process.ExitCode, execPath);
+            return (true, null);
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 2)
+        {
+            // File not found (shouldn't happen since we checked File.Exists, but handle it)
+            return (false, "Executable file not found");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            // Other Win32 errors (e.g., access denied, bad executable format)
+            var reason = $"Cannot start executable: {ex.Message}";
+            _logger.LogWarning(ex, "Executable validation failed: {Path}", execPath);
+            return (false, reason);
+        }
+        catch (Exception ex)
+        {
+            // Unexpected errors - assume the executable can run to avoid false negatives
+            _logger.LogWarning(ex, "Unexpected error validating executable, assuming it can run: {Path}", execPath);
+            return (true, null);
+        }
     }
 }
