@@ -5,73 +5,153 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="VoxTether Settings" 
-        Height="450" Width="500"
+        Height="650" Width="600"
+        MinHeight="500" MinWidth="500"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize">
+        ResizeMode="CanResizeWithGrip">
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <!-- Hotkey -->
-        <GroupBox Grid.Row="0" Header="Hotkey" Margin="0,0,0,10">
-            <StackPanel Margin="10">
-                <TextBlock Text="Press and hold this hotkey to record:"/>
-                <TextBox x:Name="HotkeyTextBox" Margin="0,5,0,0" IsReadOnly="True" 
-                         Text="Ctrl + Alt + Space" FontSize="14" Padding="5"/>
-                <TextBlock Text="Click and press new key combination to change" 
-                           Foreground="Gray" Margin="0,5,0,0" FontSize="11"/>
+        <!-- Scrollable Content -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
+            <StackPanel>
+                <!-- Hotkey -->
+                <GroupBox Header="Hotkey" Margin="0,0,0,10">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Press and hold this hotkey to record:"/>
+                        <TextBox x:Name="HotkeyTextBox" Margin="0,5,0,0" IsReadOnly="True" 
+                                 Text="Ctrl + Alt + Space" FontSize="14" Padding="5"/>
+                        <TextBlock Text="Click and press new key combination to change" 
+                                   Foreground="Gray" Margin="0,5,0,0" FontSize="11"/>
+                    </StackPanel>
+                </GroupBox>
+                
+                <!-- Model Selection -->
+                <GroupBox Header="Current Model" Margin="0,0,0,10">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Speech recognition model:"/>
+                        <ComboBox x:Name="ModelComboBox" Margin="0,5,0,0"/>
+                        <TextBlock Text="Place .bin model files in the models folder or download from below" 
+                                   Foreground="Gray" Margin="0,5,0,0" FontSize="11"/>
+                    </StackPanel>
+                </GroupBox>
+                
+                <!-- Download Models -->
+                <GroupBox Header="Download Models" Margin="0,0,0,10">
+                    <StackPanel Margin="10">
+                        <DockPanel Margin="0,0,0,10">
+                            <TextBlock Text="Top 5 Speech-to-Text Models" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right">
+                                <Hyperlink x:Name="AllModelsLink" Click="AllModelsLink_Click">
+                                    View all models on Hugging Face
+                                </Hyperlink>
+                            </TextBlock>
+                        </DockPanel>
+                        
+                        <!-- Model List -->
+                        <ItemsControl x:Name="ModelCatalogList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#DDDDDD" BorderThickness="1" Margin="0,0,0,8" Padding="10" CornerRadius="4">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <StackPanel DockPanel.Dock="Left">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
+                                                    <TextBlock Text="{Binding Description}" Foreground="Gray" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Quality: " Foreground="Gray" FontSize="11"/>
+                                                        <TextBlock Text="{Binding Quality}" FontSize="11" FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Speed: " Foreground="Gray" FontSize="11"/>
+                                                        <TextBlock Text="{Binding Speed}" FontSize="11" FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                    <TextBlock FontSize="11" Margin="0,2,0,0">
+                                                        <Hyperlink NavigateUri="{Binding InfoUrl}" RequestNavigate="Hyperlink_RequestNavigate">
+                                                            More Info
+                                                        </Hyperlink>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </DockPanel>
+                                            
+                                            <!-- Versions -->
+                                            <TextBlock Text="Versions:" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                                            <ItemsControl ItemsSource="{Binding Versions}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <DockPanel Margin="0,2,0,2">
+                                                            <Button DockPanel.Dock="Right" 
+                                                                    Content="{Binding ButtonText}" 
+                                                                    Width="80" 
+                                                                    IsEnabled="{Binding IsEnabled}"
+                                                                    Tag="{Binding}"
+                                                                    Click="DownloadButton_Click"
+                                                                    Margin="5,0,0,0"/>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Version}" FontWeight="SemiBold" Width="120"/>
+                                                                <TextBlock Text="{Binding FileName}" Foreground="Gray" Width="180"/>
+                                                                <TextBlock Text="{Binding SizeText}" Foreground="Gray"/>
+                                                            </StackPanel>
+                                                        </DockPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        
+                        <!-- Download Progress -->
+                        <StackPanel x:Name="DownloadProgressPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                            <TextBlock x:Name="DownloadStatusText" Text="Downloading..." Margin="0,0,0,5"/>
+                            <ProgressBar x:Name="DownloadProgressBar" Height="20" Minimum="0" Maximum="100"/>
+                            <Button x:Name="CancelDownloadButton" Content="Cancel Download" 
+                                    HorizontalAlignment="Left" Margin="0,5,0,0"
+                                    Click="CancelDownloadButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </GroupBox>
+                
+                <!-- Language -->
+                <GroupBox Header="Language" Margin="0,0,0,10">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Recognition language:"/>
+                        <ComboBox x:Name="LanguageComboBox" Margin="0,5,0,0" SelectedIndex="0">
+                            <ComboBoxItem Content="Auto-detect" Tag="auto"/>
+                            <ComboBoxItem Content="English" Tag="en"/>
+                            <ComboBoxItem Content="Spanish" Tag="es"/>
+                            <ComboBoxItem Content="French" Tag="fr"/>
+                            <ComboBoxItem Content="German" Tag="de"/>
+                            <ComboBoxItem Content="Italian" Tag="it"/>
+                            <ComboBoxItem Content="Portuguese" Tag="pt"/>
+                            <ComboBoxItem Content="Dutch" Tag="nl"/>
+                            <ComboBoxItem Content="Russian" Tag="ru"/>
+                            <ComboBoxItem Content="Chinese" Tag="zh"/>
+                            <ComboBoxItem Content="Japanese" Tag="ja"/>
+                            <ComboBoxItem Content="Korean" Tag="ko"/>
+                        </ComboBox>
+                    </StackPanel>
+                </GroupBox>
+                
+                <!-- Options -->
+                <GroupBox Header="Options" Margin="0,0,0,10">
+                    <StackPanel Margin="10">
+                        <CheckBox x:Name="ShowNotificationsCheckBox" Content="Show notifications" Margin="0,0,0,5"/>
+                        <CheckBox x:Name="ShowRecordingIndicatorCheckBox" Content="Show recording indicator" Margin="0,0,0,5"/>
+                        <CheckBox x:Name="FallbackToTypingCheckBox" Content="Fall back to typing if paste fails"/>
+                    </StackPanel>
+                </GroupBox>
             </StackPanel>
-        </GroupBox>
-        
-        <!-- Model Selection -->
-        <GroupBox Grid.Row="1" Header="Model" Margin="0,0,0,10">
-            <StackPanel Margin="10">
-                <TextBlock Text="Speech recognition model:"/>
-                <ComboBox x:Name="ModelComboBox" Margin="0,5,0,0"/>
-                <TextBlock Text="Place .bin model files in the models folder" 
-                           Foreground="Gray" Margin="0,5,0,0" FontSize="11"/>
-            </StackPanel>
-        </GroupBox>
-        
-        <!-- Language -->
-        <GroupBox Grid.Row="2" Header="Language" Margin="0,0,0,10">
-            <StackPanel Margin="10">
-                <TextBlock Text="Recognition language:"/>
-                <ComboBox x:Name="LanguageComboBox" Margin="0,5,0,0" SelectedIndex="0">
-                    <ComboBoxItem Content="Auto-detect" Tag="auto"/>
-                    <ComboBoxItem Content="English" Tag="en"/>
-                    <ComboBoxItem Content="Spanish" Tag="es"/>
-                    <ComboBoxItem Content="French" Tag="fr"/>
-                    <ComboBoxItem Content="German" Tag="de"/>
-                    <ComboBoxItem Content="Italian" Tag="it"/>
-                    <ComboBoxItem Content="Portuguese" Tag="pt"/>
-                    <ComboBoxItem Content="Dutch" Tag="nl"/>
-                    <ComboBoxItem Content="Russian" Tag="ru"/>
-                    <ComboBoxItem Content="Chinese" Tag="zh"/>
-                    <ComboBoxItem Content="Japanese" Tag="ja"/>
-                    <ComboBoxItem Content="Korean" Tag="ko"/>
-                </ComboBox>
-            </StackPanel>
-        </GroupBox>
-        
-        <!-- Options -->
-        <GroupBox Grid.Row="3" Header="Options" Margin="0,0,0,10">
-            <StackPanel Margin="10">
-                <CheckBox x:Name="ShowNotificationsCheckBox" Content="Show notifications" Margin="0,0,0,5"/>
-                <CheckBox x:Name="ShowRecordingIndicatorCheckBox" Content="Show recording indicator" Margin="0,0,0,5"/>
-                <CheckBox x:Name="FallbackToTypingCheckBox" Content="Fall back to typing if paste fails"/>
-            </StackPanel>
-        </GroupBox>
+        </ScrollViewer>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="SaveButton" Content="Save" Width="80" Margin="0,0,10,0" Click="SaveButton_Click"/>
             <Button x:Name="CancelButton" Content="Cancel" Width="80" Click="CancelButton_Click"/>
         </StackPanel>
