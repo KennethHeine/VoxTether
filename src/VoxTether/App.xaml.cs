@@ -91,7 +91,9 @@ public partial class App : Application
         {
             var logger = sp.GetRequiredService<ILogger<ClipboardTextInjector>>();
             var settings = sp.GetRequiredService<SettingsService>().Settings;
-            return new ClipboardTextInjector(logger, settings.ClipboardDelayMs);
+            var injector = new ClipboardTextInjector(logger, settings.ClipboardDelayMs);
+            injector.PasteToFocusedApp = settings.OutputMode == "FocusedApp";
+            return injector;
         });
         services.AddSingleton<ITranscriptionEngine, WhisperCppEngine>();
         services.AddSingleton<ITextPostProcessor, NoOpTextPostProcessor>();

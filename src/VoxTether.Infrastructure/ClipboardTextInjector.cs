@@ -6,13 +6,13 @@ using VoxTether.Core.Interfaces;
 namespace VoxTether.Infrastructure;
 
 /// <summary>
-/// Text injector that uses clipboard paste as primary method
-/// and falls back to SendInput typing if needed.
+/// Text injector that can either copy text to clipboard or paste it into the focused application.
 /// </summary>
 public class ClipboardTextInjector : ITextInjector
 {
     private readonly ILogger<ClipboardTextInjector> _logger;
     private readonly int _clipboardDelayMs;
+    private bool _pasteToFocusedApp;
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -34,9 +34,6 @@ public class ClipboardTextInjector : ITextInjector
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
-
-    [DllImport("user32.dll")]
-    private static extern short GetAsyncKeyState(int vKey);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct INPUT
@@ -63,7 +60,6 @@ public class ClipboardTextInjector : ITextInjector
 
     private const uint INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_KEYUP = 0x0002;
-    private const uint KEYEVENTF_UNICODE = 0x0004;
     private const ushort VK_CONTROL = 0x11;
     private const ushort VK_V = 0x56;
 
@@ -71,47 +67,111 @@ public class ClipboardTextInjector : ITextInjector
     {
         _logger = logger;
         _clipboardDelayMs = clipboardDelayMs;
+        _pasteToFocusedApp = false; // Default to clipboard only
+    }
+
+    /// <summary>
+    /// Sets whether to paste text into the focused application or just copy to clipboard.
+    /// </summary>
+    public bool PasteToFocusedApp
+    {
+        get => _pasteToFocusedApp;
+        set => _pasteToFocusedApp = value;
     }
 
     public async Task<bool> InjectAsync(string text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(text))
         {
-            _logger.LogWarning("Empty text, nothing to inject");
+            _logger.LogWarning("Empty text, nothing to process");
             return true;
         }
 
-        // Check for password field
-        if (IsPasswordField())
+        if (_pasteToFocusedApp)
         {
-            _logger.LogWarning("Detected password field, skipping injection");
-            return false;
+            // Check for password field
+            if (IsPasswordField())
+            {
+                _logger.LogWarning("Detected password field, skipping paste");
+                return false;
+            }
+
+            // Wait for hotkey release and window focus stabilization
+            await Task.Delay(150, cancellationToken);
+
+            // Verify there's a foreground window to paste into
+            var foregroundWindow = GetForegroundWindow();
+            if (foregroundWindow == IntPtr.Zero)
+            {
+                _logger.LogWarning("No foreground window found, copying to clipboard only");
+                return await CopyToClipboardAsync(text);
+            }
+
+            // Copy to clipboard and paste into focused app
+            return await CopyAndPasteAsync(text, cancellationToken);
         }
-
-        // Wait a bit to ensure key release
-        await Task.Delay(50, cancellationToken);
-
-        // Try clipboard paste first
-        bool success = await TryClipboardPaste(text, cancellationToken);
-        
-        if (!success)
+        else
         {
-            _logger.LogWarning("Clipboard paste failed, falling back to SendInput typing");
-            success = await TrySendInputTyping(text, cancellationToken);
+            // Just copy to clipboard - user can paste when ready
+            return await CopyToClipboardAsync(text);
         }
-
-        return success;
     }
 
-    private async Task<bool> TryClipboardPaste(string text, CancellationToken cancellationToken)
+    private async Task<bool> CopyToClipboardAsync(string text)
+    {
+        try
+        {
+            var app = System.Windows.Application.Current;
+            if (app?.Dispatcher == null)
+            {
+                _logger.LogWarning("WPF Application dispatcher not available, cannot copy to clipboard");
+                return false;
+            }
+
+            bool clipboardSet = false;
+            await app.Dispatcher.InvokeAsync(() =>
+            {
+                try
+                {
+                    System.Windows.Clipboard.SetText(text);
+                    clipboardSet = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to copy text to clipboard");
+                }
+            });
+
+            if (clipboardSet)
+            {
+                _logger.LogInformation("Transcript copied to clipboard ({Length} chars)", text.Length);
+            }
+
+            return clipboardSet;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to copy to clipboard");
+            return false;
+        }
+    }
+
+    private async Task<bool> CopyAndPasteAsync(string text, CancellationToken cancellationToken)
     {
         string? savedClipboard = null;
         bool hadClipboard = false;
 
         try
         {
+            var app = System.Windows.Application.Current;
+            if (app?.Dispatcher == null)
+            {
+                _logger.LogWarning("WPF Application dispatcher not available, cannot paste");
+                return false;
+            }
+
             // Save current clipboard content (best effort)
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            await app.Dispatcher.InvokeAsync(() =>
             {
                 try
                 {
@@ -131,7 +191,7 @@ public class ClipboardTextInjector : ITextInjector
 
             // Set clipboard to our text
             bool clipboardSet = false;
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            await app.Dispatcher.InvokeAsync(() =>
             {
                 try
                 {
@@ -151,17 +211,17 @@ public class ClipboardTextInjector : ITextInjector
 
             await Task.Delay(_clipboardDelayMs, cancellationToken);
 
-            // Send Ctrl+V
+            // Send Ctrl+V to paste
             SendCtrlV();
 
-            _logger.LogInformation("Text injected via clipboard paste ({Length} chars)", text.Length);
+            _logger.LogInformation("Text pasted into focused app ({Length} chars)", text.Length);
 
             // Wait a bit then restore clipboard
             await Task.Delay(_clipboardDelayMs * 2, cancellationToken);
 
             if (hadClipboard && savedClipboard != null)
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await app.Dispatcher.InvokeAsync(() =>
                 {
                     try
                     {
@@ -178,7 +238,7 @@ public class ClipboardTextInjector : ITextInjector
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Clipboard paste failed");
+            _logger.LogError(ex, "Paste to focused app failed");
             return false;
         }
     }
@@ -228,57 +288,6 @@ public class ClipboardTextInjector : ITextInjector
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
     }
 
-    private async Task<bool> TrySendInputTyping(string text, CancellationToken cancellationToken)
-    {
-        try
-        {
-            foreach (char c in text)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    return false;
-
-                var inputs = new INPUT[]
-                {
-                    new INPUT
-                    {
-                        type = INPUT_KEYBOARD,
-                        u = new INPUTUNION
-                        {
-                            ki = new KEYBDINPUT
-                            {
-                                wScan = c,
-                                dwFlags = KEYEVENTF_UNICODE
-                            }
-                        }
-                    },
-                    new INPUT
-                    {
-                        type = INPUT_KEYBOARD,
-                        u = new INPUTUNION
-                        {
-                            ki = new KEYBDINPUT
-                            {
-                                wScan = c,
-                                dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP
-                            }
-                        }
-                    }
-                };
-
-                SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
-                await Task.Delay(5, cancellationToken); // Small delay between characters
-            }
-
-            _logger.LogInformation("Text injected via SendInput typing ({Length} chars)", text.Length);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "SendInput typing failed");
-            return false;
-        }
-    }
-
     public bool IsPasswordField()
     {
         try
@@ -287,16 +296,12 @@ public class ClipboardTextInjector : ITextInjector
             if (foregroundWindow == IntPtr.Zero)
                 return false;
 
-            // Get the focused control's class name
             GetWindowThreadProcessId(foregroundWindow, out uint processId);
             uint currentThreadId = GetCurrentThreadId();
             uint targetThreadId = GetWindowThreadProcessId(foregroundWindow, out _);
 
-            // Attach to thread to get focus
             AttachThreadInput(currentThreadId, targetThreadId, true);
-            
             var focusedWindow = GetFocus();
-            
             AttachThreadInput(currentThreadId, targetThreadId, false);
 
             if (focusedWindow == IntPtr.Zero)
@@ -304,18 +309,14 @@ public class ClipboardTextInjector : ITextInjector
 
             var className = new System.Text.StringBuilder(256);
             GetClassName(focusedWindow, className, 256);
-            
+
             var classNameStr = className.ToString().ToLowerInvariant();
-            
-            // Heuristic: password fields often have these class names
-            if (classNameStr.Contains("password") || 
-                classNameStr.Contains("secret"))
+
+            if (classNameStr.Contains("password") || classNameStr.Contains("secret"))
             {
                 return true;
             }
 
-            // Check for common edit controls that might be password fields
-            // This is a best-effort heuristic
             return false;
         }
         catch (Exception ex)

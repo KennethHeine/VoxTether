@@ -119,6 +119,16 @@ public partial class SettingsWindow : Window
             }
         }
 
+        // Output Mode
+        foreach (ComboBoxItem item in OutputModeComboBox.Items)
+        {
+            if (item.Tag?.ToString() == settings.OutputMode)
+            {
+                OutputModeComboBox.SelectedItem = item;
+                break;
+            }
+        }
+
         // Options
         ShowNotificationsCheckBox.IsChecked = settings.ShowNotifications;
         ShowRecordingIndicatorCheckBox.IsChecked = settings.ShowRecordingIndicator;
@@ -126,6 +136,7 @@ public partial class SettingsWindow : Window
 
         // Audio Recording
         SaveAudioRecordingsCheckBox.IsChecked = settings.SaveAudioRecordings;
+        SaveTranscriptsCheckBox.IsChecked = settings.SaveTranscripts;
         AudioSavePathTextBox.Text = settings.AudioSavePath ?? SettingsService.AudioRecordingsPath;
     }
 
@@ -539,12 +550,18 @@ public partial class SettingsWindow : Window
                 settings.Language = langItem.Tag?.ToString() ?? "auto";
             }
 
+            if (OutputModeComboBox.SelectedItem is ComboBoxItem outputItem)
+            {
+                settings.OutputMode = outputItem.Tag?.ToString() ?? "Clipboard";
+            }
+
             settings.ShowNotifications = ShowNotificationsCheckBox.IsChecked ?? true;
             settings.ShowRecordingIndicator = ShowRecordingIndicatorCheckBox.IsChecked ?? true;
             settings.FallbackToTyping = FallbackToTypingCheckBox.IsChecked ?? true;
 
             // Audio recording settings
             settings.SaveAudioRecordings = SaveAudioRecordingsCheckBox.IsChecked ?? false;
+            settings.SaveTranscripts = SaveTranscriptsCheckBox.IsChecked ?? false;
             settings.AudioSavePath = string.IsNullOrWhiteSpace(AudioSavePathTextBox.Text) 
                 ? null 
                 : AudioSavePathTextBox.Text;
@@ -557,7 +574,7 @@ public partial class SettingsWindow : Window
         });
 
         MessageBox.Show(
-            "Settings saved. Restart VoxTether for hotkey changes to take effect.",
+            "Settings saved. Restart VoxTether for changes to take effect.",
             "Settings Saved",
             MessageBoxButton.OK,
             MessageBoxImage.Information);

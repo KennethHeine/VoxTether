@@ -44,6 +44,19 @@
                             </StackPanel>
                         </GroupBox>
                         
+                        <!-- Output Mode -->
+                        <GroupBox Header="Transcript Output">
+                            <StackPanel Margin="4">
+                                <TextBlock Text="After transcription, send text to:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <ComboBox x:Name="OutputModeComboBox" Margin="0,8,0,0" SelectedIndex="0">
+                                    <ComboBoxItem Content="Clipboard only (paste manually with Ctrl+V)" Tag="Clipboard"/>
+                                    <ComboBoxItem Content="Focused application (paste automatically)" Tag="FocusedApp"/>
+                                </ComboBox>
+                                <TextBlock Text="Clipboard mode copies the text so you can paste it when ready. Focused app mode automatically pastes into the active window." 
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" FontSize="11" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </GroupBox>
+                        
                         <!-- Options -->
                         <GroupBox Header="Options">
                             <StackPanel Margin="4">
@@ -219,6 +232,8 @@
                         <GroupBox Header="Audio Recording">
                             <StackPanel Margin="4">
                                 <CheckBox x:Name="SaveAudioRecordingsCheckBox" Content="Save audio recordings to folder" Margin="0,0,0,8"/>
+                                <CheckBox x:Name="SaveTranscriptsCheckBox" Content="Save transcripts with recordings (creates a folder for each recording)" Margin="0,0,0,8"
+                                          IsEnabled="{Binding ElementName=SaveAudioRecordingsCheckBox, Path=IsChecked}"/>
                                 <DockPanel Margin="0,0,0,4">
                                     <Button x:Name="BrowseFolderButton" DockPanel.Dock="Right" Content="Browse..." 
                                             Width="80" Margin="8,0,0,0" Click="BrowseFolderButton_Click"/>

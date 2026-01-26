@@ -60,6 +60,13 @@ public class VoxTetherSettings
     public int ClipboardDelayMs { get; set; } = 100;
 
     /// <summary>
+    /// How to output the transcript after transcription.
+    /// "Clipboard" = Copy to clipboard only (user pastes manually)
+    /// "FocusedApp" = Paste directly into the focused application
+    /// </summary>
+    public string OutputMode { get; set; } = "Clipboard";
+
+    /// <summary>
     /// The toggle hotkey combination string (e.g., "Ctrl + Alt + T").
     /// Press once to start recording, press again to stop.
     /// </summary>
@@ -69,6 +76,13 @@ public class VoxTetherSettings
     /// Whether to save audio recordings to a default folder.
     /// </summary>
     public bool SaveAudioRecordings { get; set; } = false;
+
+    /// <summary>
+    /// Whether to save transcript text files alongside audio recordings.
+    /// When enabled, creates a folder for each recording containing both audio and transcript.
+    /// Requires SaveAudioRecordings to be enabled.
+    /// </summary>
+    public bool SaveTranscripts { get; set; } = false;
 
     /// <summary>
     /// The path where audio recordings are saved.
