@@ -530,12 +530,6 @@ public class BackendSelectionService : IBackendSelectionService
             };
             
             using var process = new Process { StartInfo = startInfo };
-            
-            // Capture exit code immediately on exit to detect fast failures
-            int? exitCode = null;
-            process.EnableRaisingEvents = true;
-            process.Exited += (_, _) => exitCode = process.ExitCode;
-            
             process.Start();
             
             // Wait for the process to complete with a short timeout
@@ -559,14 +553,12 @@ public class BackendSelectionService : IBackendSelectionService
                 return (true, null);
             }
             
-            // Process completed - check the exit code
-            var actualExitCode = exitCode ?? process.ExitCode;
-            
+            // Process completed - WaitForExit() returned true, so process.ExitCode is available
             // Check for DLL_NOT_FOUND errors
             // 0xC0000135 = -1073741515 = STATUS_DLL_NOT_FOUND
             const int STATUS_DLL_NOT_FOUND = unchecked((int)0xC0000135);
             
-            if (actualExitCode == STATUS_DLL_NOT_FOUND)
+            if (process.ExitCode == STATUS_DLL_NOT_FOUND)
             {
                 var reason = "Required DLL not found (missing CUDA runtime or other dependencies)";
                 _logger.LogWarning("Executable cannot run due to missing DLL: {Path}", execPath);
@@ -575,7 +567,7 @@ public class BackendSelectionService : IBackendSelectionService
             
             // Any other exit code (including non-zero from --help) means the executable at least runs
             // whisper --help returns 0 on success
-            _logger.LogDebug("Executable validation passed (exit code {ExitCode}): {Path}", actualExitCode, execPath);
+            _logger.LogDebug("Executable validation passed (exit code {ExitCode}): {Path}", process.ExitCode, execPath);
             return (true, null);
         }
         catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 2)
