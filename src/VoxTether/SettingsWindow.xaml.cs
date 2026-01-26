@@ -168,6 +168,9 @@ public class BackendManagementViewModel : System.ComponentModel.INotifyPropertyC
 /// </summary>
 public partial class SettingsWindow : Window
 {
+    // Approximate CUDA DLL download size (~403 MB for CUDA Runtime + cuBLAS)
+    private const string CudaDllDownloadSizeDisplay = "~403 MB";
+    
     private readonly SettingsService _settingsService;
     private readonly ModelDownloadService _downloadService;
     private readonly IAudioRecorder? _audioRecorder;
@@ -963,7 +966,7 @@ public partial class SettingsWindow : Window
                     Id = backend.Id,
                     Name = backend.Name,
                     Description = needsCudaDlls 
-                        ? backend.Description + " CUDA 11.8 runtime DLLs are required but not installed." 
+                        ? backend.Description + " Note: CUDA 11.8 runtime DLLs are required but not installed." 
                         : backend.Description,
                     Size = backend.Size,
                     IsInstalled = isInstalled,
@@ -1048,7 +1051,7 @@ public partial class SettingsWindow : Window
                     !_backendDownloadService.AreCudaDllsInstalled())
                 {
                     viewModel.NeedsCudaDlls = true;
-                    BackendDownloadStatusText.Text = $"{viewModel.Name} backend installed! Click 'Get CUDA DLLs' to download required runtime DLLs (~403 MB).";
+                    BackendDownloadStatusText.Text = $"{viewModel.Name} backend installed! Click 'Get CUDA DLLs' to download required runtime DLLs ({CudaDllDownloadSizeDisplay}).";
                 }
                 else
                 {
@@ -1078,7 +1081,7 @@ public partial class SettingsWindow : Window
             return;
 
         viewModel.IsDownloading = true;
-        BackendDownloadStatusText.Text = "Downloading CUDA runtime DLLs from NVIDIA (~403 MB)...";
+        BackendDownloadStatusText.Text = $"Downloading CUDA runtime DLLs from NVIDIA ({CudaDllDownloadSizeDisplay})...";
         BackendDownloadStatusText.Visibility = Visibility.Visible;
 
         var progress = new Progress<BackendDownloadProgress>(p =>
