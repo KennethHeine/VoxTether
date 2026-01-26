@@ -88,8 +88,19 @@ public class ClipboardTextInjector : ITextInjector
             return false;
         }
 
-        // Wait a bit to ensure key release
-        await Task.Delay(50, cancellationToken);
+        // Wait for hotkey release and window focus stabilization
+        // This delay is important because:
+        // 1. The user just released the hotkey, and we need to ensure all keys are released
+        // 2. The target application needs time to properly receive focus
+        await Task.Delay(150, cancellationToken);
+
+        // Verify there's a foreground window to inject into
+        var foregroundWindow = GetForegroundWindow();
+        if (foregroundWindow == IntPtr.Zero)
+        {
+            _logger.LogWarning("No foreground window found, cannot inject text");
+            return false;
+        }
 
         // Try clipboard paste first
         bool success = await TryClipboardPaste(text, cancellationToken);
@@ -110,8 +121,16 @@ public class ClipboardTextInjector : ITextInjector
 
         try
         {
+            // Check if WPF Application dispatcher is available
+            var app = System.Windows.Application.Current;
+            if (app?.Dispatcher == null)
+            {
+                _logger.LogWarning("WPF Application dispatcher not available, cannot use clipboard paste");
+                return false;
+            }
+
             // Save current clipboard content (best effort)
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            await app.Dispatcher.InvokeAsync(() =>
             {
                 try
                 {
@@ -131,7 +150,7 @@ public class ClipboardTextInjector : ITextInjector
 
             // Set clipboard to our text
             bool clipboardSet = false;
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            await app.Dispatcher.InvokeAsync(() =>
             {
                 try
                 {
@@ -161,7 +180,7 @@ public class ClipboardTextInjector : ITextInjector
 
             if (hadClipboard && savedClipboard != null)
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await app.Dispatcher.InvokeAsync(() =>
                 {
                     try
                     {

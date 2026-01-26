@@ -256,25 +256,47 @@ public class VoxTetherController
                 _logger.LogWarning("Text injection failed or was skipped");
             }
 
-            // Save audio file if enabled
+            // Save audio file and optionally transcript if enabled
             if (_settingsService.Settings.SaveAudioRecordings)
             {
                 try
                 {
-                    var savePath = !string.IsNullOrEmpty(_settingsService.Settings.AudioSavePath)
+                    var baseSavePath = !string.IsNullOrEmpty(_settingsService.Settings.AudioSavePath)
                         ? _settingsService.Settings.AudioSavePath
                         : SettingsService.AudioRecordingsPath;
                     
-                    Directory.CreateDirectory(savePath);
-                    var savedFileName = Path.GetFileName(wavPath);
-                    var savedPath = Path.Combine(savePath, savedFileName);
-                    // Note: Filename already contains timestamp + GUID so collisions are extremely unlikely
-                    File.Copy(wavPath, savedPath, overwrite: false);
-                    _logger.LogInformation("Audio saved to: {Path}", savedPath);
+                    Directory.CreateDirectory(baseSavePath);
+                    
+                    // Get the base filename without extension (e.g., "recording_20240126_143052_abc123")
+                    var baseFileName = Path.GetFileNameWithoutExtension(wavPath);
+                    
+                    // If saving transcripts, create a folder for each recording
+                    if (_settingsService.Settings.SaveTranscripts)
+                    {
+                        var recordingFolder = Path.Combine(baseSavePath, baseFileName);
+                        Directory.CreateDirectory(recordingFolder);
+                        
+                        // Save audio file
+                        var savedAudioPath = Path.Combine(recordingFolder, Path.GetFileName(wavPath));
+                        File.Copy(wavPath, savedAudioPath, overwrite: false);
+                        _logger.LogInformation("Audio saved to: {Path}", savedAudioPath);
+                        
+                        // Save transcript
+                        var transcriptPath = Path.Combine(recordingFolder, baseFileName + ".txt");
+                        await File.WriteAllTextAsync(transcriptPath, processedText, cancellationToken);
+                        _logger.LogInformation("Transcript saved to: {Path}", transcriptPath);
+                    }
+                    else
+                    {
+                        // Just save audio file directly in the save path
+                        var savedPath = Path.Combine(baseSavePath, Path.GetFileName(wavPath));
+                        File.Copy(wavPath, savedPath, overwrite: false);
+                        _logger.LogInformation("Audio saved to: {Path}", savedPath);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to save audio file");
+                    _logger.LogWarning(ex, "Failed to save audio/transcript files");
                 }
             }
 

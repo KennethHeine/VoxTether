@@ -20,6 +20,7 @@ public class SettingsTests
         Assert.True(settings.FallbackToTyping);
         Assert.Equal(100, settings.ClipboardDelayMs);
         Assert.False(settings.SaveAudioRecordings);
+        Assert.False(settings.SaveTranscripts);
         Assert.Null(settings.AudioSavePath);
     }
 

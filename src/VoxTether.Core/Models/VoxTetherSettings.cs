@@ -71,6 +71,13 @@ public class VoxTetherSettings
     public bool SaveAudioRecordings { get; set; } = false;
 
     /// <summary>
+    /// Whether to save transcript text files alongside audio recordings.
+    /// When enabled, creates a folder for each recording containing both audio and transcript.
+    /// Requires SaveAudioRecordings to be enabled.
+    /// </summary>
+    public bool SaveTranscripts { get; set; } = false;
+
+    /// <summary>
     /// The path where audio recordings are saved.
     /// If null or empty, uses the default AudioRecordingsPath.
     /// </summary>

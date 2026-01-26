@@ -126,6 +126,7 @@ public partial class SettingsWindow : Window
 
         // Audio Recording
         SaveAudioRecordingsCheckBox.IsChecked = settings.SaveAudioRecordings;
+        SaveTranscriptsCheckBox.IsChecked = settings.SaveTranscripts;
         AudioSavePathTextBox.Text = settings.AudioSavePath ?? SettingsService.AudioRecordingsPath;
     }
 
@@ -545,6 +546,7 @@ public partial class SettingsWindow : Window
 
             // Audio recording settings
             settings.SaveAudioRecordings = SaveAudioRecordingsCheckBox.IsChecked ?? false;
+            settings.SaveTranscripts = SaveTranscriptsCheckBox.IsChecked ?? false;
             settings.AudioSavePath = string.IsNullOrWhiteSpace(AudioSavePathTextBox.Text) 
                 ? null 
                 : AudioSavePathTextBox.Text;

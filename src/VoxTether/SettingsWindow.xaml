@@ -219,6 +219,8 @@
                         <GroupBox Header="Audio Recording">
                             <StackPanel Margin="4">
                                 <CheckBox x:Name="SaveAudioRecordingsCheckBox" Content="Save audio recordings to folder" Margin="0,0,0,8"/>
+                                <CheckBox x:Name="SaveTranscriptsCheckBox" Content="Save transcripts with recordings (creates a folder for each recording)" Margin="0,0,0,8"
+                                          IsEnabled="{Binding ElementName=SaveAudioRecordingsCheckBox, Path=IsChecked}"/>
                                 <DockPanel Margin="0,0,0,4">
                                     <Button x:Name="BrowseFolderButton" DockPanel.Dock="Right" Content="Browse..." 
                                             Width="80" Margin="8,0,0,0" Click="BrowseFolderButton_Click"/>
