@@ -171,4 +171,90 @@ public class BackendSelectionTests
         Assert.False(diagnostics.HasIntelGpu);
         Assert.False(diagnostics.HasAmdGpu);
     }
+
+    [Fact]
+    public void FindsBackendInSubdirectory_Integration()
+    {
+        // This test verifies that the BackendSelectionService can find executables
+        // in subdirectories like whisper/cuda/Release/ which is the structure
+        // used by whisper.cpp releases
+        
+        // Arrange
+        var logger = CreateTestLogger();
+        var service = new BackendSelectionService(logger);
+        
+        // Create a temporary directory structure that mimics the whisper.cpp release
+        var baseDir = AppContext.BaseDirectory;
+        var cudaReleaseDir = Path.Combine(baseDir, "whisper", "cuda", "Release");
+        
+        try
+        {
+            Directory.CreateDirectory(cudaReleaseDir);
+            var mainExePath = Path.Combine(cudaReleaseDir, "main.exe");
+            
+            // Create a dummy executable file
+            File.WriteAllText(mainExePath, "dummy");
+            
+            // Act - Check if the backend is now available
+            var isAvailable = service.IsBackendAvailable(TranscriptionBackendMode.Cuda);
+            var backends = service.GetAvailableBackends();
+            var cudaBackend = backends.FirstOrDefault(b => b.Backend == TranscriptionBackendMode.Cuda);
+            
+            // Assert - The CUDA backend should now be detected as available
+            Assert.True(isAvailable, "CUDA backend should be available when main.exe is in whisper/cuda/Release/");
+            Assert.NotNull(cudaBackend);
+            Assert.True(cudaBackend.IsAvailable);
+            Assert.NotNull(cudaBackend.ExecutablePath);
+            Assert.Contains("Release", cudaBackend.ExecutablePath);
+            Assert.EndsWith("main.exe", cudaBackend.ExecutablePath);
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(Path.Combine(baseDir, "whisper", "cuda")))
+            {
+                Directory.Delete(Path.Combine(baseDir, "whisper", "cuda"), true);
+            }
+        }
+    }
+
+    [Fact]
+    public void FindsWhisperCliExe_Integration()
+    {
+        // Test that whisper-cli.exe is also found as a valid executable
+        
+        // Arrange
+        var logger = CreateTestLogger();
+        var service = new BackendSelectionService(logger);
+        
+        var baseDir = AppContext.BaseDirectory;
+        var cudaReleaseDir = Path.Combine(baseDir, "whisper", "cuda", "Release");
+        
+        try
+        {
+            Directory.CreateDirectory(cudaReleaseDir);
+            var whisperCliPath = Path.Combine(cudaReleaseDir, "whisper-cli.exe");
+            
+            // Create a dummy executable file
+            File.WriteAllText(whisperCliPath, "dummy");
+            
+            // Act
+            var isAvailable = service.IsBackendAvailable(TranscriptionBackendMode.Cuda);
+            var backends = service.GetAvailableBackends();
+            var cudaBackend = backends.FirstOrDefault(b => b.Backend == TranscriptionBackendMode.Cuda);
+            
+            // Assert
+            Assert.True(isAvailable, "CUDA backend should be available when whisper-cli.exe is in whisper/cuda/Release/");
+            Assert.NotNull(cudaBackend);
+            Assert.True(cudaBackend.IsAvailable);
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(Path.Combine(baseDir, "whisper", "cuda")))
+            {
+                Directory.Delete(Path.Combine(baseDir, "whisper", "cuda"), true);
+            }
+        }
+    }
 }
