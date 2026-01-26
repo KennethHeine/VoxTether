@@ -85,6 +85,9 @@ public class VoxTetherController
         var toggleHotkeyString = _settingsService.Settings.ToggleHotkey;
         _hotkeyService.ToggleHotkey = HotkeyCombination.Parse(toggleHotkeyString);
         
+        // Configure selected microphone from settings
+        _recorder.SelectedDeviceId = _settingsService.Settings.SelectedMicrophoneDeviceId;
+        
         _hotkeyService.Start();
         _logger.LogInformation("VoxTether controller started, hotkey: {Hotkey}, toggle hotkey: {ToggleHotkey}", 
             _hotkeyService.Hotkey, _hotkeyService.ToggleHotkey);

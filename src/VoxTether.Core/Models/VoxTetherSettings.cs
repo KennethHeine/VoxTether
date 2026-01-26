@@ -75,6 +75,12 @@ public class VoxTetherSettings
     /// If null or empty, uses the default AudioRecordingsPath.
     /// </summary>
     public string? AudioSavePath { get; set; }
+
+    /// <summary>
+    /// The selected microphone device ID for recording.
+    /// -1 means use the default system microphone.
+    /// </summary>
+    public int SelectedMicrophoneDeviceId { get; set; } = -1;
 }
 
 /// <summary>
