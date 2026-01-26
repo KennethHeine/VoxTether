@@ -44,6 +44,22 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
   ]
 }";
 
+    // CUDA Runtime DLL download information from NVIDIA redistribution site
+    // These files are licensed for redistribution per NVIDIA's CUDA EULA
+    // See: https://developer.download.nvidia.com/compute/cuda/redist/
+    // Version constants for easier maintenance
+    private const string CudaRuntimeVersion = "11.8.89";
+    private const string CublasVersion = "11.11.3.6";
+    
+    private static readonly string CudaRuntimeUrl = $"https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-{CudaRuntimeVersion}-archive.zip";
+    private const long CudaRuntimeSize = 3_000_000; // ~3MB
+    
+    private static readonly string CublasUrl = $"https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/libcublas-windows-x86_64-{CublasVersion}-archive.zip";
+    private const long CublasSize = 420_000_000; // ~400MB
+    
+    // Required DLL files for CUDA 11.8 backend
+    private static readonly string[] RequiredCudaDlls = ["cublas64_11.dll", "cublasLt64_11.dll", "cudart64_110.dll"];
+
     public BackendDownloadService(
         ILogger<BackendDownloadService> logger,
         IBackendSelectionService backendSelection)
@@ -356,6 +372,272 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
             Message = message,
             ErrorMessage = errorMessage
         });
+    }
+
+    /// <inheritdoc />
+    public bool AreCudaDllsInstalled()
+    {
+        var cudaReleaseDir = GetCudaReleaseDirectory();
+        if (!Directory.Exists(cudaReleaseDir))
+        {
+            _logger.LogDebug("CUDA release directory does not exist: {Path}", cudaReleaseDir);
+            return false;
+        }
+
+        foreach (var dll in RequiredCudaDlls)
+        {
+            var dllPath = Path.Combine(cudaReleaseDir, dll);
+            if (!File.Exists(dllPath))
+            {
+                _logger.LogDebug("Required CUDA DLL not found: {DllPath}", dllPath);
+                return false;
+            }
+        }
+
+        _logger.LogDebug("All required CUDA DLLs are installed");
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> DownloadCudaDllsAsync(
+        IProgress<BackendDownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        const string backendId = "cuda-dlls";
+        
+        try
+        {
+            _logger.LogInformation("Starting download of CUDA runtime DLLs from NVIDIA redistribution site");
+
+            // Ensure CUDA backend directory exists
+            var cudaReleaseDir = GetCudaReleaseDirectory();
+            Directory.CreateDirectory(cudaReleaseDir);
+
+            // Check disk space - need space for both downloads plus extraction
+            var totalRequiredSpace = (CudaRuntimeSize + CublasSize) * 2;
+            var availableSpace = GetAvailableDiskSpace();
+            if (availableSpace < totalRequiredSpace)
+            {
+                var errorMsg = $"Insufficient disk space. Need {FormatUtility.FormatBytes(totalRequiredSpace)}, " +
+                              $"have {FormatUtility.FormatBytes(availableSpace)}";
+                _logger.LogError(errorMsg);
+                ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
+                    0, 0, "Insufficient disk space", errorMsg);
+                return false;
+            }
+
+            // Create temp download directory
+            var tempDir = Path.Combine(Path.GetTempPath(), "VoxTether", "cuda-dlls");
+            Directory.CreateDirectory(tempDir);
+
+            var totalSize = CudaRuntimeSize + CublasSize;
+            var totalDownloaded = 0L;
+
+            // Download and extract CUDA Runtime (contains cudart64_110.dll)
+            ReportProgress(progress, backendId, BackendDownloadStatus.Downloading,
+                totalDownloaded, totalSize, "Downloading CUDA Runtime...");
+
+            var cudaRuntimeZip = Path.Combine(tempDir, "cuda_cudart.zip");
+            if (!await DownloadFileAsync(CudaRuntimeUrl, cudaRuntimeZip, (downloaded, total) =>
+            {
+                ReportProgress(progress, backendId, BackendDownloadStatus.Downloading,
+                    downloaded, totalSize,
+                    $"Downloading CUDA Runtime... {FormatUtility.FormatBytes(downloaded)}");
+            }, cancellationToken))
+            {
+                ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
+                    0, 0, "Failed to download CUDA Runtime", "Download failed");
+                return false;
+            }
+
+            totalDownloaded = CudaRuntimeSize;
+
+            // Extract CUDA Runtime DLLs
+            ReportProgress(progress, backendId, BackendDownloadStatus.Extracting,
+                totalDownloaded, totalSize, "Extracting CUDA Runtime...");
+
+            if (!ExtractCudaDllsFromArchive(cudaRuntimeZip, cudaReleaseDir, ["cudart64_110.dll"]))
+            {
+                ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
+                    0, 0, "Failed to extract CUDA Runtime", "Extraction failed");
+                return false;
+            }
+
+            // Download cuBLAS (contains cublas64_11.dll and cublasLt64_11.dll)
+            ReportProgress(progress, backendId, BackendDownloadStatus.Downloading,
+                totalDownloaded, totalSize, "Downloading cuBLAS library...");
+
+            var cublasZip = Path.Combine(tempDir, "libcublas.zip");
+            if (!await DownloadFileAsync(CublasUrl, cublasZip, (downloaded, total) =>
+            {
+                var currentTotal = CudaRuntimeSize + downloaded;
+                ReportProgress(progress, backendId, BackendDownloadStatus.Downloading,
+                    currentTotal, totalSize,
+                    $"Downloading cuBLAS... {FormatUtility.FormatBytes(downloaded)} / {FormatUtility.FormatBytes(CublasSize)}");
+            }, cancellationToken))
+            {
+                ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
+                    0, 0, "Failed to download cuBLAS", "Download failed");
+                return false;
+            }
+
+            totalDownloaded = totalSize;
+
+            // Extract cuBLAS DLLs
+            ReportProgress(progress, backendId, BackendDownloadStatus.Extracting,
+                totalDownloaded, totalSize, "Extracting cuBLAS...");
+
+            if (!ExtractCudaDllsFromArchive(cublasZip, cudaReleaseDir, ["cublas64_11.dll", "cublasLt64_11.dll"]))
+            {
+                ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
+                    0, 0, "Failed to extract cuBLAS", "Extraction failed");
+                return false;
+            }
+
+            // Clean up temp files
+            try
+            {
+                File.Delete(cudaRuntimeZip);
+                File.Delete(cublasZip);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to clean up temp files");
+            }
+
+            // Verify all DLLs are installed
+            if (!AreCudaDllsInstalled())
+            {
+                ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
+                    0, 0, "Verification failed", "Not all required DLLs were installed");
+                return false;
+            }
+
+            _logger.LogInformation("CUDA runtime DLLs installed successfully to {Path}", cudaReleaseDir);
+            ReportProgress(progress, backendId, BackendDownloadStatus.Completed,
+                totalSize, totalSize, "CUDA DLLs installed successfully");
+
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("CUDA DLL download cancelled");
+            ReportProgress(progress, backendId, BackendDownloadStatus.Cancelled,
+                0, 0, "Download cancelled");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download CUDA DLLs");
+            ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
+                0, 0, "Download failed", ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Gets the path to the CUDA backend's Release directory where DLLs should be placed.
+    /// </summary>
+    private string GetCudaReleaseDirectory()
+    {
+        // The whisper.cpp CUDA release extracts to whisper/cuda/Release/
+        return Path.Combine(_whisperDirectory, "cuda", "Release");
+    }
+
+    /// <summary>
+    /// Downloads a file from a URL with progress reporting.
+    /// </summary>
+    private async Task<bool> DownloadFileAsync(
+        string url,
+        string destinationPath,
+        Action<long, long> onProgress,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogDebug("Downloading from {Url} to {Path}", url, destinationPath);
+
+            using var response = await _httpClient.GetAsync(url,
+                HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var totalBytes = response.Content.Headers.ContentLength ?? 0;
+            using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            using var downloadStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+            var buffer = new byte[8192];
+            long bytesRead = 0;
+            int lastReportedPercent = -1;
+
+            while (true)
+            {
+                var read = await downloadStream.ReadAsync(buffer, cancellationToken);
+                if (read == 0) break;
+
+                await fileStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                bytesRead += read;
+
+                // Report progress every 1%
+                if (totalBytes > 0)
+                {
+                    var percent = (int)((bytesRead * 100) / totalBytes);
+                    if (percent != lastReportedPercent)
+                    {
+                        lastReportedPercent = percent;
+                        onProgress(bytesRead, totalBytes);
+                    }
+                }
+            }
+
+            _logger.LogDebug("Download completed: {Bytes} bytes", bytesRead);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download from {Url}", url);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Extracts specific DLL files from a CUDA redistribution archive to the destination directory.
+    /// NVIDIA archives have structure: archive-name/bin/dll-files
+    /// </summary>
+    private bool ExtractCudaDllsFromArchive(string archivePath, string destinationDir, string[] dllNames)
+    {
+        try
+        {
+            _logger.LogDebug("Extracting DLLs from {Archive} to {Destination}", archivePath, destinationDir);
+
+            using var archive = ZipFile.OpenRead(archivePath);
+
+            foreach (var dllName in dllNames)
+            {
+                // Find the DLL in the archive (it's in the bin subdirectory)
+                var entry = archive.Entries.FirstOrDefault(e =>
+                    e.Name.Equals(dllName, StringComparison.OrdinalIgnoreCase) &&
+                    e.FullName.Contains("/bin/", StringComparison.OrdinalIgnoreCase));
+
+                if (entry == null)
+                {
+                    _logger.LogError("DLL {DllName} not found in archive {Archive}", dllName, archivePath);
+                    return false;
+                }
+
+                var destPath = Path.Combine(destinationDir, dllName);
+                _logger.LogDebug("Extracting {Entry} to {Destination}", entry.FullName, destPath);
+
+                // Extract the file, overwriting if it exists
+                entry.ExtractToFile(destPath, overwrite: true);
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to extract DLLs from archive {Archive}", archivePath);
+            return false;
+        }
     }
 
     /// <summary>

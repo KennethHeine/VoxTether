@@ -234,20 +234,41 @@ The pre-built whisper.cpp CUDA binaries from [ggml-org/whisper.cpp releases](htt
 
 If you have multiple CUDA versions installed, ensure CUDA 11.8 bin directory appears first in your PATH, or place the required DLLs directly in the whisper\cuda\Release\ folder.
 
-## Future Improvements
+## Automatic CUDA DLL Download
 
-### Automatic CUDA DLL Download (Planned)
+VoxTether can automatically download the required CUDA 11.8 runtime DLLs from NVIDIA's redistribution site. This eliminates the need for users to manually install the full CUDA Toolkit.
 
-NVIDIA provides redistributable CUDA DLLs at stable URLs that can be programmatically downloaded:
-- CUDA Runtime: https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/
-- cuBLAS: https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/
+### How It Works
 
-VoxTether could automatically download these DLLs when the CUDA backend is installed but runtime DLLs are missing. This would eliminate the need for users to manually install CUDA Toolkit 11.8.
+When the CUDA backend is installed but the runtime DLLs are missing, VoxTether can download them directly from NVIDIA:
+- **CUDA Runtime**: https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/
+- **cuBLAS**: https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/
 
-**Considerations:**
-- cuBLAS is ~400MB, which is a significant download
-- CUDA Runtime is only ~3MB
-- Files are licensed for redistribution per NVIDIA's CUDA EULA
+The following DLLs are downloaded and placed in the `whisper\cuda\Release\` directory:
+- `cudart64_110.dll` (CUDA Runtime)
+- `cublas64_11.dll` (cuBLAS)
+- `cublasLt64_11.dll` (cuBLAS Lightweight)
+
+### API Usage
+
+The automatic download is available through the `IBackendDownloadService` interface:
+
+```csharp
+// Check if CUDA DLLs are already installed
+if (!backendDownloadService.AreCudaDllsInstalled())
+{
+    // Download and install CUDA DLLs
+    var success = await backendDownloadService.DownloadCudaDllsAsync(progress, cancellationToken);
+}
+```
+
+### Size Considerations
+
+- CUDA Runtime: ~3MB
+- cuBLAS: ~400MB
+- **Total download**: ~403MB
+
+These files are licensed for redistribution per NVIDIA's CUDA EULA.
 
 ## Getting Help
 
