@@ -1191,7 +1191,7 @@ public partial class SettingsWindow : Window
                 Language = _settingsService.Settings.Language
             };
 
-            var result = await _transcriptionEngine.TranscribeAsync(filePath, options, _transcriptionCts.Token);
+            var result = await _transcriptionEngine!.TranscribeAsync(filePath, options, _transcriptionCts.Token);
 
             if (result.Success)
             {
@@ -1215,14 +1215,14 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Transcription failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            TranscriptionStatusText.Text = "Transcription failed";
+            TranscriptionStatusText.Text = $"Error: {ex.Message}";
         }
         finally
         {
             _isTranscribingFile = false;
             TranscribeFileButton.Content = "Transcribe";
-            TranscriptionProgressPanel.Visibility = Visibility.Collapsed;
+            TranscriptionProgressBar.IsIndeterminate = false;
+            TranscriptionProgressBar.Visibility = Visibility.Collapsed;
         }
     }
 
