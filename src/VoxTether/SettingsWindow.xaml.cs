@@ -71,11 +71,29 @@ public class BackendManagementViewModel : System.ComponentModel.INotifyPropertyC
         set
         {
             _isInstalled = value;
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsInstalled)));
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(StatusText)));
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(StatusColor)));
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ButtonText)));
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ButtonEnabled)));
+            NotifyPropertyChanged(nameof(IsInstalled));
+            NotifyPropertyChanged(nameof(StatusText));
+            NotifyPropertyChanged(nameof(StatusColor));
+            NotifyPropertyChanged(nameof(ButtonText));
+            NotifyPropertyChanged(nameof(ButtonEnabled));
+        }
+    }
+    
+    private bool _needsCudaDlls;
+    /// <summary>
+    /// True if CUDA backend is installed but CUDA runtime DLLs are missing.
+    /// </summary>
+    public bool NeedsCudaDlls
+    {
+        get => _needsCudaDlls;
+        set
+        {
+            _needsCudaDlls = value;
+            NotifyPropertyChanged(nameof(NeedsCudaDlls));
+            NotifyPropertyChanged(nameof(StatusText));
+            NotifyPropertyChanged(nameof(StatusColor));
+            NotifyPropertyChanged(nameof(ButtonText));
+            NotifyPropertyChanged(nameof(ShowCudaDllButton));
         }
     }
     
@@ -86,10 +104,11 @@ public class BackendManagementViewModel : System.ComponentModel.INotifyPropertyC
         set
         {
             _isDownloading = value;
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsDownloading)));
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ButtonText)));
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ButtonEnabled)));
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ProgressVisibility)));
+            NotifyPropertyChanged(nameof(IsDownloading));
+            NotifyPropertyChanged(nameof(ButtonText));
+            NotifyPropertyChanged(nameof(ButtonEnabled));
+            NotifyPropertyChanged(nameof(ProgressVisibility));
+            NotifyPropertyChanged(nameof(CudaDllButtonEnabled));
         }
     }
     
@@ -100,15 +119,48 @@ public class BackendManagementViewModel : System.ComponentModel.INotifyPropertyC
         set
         {
             _downloadProgress = value;
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(DownloadProgress)));
+            NotifyPropertyChanged(nameof(DownloadProgress));
         }
     }
 
-    public string StatusText => IsInstalled ? "Installed" : "Not installed";
-    public string StatusColor => IsInstalled ? "#00FF00" : "#808080";
+    public string StatusText
+    {
+        get
+        {
+            if (IsInstalled && NeedsCudaDlls)
+                return "Missing CUDA DLLs";
+            return IsInstalled ? "Installed" : "Not installed";
+        }
+    }
+    
+    public string StatusColor
+    {
+        get
+        {
+            if (IsInstalled && NeedsCudaDlls)
+                return "#FFA500"; // Orange for warning
+            return IsInstalled ? "#00FF00" : "#808080";
+        }
+    }
+    
     public string ButtonText => IsDownloading ? "Downloading..." : (IsInstalled ? "Remove" : "Download");
     public bool ButtonEnabled => !IsDownloading;
     public Visibility ProgressVisibility => IsDownloading ? Visibility.Visible : Visibility.Collapsed;
+    
+    /// <summary>
+    /// Show the CUDA DLL download button when CUDA backend is installed but DLLs are missing.
+    /// </summary>
+    public Visibility ShowCudaDllButton => NeedsCudaDlls ? Visibility.Visible : Visibility.Collapsed;
+    
+    /// <summary>
+    /// Enable the CUDA DLL download button when not currently downloading.
+    /// </summary>
+    public bool CudaDllButtonEnabled => !IsDownloading;
+    
+    private void NotifyPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+    }
 }
 
 /// <summary>
@@ -116,6 +168,9 @@ public class BackendManagementViewModel : System.ComponentModel.INotifyPropertyC
 /// </summary>
 public partial class SettingsWindow : Window
 {
+    // Approximate CUDA DLL download size (~403 MB for CUDA Runtime + cuBLAS)
+    private const string CudaDllDownloadSizeDisplay = "~403 MB";
+    
     private readonly SettingsService _settingsService;
     private readonly ModelDownloadService _downloadService;
     private readonly IAudioRecorder? _audioRecorder;
@@ -895,13 +950,28 @@ public partial class SettingsWindow : Window
         try
         {
             var manifest = await _backendDownloadService.GetManifestAsync();
-            var viewModels = manifest.Backends.Select(backend => new BackendManagementViewModel
+            var viewModels = manifest.Backends.Select(backend =>
             {
-                Id = backend.Id,
-                Name = backend.Name,
-                Description = backend.Description,
-                Size = backend.Size,
-                IsInstalled = _backendDownloadService.IsBackendInstalled(backend.Id)
+                var isInstalled = _backendDownloadService.IsBackendInstalled(backend.Id);
+                
+                // Check if CUDA backend is installed but missing runtime DLLs
+                var needsCudaDlls = false;
+                if (backend.Id.Equals("cuda", StringComparison.OrdinalIgnoreCase) && isInstalled)
+                {
+                    needsCudaDlls = !_backendDownloadService.AreCudaDllsInstalled();
+                }
+                
+                return new BackendManagementViewModel
+                {
+                    Id = backend.Id,
+                    Name = backend.Name,
+                    Description = needsCudaDlls 
+                        ? backend.Description + " Note: CUDA 11.8 runtime DLLs are required but not installed." 
+                        : backend.Description,
+                    Size = backend.Size,
+                    IsInstalled = isInstalled,
+                    NeedsCudaDlls = needsCudaDlls
+                };
             }).ToList();
 
             BackendManagementList.ItemsSource = viewModels;
@@ -975,7 +1045,19 @@ public partial class SettingsWindow : Window
             {
                 viewModel.IsInstalled = true;
                 viewModel.DownloadProgress = 0;
-                BackendDownloadStatusText.Text = $"{viewModel.Name} backend installed successfully!";
+                
+                // Check if CUDA backend needs runtime DLLs
+                if (backendId.Equals("cuda", StringComparison.OrdinalIgnoreCase) && 
+                    !_backendDownloadService.AreCudaDllsInstalled())
+                {
+                    viewModel.NeedsCudaDlls = true;
+                    BackendDownloadStatusText.Text = $"{viewModel.Name} backend installed! Click 'Get CUDA DLLs' to download required runtime DLLs ({CudaDllDownloadSizeDisplay}).";
+                }
+                else
+                {
+                    BackendDownloadStatusText.Text = $"{viewModel.Name} backend installed successfully!";
+                }
+                
                 RefreshBackendDiagnostics();
             }
             else
@@ -983,6 +1065,48 @@ public partial class SettingsWindow : Window
                 viewModel.DownloadProgress = 0;
                 BackendDownloadStatusText.Text = $"Failed to download {viewModel.Name} backend. Check logs for details.";
             }
+        }
+    }
+
+    private async void CudaDllDownloadButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button button || button.Tag is not string backendId)
+            return;
+
+        var viewModel = BackendManagementList.ItemsSource?
+            .Cast<BackendManagementViewModel>()
+            .FirstOrDefault(vm => vm.Id == backendId);
+
+        if (viewModel == null || _backendDownloadService == null)
+            return;
+
+        viewModel.IsDownloading = true;
+        BackendDownloadStatusText.Text = $"Downloading CUDA runtime DLLs from NVIDIA ({CudaDllDownloadSizeDisplay})...";
+        BackendDownloadStatusText.Visibility = Visibility.Visible;
+
+        var progress = new Progress<BackendDownloadProgress>(p =>
+        {
+            Dispatcher.Invoke(() =>
+            {
+                viewModel.DownloadProgress = p.PercentComplete;
+                BackendDownloadStatusText.Text = $"CUDA DLLs: {p.Message}";
+            });
+        });
+
+        var success = await _backendDownloadService.DownloadCudaDllsAsync(progress);
+        
+        viewModel.IsDownloading = false;
+        viewModel.DownloadProgress = 0;
+
+        if (success)
+        {
+            viewModel.NeedsCudaDlls = false;
+            BackendDownloadStatusText.Text = "CUDA runtime DLLs installed successfully! Restart VoxTether to use GPU acceleration.";
+            RefreshBackendDiagnostics();
+        }
+        else
+        {
+            BackendDownloadStatusText.Text = "Failed to download CUDA DLLs. See docs/cuda-troubleshooting.md for manual installation options.";
         }
     }
 

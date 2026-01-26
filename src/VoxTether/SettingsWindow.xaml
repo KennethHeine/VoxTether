@@ -327,6 +327,13 @@
                                                                 IsEnabled="{Binding ButtonEnabled}"
                                                                 Click="BackendDownloadButton_Click"
                                                                 Tag="{Binding Id}"/>
+                                                        <Button Content="Get CUDA DLLs" 
+                                                                Width="100" 
+                                                                IsEnabled="{Binding CudaDllButtonEnabled}"
+                                                                Visibility="{Binding ShowCudaDllButton}"
+                                                                Click="CudaDllDownloadButton_Click"
+                                                                Tag="{Binding Id}"
+                                                                Margin="0,4,0,0"/>
                                                         <ProgressBar Height="4" 
                                                                      Value="{Binding DownloadProgress}" 
                                                                      Visibility="{Binding ProgressVisibility}"
