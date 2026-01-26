@@ -1,7 +1,12 @@
 name: Release
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,11 +23,17 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Extract version from tag
+    - name: Validate and set version
       id: version
       run: |
-        $tag = "${{ github.ref_name }}"
-        $version = $tag -replace '^v', ''
+        $version = "${{ github.event.inputs.version }}"
+        # Remove 'v' prefix if provided
+        $version = $version -replace '^v', ''
+        # Validate semver format (basic validation for X.Y.Z with optional prerelease/metadata)
+        if (-not ($version -match '^\d+\.\d+\.\d+(-[\w-]+(\.[\w-]+)*)?(\+[\w-]+(\.[\w-]+)*)?$')) {
+          Write-Error "Invalid version format: $version. Expected format: X.Y.Z (e.g., 1.0.0)"
+          exit 1
+        }
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
       shell: pwsh
 
@@ -95,6 +106,8 @@ jobs:
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: VoxTether v${{ steps.version.outputs.VERSION }}
         files: |
           ./VoxTether-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
           ./installer/Output/VoxTether-Setup-${{ steps.version.outputs.VERSION }}.exe
