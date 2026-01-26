@@ -10,15 +10,22 @@ public class FileLogger : ILogger
 {
     private readonly string _name;
     private readonly string _logPath;
+    private readonly string _version;
     private readonly object _lock = new();
     private const int MaxFileSizeBytes = 5 * 1024 * 1024; // 5MB
     private const int MaxLogFiles = 5;
 
-    public FileLogger(string name, string logPath)
+    public FileLogger(string name, string logPath, string version)
     {
         _name = name;
         _logPath = logPath;
+        _version = version;
     }
+
+    /// <summary>
+    /// Gets the base log filename including the version (e.g., "voxtether-1.0.0.log").
+    /// </summary>
+    private string LogFileName => $"voxtether-{_version}.log";
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -39,7 +46,7 @@ public class FileLogger : ILogger
         {
             try
             {
-                var logFile = Path.Combine(_logPath, "voxtether.log");
+                var logFile = Path.Combine(_logPath, LogFileName);
                 
                 // Check for log rotation
                 if (File.Exists(logFile))
@@ -67,10 +74,12 @@ public class FileLogger : ILogger
 
     private void RotateLogs()
     {
-        var logFile = Path.Combine(_logPath, "voxtether.log");
+        // Get the base name without extension (e.g., "voxtether-1.0.0")
+        var baseName = Path.GetFileNameWithoutExtension(LogFileName);
+        var logFile = Path.Combine(_logPath, LogFileName);
 
         // Delete oldest log if we have too many
-        var oldestLog = Path.Combine(_logPath, $"voxtether.{MaxLogFiles}.log");
+        var oldestLog = Path.Combine(_logPath, $"{baseName}.{MaxLogFiles}.log");
         if (File.Exists(oldestLog))
         {
             File.Delete(oldestLog);
@@ -79,8 +88,8 @@ public class FileLogger : ILogger
         // Rotate existing logs
         for (int i = MaxLogFiles - 1; i >= 1; i--)
         {
-            var source = Path.Combine(_logPath, $"voxtether.{i}.log");
-            var dest = Path.Combine(_logPath, $"voxtether.{i + 1}.log");
+            var source = Path.Combine(_logPath, $"{baseName}.{i}.log");
+            var dest = Path.Combine(_logPath, $"{baseName}.{i + 1}.log");
             if (File.Exists(source))
             {
                 File.Move(source, dest);
@@ -90,7 +99,7 @@ public class FileLogger : ILogger
         // Move current log
         if (File.Exists(logFile))
         {
-            File.Move(logFile, Path.Combine(_logPath, "voxtether.1.log"));
+            File.Move(logFile, Path.Combine(_logPath, $"{baseName}.1.log"));
         }
     }
 }
@@ -101,16 +110,18 @@ public class FileLogger : ILogger
 public class FileLoggerProvider : ILoggerProvider
 {
     private readonly string _logPath;
+    private readonly string _version;
 
-    public FileLoggerProvider(string logPath)
+    public FileLoggerProvider(string logPath, string version)
     {
         _logPath = logPath;
+        _version = version;
         Directory.CreateDirectory(logPath);
     }
 
     public ILogger CreateLogger(string categoryName)
     {
-        return new FileLogger(categoryName, _logPath);
+        return new FileLogger(categoryName, _logPath, _version);
     }
 
     public void Dispose()
@@ -123,9 +134,9 @@ public class FileLoggerProvider : ILoggerProvider
 /// </summary>
 public static class FileLoggerExtensions
 {
-    public static ILoggingBuilder AddFileLogger(this ILoggingBuilder builder, string logPath)
+    public static ILoggingBuilder AddFileLogger(this ILoggingBuilder builder, string logPath, string version)
     {
-        builder.AddProvider(new FileLoggerProvider(logPath));
+        builder.AddProvider(new FileLoggerProvider(logPath, version));
         return builder;
     }
 }
