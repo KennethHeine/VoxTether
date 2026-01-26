@@ -55,4 +55,22 @@ public interface IBackendDownloadService
     /// </summary>
     /// <returns>Available disk space in bytes.</returns>
     long GetAvailableDiskSpace();
+
+    /// <summary>
+    /// Downloads and installs CUDA runtime DLLs from NVIDIA's redistribution site.
+    /// This allows the CUDA backend to run without requiring users to install the full CUDA Toolkit.
+    /// Downloads cublas64_11.dll, cublasLt64_11.dll, and cudart64_110.dll.
+    /// </summary>
+    /// <param name="progress">Progress reporter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if download and installation succeeded.</returns>
+    Task<bool> DownloadCudaDllsAsync(
+        IProgress<BackendDownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks if the CUDA runtime DLLs are installed in the CUDA backend directory.
+    /// </summary>
+    /// <returns>True if all required CUDA DLLs are present.</returns>
+    bool AreCudaDllsInstalled();
 }

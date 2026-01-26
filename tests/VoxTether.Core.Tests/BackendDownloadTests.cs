@@ -98,6 +98,39 @@ public class BackendDownloadTests
         // Assert
         Assert.False(result);
     }
+
+    [Fact]
+    public void AreCudaDllsInstalled_WhenNotInstalled_ReturnsFalse()
+    {
+        // Arrange
+        var logger = CreateTestLogger();
+        var backendSelection = new BackendSelectionService(CreateBackendSelectionLogger());
+        using var service = new BackendDownloadService(logger, backendSelection);
+
+        // Act
+        var result = service.AreCudaDllsInstalled();
+
+        // Assert
+        // In a fresh test environment without CUDA DLLs installed, this should return false
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task DownloadCudaDllsAsync_WhenCancelled_ReturnsFalse()
+    {
+        // Arrange
+        var logger = CreateTestLogger();
+        var backendSelection = new BackendSelectionService(CreateBackendSelectionLogger());
+        using var service = new BackendDownloadService(logger, backendSelection);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel(); // Cancel immediately
+
+        // Act
+        var result = await service.DownloadCudaDllsAsync(cancellationToken: cts.Token);
+
+        // Assert
+        Assert.False(result);
+    }
 }
 
 public class BackendManifestTests
