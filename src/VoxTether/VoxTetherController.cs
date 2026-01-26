@@ -265,7 +265,8 @@ public class VoxTetherController
                     Directory.CreateDirectory(savePath);
                     var savedFileName = Path.GetFileName(wavPath);
                     var savedPath = Path.Combine(savePath, savedFileName);
-                    File.Copy(wavPath, savedPath, overwrite: true);
+                    // Note: Filename already contains timestamp + GUID so collisions are extremely unlikely
+                    File.Copy(wavPath, savedPath, overwrite: false);
                     _logger.LogInformation("Audio saved to: {Path}", savedPath);
                 }
                 catch (Exception ex)
