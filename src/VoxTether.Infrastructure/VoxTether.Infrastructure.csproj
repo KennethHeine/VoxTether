@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
     <ProjectReference Include="..\VoxTether.Core\VoxTether.Core.csproj" />
   </ItemGroup>
 
