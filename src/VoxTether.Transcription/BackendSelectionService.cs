@@ -504,6 +504,10 @@ public class BackendSelectionService : IBackendSelectionService
     
     /// <summary>
     /// Performs the actual runtime validation by attempting to start the executable.
+    /// Note: This validation may not catch all DLL issues due to delay-loading. CUDA DLLs
+    /// may only be loaded when CUDA functions are actually called during transcription,
+    /// not during --help. The WhisperCppEngine provides a clear error message if DLL
+    /// loading fails during actual transcription.
     /// </summary>
     private (bool CanRun, string? FailureReason) PerformRuntimeValidation(string execPath)
     {
@@ -531,6 +535,7 @@ public class BackendSelectionService : IBackendSelectionService
             // Wait for the process to complete with a short timeout
             var completed = process.WaitForExit(ValidationTimeoutMs);
             
+            // If process is still running after timeout, it at least started successfully
             if (!completed)
             {
                 // Process is still running, which means it at least started successfully
@@ -544,10 +549,11 @@ public class BackendSelectionService : IBackendSelectionService
                     // Fallback to simple kill if tree kill fails
                     try { process.Kill(); } catch { /* Ignore */ }
                 }
-                _logger.LogDebug("Executable validation passed (process started): {Path}", execPath);
+                _logger.LogDebug("Executable validation passed (process still running after timeout): {Path}", execPath);
                 return (true, null);
             }
             
+            // Process completed - WaitForExit() returned true, so process.ExitCode is available
             // Check for DLL_NOT_FOUND errors
             // 0xC0000135 = -1073741515 = STATUS_DLL_NOT_FOUND
             const int STATUS_DLL_NOT_FOUND = unchecked((int)0xC0000135);

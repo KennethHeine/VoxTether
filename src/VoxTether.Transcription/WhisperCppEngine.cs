@@ -207,6 +207,19 @@ public class WhisperCppEngine : ITranscriptionEngine
                 var stderr = errorBuilder.ToString().Trim();
                 var stdout = outputBuilder.ToString().Trim();
                 
+                // Check for STATUS_DLL_NOT_FOUND (0xC0000135 = -1073741515)
+                // This typically means CUDA runtime DLLs are missing when using CUDA backend
+                const int STATUS_DLL_NOT_FOUND = unchecked((int)0xC0000135);
+                
+                if (process.ExitCode == STATUS_DLL_NOT_FOUND)
+                {
+                    result.Error = "Missing required DLLs. If using CUDA backend, please install the NVIDIA CUDA Toolkit or switch to CPU backend in Settings.";
+                    _logger.LogError("Whisper transcription failed due to missing DLLs (likely CUDA runtime). " +
+                        "Exit code: {ExitCode}. Consider switching to CPU backend or installing CUDA Toolkit.", 
+                        process.ExitCode);
+                    return result;
+                }
+                
                 // Include both stderr and stdout in error message for better diagnostics
                 // whisper.cpp often writes error info to stdout (e.g., model loading, CUDA initialization)
                 var errorDetails = new StringBuilder();
