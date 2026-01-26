@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VoxTether.Core.Interfaces;
 using VoxTether.Core.Models;
@@ -9,7 +8,6 @@ namespace VoxTether.Transcription;
 /// Service for detecting and selecting the best transcription backend.
 /// Uses a "try-load" approach for robust detection:
 /// - Checks for existence of backend-specific executables
-/// - Optionally probes GPU hardware via DXGI for hints
 /// - Falls back gracefully to CPU if requested backend is unavailable
 /// </summary>
 public class BackendSelectionService : IBackendSelectionService
@@ -142,36 +140,44 @@ public class BackendSelectionService : IBackendSelectionService
 
         var diagnostics = new GpuDiagnostics();
 
+        // Instead of using fragile DXGI COM interop which can crash on some systems,
+        // we use a simpler approach: infer GPU presence from available backend executables
+        // and environment. This follows the "try-load" robustness principle.
         try
         {
-            // Try to enumerate GPUs via DXGI
-            var gpus = EnumerateGpusViaDxgi();
-            diagnostics.DetectedGpus = gpus;
-
-            foreach (var gpu in gpus)
+            // Check for NVIDIA driver hint via CUDA availability
+            if (IsBackendAvailable(TranscriptionBackendMode.Cuda))
             {
-                var lowerGpu = gpu.ToLowerInvariant();
-                if (lowerGpu.Contains("nvidia") || lowerGpu.Contains("geforce") || lowerGpu.Contains("quadro") || lowerGpu.Contains("rtx") || lowerGpu.Contains("gtx"))
-                {
-                    diagnostics.HasNvidiaGpu = true;
-                }
-                else if (lowerGpu.Contains("intel"))
-                {
-                    diagnostics.HasIntelGpu = true;
-                }
-                else if (lowerGpu.Contains("amd") || lowerGpu.Contains("radeon"))
-                {
-                    diagnostics.HasAmdGpu = true;
-                }
+                diagnostics.HasNvidiaGpu = true;
+                diagnostics.DetectedGpus.Add("NVIDIA GPU (inferred from CUDA backend availability)");
             }
 
-            _logger.LogDebug("GPU diagnostics: NVIDIA={HasNvidia}, Intel={HasIntel}, AMD={HasAmd}, GPUs={Gpus}",
-                diagnostics.HasNvidiaGpu, diagnostics.HasIntelGpu, diagnostics.HasAmdGpu,
-                string.Join(", ", diagnostics.DetectedGpus));
+            // Check for Intel OpenVINO availability
+            if (IsBackendAvailable(TranscriptionBackendMode.OpenVino))
+            {
+                diagnostics.HasIntelGpu = true;
+                diagnostics.DetectedGpus.Add("Intel GPU/NPU (inferred from OpenVINO backend availability)");
+            }
+
+            // Check for Vulkan availability (cross-vendor)
+            if (IsBackendAvailable(TranscriptionBackendMode.Vulkan))
+            {
+                // Vulkan could be AMD, NVIDIA, or Intel - we can't tell without DXGI
+                diagnostics.DetectedGpus.Add("Vulkan-capable GPU (inferred from Vulkan backend availability)");
+            }
+
+            // If no accelerated backends found, just note that CPU is available
+            if (diagnostics.DetectedGpus.Count == 0)
+            {
+                diagnostics.DetectedGpus.Add("(No GPU-accelerated backends detected)");
+            }
+
+            _logger.LogDebug("GPU diagnostics: NVIDIA={HasNvidia}, Intel={HasIntel}, AMD={HasAmd}",
+                diagnostics.HasNvidiaGpu, diagnostics.HasIntelGpu, diagnostics.HasAmdGpu);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to enumerate GPUs via DXGI");
+            _logger.LogWarning(ex, "Failed to gather GPU diagnostics");
             diagnostics.DetectedGpus = ["(Detection failed)"];
         }
 
@@ -190,15 +196,14 @@ public class BackendSelectionService : IBackendSelectionService
     }
 
     /// <summary>
-    /// Determines the best available backend based on hardware and executable availability.
+    /// Determines the best available backend based on executable availability.
     /// Order of preference: CUDA > Vulkan > OpenVINO > CPU.
+    /// Uses a simple "try-load" approach by checking for backend executables.
     /// </summary>
     private TranscriptionBackendMode DetermineBestAvailableBackend()
     {
-        // Get GPU diagnostics to guide selection
-        var gpuInfo = GetGpuDiagnostics();
-
-        // Priority order for acceleration
+        // Standard priority order for acceleration: CUDA > Vulkan > OpenVINO > CPU
+        // This order is based on typical performance characteristics.
         var priorityOrder = new List<TranscriptionBackendMode>
         {
             TranscriptionBackendMode.Cuda,
@@ -206,18 +211,6 @@ public class BackendSelectionService : IBackendSelectionService
             TranscriptionBackendMode.OpenVino,
             TranscriptionBackendMode.CpuOnly
         };
-
-        // If NVIDIA is present, check CUDA first (already at top)
-        // If Intel only, prioritize OpenVINO
-        if (gpuInfo.HasIntelGpu && !gpuInfo.HasNvidiaGpu && !gpuInfo.HasAmdGpu)
-        {
-            priorityOrder = new List<TranscriptionBackendMode>
-            {
-                TranscriptionBackendMode.OpenVino,
-                TranscriptionBackendMode.Vulkan,
-                TranscriptionBackendMode.CpuOnly
-            };
-        }
 
         foreach (var backend in priorityOrder)
         {
@@ -274,123 +267,4 @@ public class BackendSelectionService : IBackendSelectionService
         _logger.LogDebug("No executable found for backend {Backend}", backend);
         return null;
     }
-
-    /// <summary>
-    /// Enumerates GPU adapters using DXGI.
-    /// </summary>
-    private static List<string> EnumerateGpusViaDxgi()
-    {
-        var gpus = new List<string>();
-        IDXGIFactory? factory = null;
-
-        try
-        {
-            // Use DXGI to enumerate adapters
-            var result = CreateDXGIFactory(typeof(IDXGIFactory).GUID, out var factoryPtr);
-            if (result != 0 || factoryPtr == IntPtr.Zero)
-            {
-                return gpus;
-            }
-
-            factory = (IDXGIFactory)Marshal.GetObjectForIUnknown(factoryPtr);
-            
-            uint adapterIndex = 0;
-            while (true)
-            {
-                var enumResult = factory.EnumAdapters(adapterIndex, out var adapter);
-                if (enumResult != 0)
-                    break;
-
-                if (adapter != null)
-                {
-                    try
-                    {
-                        var desc = new DXGI_ADAPTER_DESC();
-                        adapter.GetDesc(ref desc);
-                        
-                        var description = desc.Description;
-                        if (!string.IsNullOrWhiteSpace(description) && 
-                            !description.Contains("Microsoft Basic Render Driver", StringComparison.OrdinalIgnoreCase))
-                        {
-                            gpus.Add(description.Trim());
-                        }
-                    }
-                    finally
-                    {
-                        Marshal.ReleaseComObject(adapter);
-                    }
-                }
-                
-                adapterIndex++;
-            }
-        }
-        catch
-        {
-            // DXGI may not be available, return empty list
-        }
-        finally
-        {
-            if (factory != null)
-            {
-                Marshal.ReleaseComObject(factory);
-            }
-        }
-
-        return gpus;
-    }
-
-    #region DXGI Interop
-
-    [DllImport("dxgi.dll", PreserveSig = true)]
-    private static extern int CreateDXGIFactory(in Guid riid, out IntPtr ppFactory);
-
-    [ComImport]
-    [Guid("7b7166ec-21c7-44ae-b21a-c9ae321ae369")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IDXGIFactory
-    {
-        [PreserveSig]
-        int EnumAdapters(uint Adapter, out IDXGIAdapter? ppAdapter);
-        
-        // Other methods not needed - just declare to maintain vtable order
-        void MakeWindowAssociation();
-        void GetWindowAssociation();
-        void CreateSwapChain();
-        void CreateSoftwareAdapter();
-    }
-
-    [ComImport]
-    [Guid("2411e7e1-12ac-4ccf-bd14-9798e8534dc0")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IDXGIAdapter
-    {
-        // EnumOutputs - not needed
-        void EnumOutputs();
-        
-        [PreserveSig]
-        int GetDesc(ref DXGI_ADAPTER_DESC pDesc);
-        
-        // Other methods not needed
-        void CheckInterfaceSupport();
-    }
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct DXGI_ADAPTER_DESC
-    {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string Description;
-        public uint VendorId;
-        public uint DeviceId;
-        public uint SubSysId;
-        public uint Revision;
-        // Use UIntPtr for SIZE_T which is pointer-sized (32-bit on x86, 64-bit on x64)
-        public UIntPtr DedicatedVideoMemory;
-        public UIntPtr DedicatedSystemMemory;
-        public UIntPtr SharedSystemMemory;
-        // LUID structure: two 32-bit values packed together
-        public uint AdapterLuidLowPart;
-        public int AdapterLuidHighPart;
-    }
-
-    #endregion
 }
