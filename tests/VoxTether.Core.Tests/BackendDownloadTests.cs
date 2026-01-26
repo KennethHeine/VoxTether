@@ -25,7 +25,7 @@ public class BackendDownloadTests
         // Arrange
         var logger = CreateTestLogger();
         var backendSelection = new BackendSelectionService(CreateBackendSelectionLogger());
-        var service = new BackendDownloadService(logger, backendSelection);
+        using var service = new BackendDownloadService(logger, backendSelection);
 
         // Act
         var manifest = await service.GetManifestAsync();
@@ -44,7 +44,7 @@ public class BackendDownloadTests
         // Arrange
         var logger = CreateTestLogger();
         var backendSelection = new BackendSelectionService(CreateBackendSelectionLogger());
-        var service = new BackendDownloadService(logger, backendSelection);
+        using var service = new BackendDownloadService(logger, backendSelection);
 
         // Act
         var space = service.GetAvailableDiskSpace();
@@ -59,7 +59,7 @@ public class BackendDownloadTests
         // Arrange
         var logger = CreateTestLogger();
         var backendSelection = new BackendSelectionService(CreateBackendSelectionLogger());
-        var service = new BackendDownloadService(logger, backendSelection);
+        using var service = new BackendDownloadService(logger, backendSelection);
 
         // Act
         var isInstalled = service.IsBackendInstalled("nonexistent-backend");
@@ -74,7 +74,7 @@ public class BackendDownloadTests
         // Arrange
         var logger = CreateTestLogger();
         var backendSelection = new BackendSelectionService(CreateBackendSelectionLogger());
-        var service = new BackendDownloadService(logger, backendSelection);
+        using var service = new BackendDownloadService(logger, backendSelection);
 
         // Act
         var recommended = service.GetRecommendedBackends();
@@ -90,7 +90,7 @@ public class BackendDownloadTests
         // Arrange
         var logger = CreateTestLogger();
         var backendSelection = new BackendSelectionService(CreateBackendSelectionLogger());
-        var service = new BackendDownloadService(logger, backendSelection);
+        using var service = new BackendDownloadService(logger, backendSelection);
 
         // Act
         var result = await service.RemoveBackendAsync("nonexistent-backend");

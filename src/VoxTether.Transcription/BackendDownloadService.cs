@@ -19,7 +19,7 @@ namespace VoxTether.Transcription;
 /// <summary>
 /// Service for downloading and managing transcription backend packages.
 /// </summary>
-public class BackendDownloadService : IBackendDownloadService
+public class BackendDownloadService : IBackendDownloadService, IDisposable
 {
     private readonly ILogger<BackendDownloadService> _logger;
     private readonly IBackendSelectionService _backendSelection;
@@ -365,5 +365,13 @@ public class BackendDownloadService : IBackendDownloadService
             Message = message,
             ErrorMessage = errorMessage
         });
+    }
+
+    /// <summary>
+    /// Disposes the HTTP client.
+    /// </summary>
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
     }
 }
