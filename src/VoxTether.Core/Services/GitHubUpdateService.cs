@@ -9,11 +9,19 @@ namespace VoxTether.Core.Services;
 /// <summary>
 /// Service for checking updates from GitHub releases.
 /// </summary>
-public class GitHubUpdateService : IUpdateService
+public class GitHubUpdateService : IUpdateService, IDisposable
 {
     private readonly ILogger<GitHubUpdateService> _logger;
     private readonly HttpClient _httpClient;
+    private bool _disposed;
+    
     private const string GitHubApiUrl = "https://api.github.com/repos/KennethHeine/VoxTether/releases/latest";
+    
+    // Asset file patterns for matching release downloads
+    private const string InstallerExtension = ".exe";
+    private const string InstallerPattern = "Setup";
+    private const string PortableExtension = ".zip";
+    private const string PortablePattern = "portable";
 
     public GitHubUpdateService(ILogger<GitHubUpdateService> logger)
     {
@@ -56,11 +64,11 @@ public class GitHubUpdateService : IUpdateService
                     var name = asset.GetProperty("name").GetString() ?? string.Empty;
                     var downloadUrl = asset.GetProperty("browser_download_url").GetString();
 
-                    if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && name.Contains("Setup"))
+                    if (IsInstallerAsset(name))
                     {
                         installerUrl = downloadUrl;
                     }
-                    else if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && name.Contains("portable"))
+                    else if (IsPortableAsset(name))
                     {
                         portableUrl = downloadUrl;
                     }
@@ -114,6 +122,24 @@ public class GitHubUpdateService : IUpdateService
     }
 
     /// <summary>
+    /// Determines if an asset name matches the installer pattern.
+    /// </summary>
+    private static bool IsInstallerAsset(string name)
+    {
+        return name.EndsWith(InstallerExtension, StringComparison.OrdinalIgnoreCase) && 
+               name.Contains(InstallerPattern, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Determines if an asset name matches the portable package pattern.
+    /// </summary>
+    private static bool IsPortableAsset(string name)
+    {
+        return name.EndsWith(PortableExtension, StringComparison.OrdinalIgnoreCase) && 
+               name.Contains(PortablePattern, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Compares two version strings to determine if the latest is newer than current.
     /// </summary>
     private static bool IsNewerVersion(string currentVersion, string latestVersion)
@@ -153,5 +179,14 @@ public class GitHubUpdateService : IUpdateService
         }
 
         return version;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        
+        _httpClient.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
