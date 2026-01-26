@@ -62,7 +62,7 @@ public class BackendManagementViewModel : System.ComponentModel.INotifyPropertyC
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public long Size { get; set; }
-    public string SizeText => $"Download size: {FormatBytes(Size)}";
+    public string SizeText => $"Download size: {FormatUtility.FormatBytes(Size)}";
     
     private bool _isInstalled;
     public bool IsInstalled
@@ -109,19 +109,6 @@ public class BackendManagementViewModel : System.ComponentModel.INotifyPropertyC
     public string ButtonText => IsDownloading ? "Downloading..." : (IsInstalled ? "Remove" : "Download");
     public bool ButtonEnabled => !IsDownloading;
     public Visibility ProgressVisibility => IsDownloading ? Visibility.Visible : Visibility.Collapsed;
-
-    private string FormatBytes(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len /= 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
-    }
 }
 
 /// <summary>

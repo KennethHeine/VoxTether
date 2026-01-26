@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VoxTether.Core.Interfaces;
 using VoxTether.Core.Models;
+using VoxTether.Core.Services;
 
 namespace VoxTether.Transcription;
 
@@ -125,8 +126,8 @@ public class BackendDownloadService : IBackendDownloadService
             var availableSpace = GetAvailableDiskSpace();
             if (availableSpace < packageInfo.Size * 2) // Need 2x space for zip + extraction
             {
-                var errorMsg = $"Insufficient disk space. Need {FormatBytes(packageInfo.Size * 2)}, " +
-                              $"have {FormatBytes(availableSpace)}";
+                var errorMsg = $"Insufficient disk space. Need {FormatUtility.FormatBytes(packageInfo.Size * 2)}, " +
+                              $"have {FormatUtility.FormatBytes(availableSpace)}";
                 _logger.LogError(errorMsg);
                 ReportProgress(progress, backendId, BackendDownloadStatus.Failed, 
                     0, 0, "Insufficient disk space", errorMsg);
@@ -170,7 +171,7 @@ public class BackendDownloadService : IBackendDownloadService
                         lastReportedPercent = percent;
                         ReportProgress(progress, backendId, BackendDownloadStatus.Downloading,
                             bytesRead, totalBytes, 
-                            $"Downloading... {FormatBytes(bytesRead)} / {FormatBytes(totalBytes)}");
+                            $"Downloading... {FormatUtility.FormatBytes(bytesRead)} / {FormatUtility.FormatBytes(totalBytes)}");
                     }
                 }
             }
@@ -178,8 +179,8 @@ public class BackendDownloadService : IBackendDownloadService
             _logger.LogInformation("Download completed for {BackendId}, {Size} bytes", 
                 backendId, new FileInfo(zipPath).Length);
 
-            // Validate checksum (skip if "pending" placeholder)
-            if (!packageInfo.Checksum.Contains("pending", StringComparison.OrdinalIgnoreCase))
+            // Validate checksum (skip if exactly "sha256:pending" placeholder)
+            if (!packageInfo.Checksum.Equals("sha256:pending", StringComparison.OrdinalIgnoreCase))
             {
                 ReportProgress(progress, backendId, BackendDownloadStatus.Validating,
                     0, 0, "Validating checksum...");
@@ -364,18 +365,5 @@ public class BackendDownloadService : IBackendDownloadService
             Message = message,
             ErrorMessage = errorMessage
         });
-    }
-
-    private string FormatBytes(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len /= 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
     }
 }
