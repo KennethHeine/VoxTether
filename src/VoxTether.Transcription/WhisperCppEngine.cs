@@ -151,6 +151,13 @@ public class WhisperCppEngine : ITranscriptionEngine
             var outputDone = new TaskCompletionSource<bool>();
             var errorDone = new TaskCompletionSource<bool>();
 
+            // Register cancellation to prevent hanging if process is killed before streams close
+            using var registration = cancellationToken.Register(() =>
+            {
+                outputDone.TrySetCanceled(cancellationToken);
+                errorDone.TrySetCanceled(cancellationToken);
+            });
+
             process.OutputDataReceived += (_, e) =>
             {
                 if (e.Data != null)
