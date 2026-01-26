@@ -23,6 +23,7 @@ public class VoxTetherController
     private string _currentRecordingPath = string.Empty;
     private bool _isRecording;
     private bool _isTranscribing;
+    private bool _isToggleRecording;
 
     /// <summary>
     /// Event raised when recording state changes.
@@ -68,6 +69,7 @@ public class VoxTetherController
 
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _hotkeyService.HotkeyReleased += OnHotkeyReleased;
+        _hotkeyService.ToggleHotkeyPressed += OnToggleHotkeyPressed;
     }
 
     /// <summary>
@@ -79,8 +81,13 @@ public class VoxTetherController
         var hotkeyString = _settingsService.Settings.Hotkey;
         _hotkeyService.Hotkey = HotkeyCombination.Parse(hotkeyString);
         
+        // Configure toggle hotkey from settings
+        var toggleHotkeyString = _settingsService.Settings.ToggleHotkey;
+        _hotkeyService.ToggleHotkey = HotkeyCombination.Parse(toggleHotkeyString);
+        
         _hotkeyService.Start();
-        _logger.LogInformation("VoxTether controller started, hotkey: {Hotkey}", _hotkeyService.Hotkey);
+        _logger.LogInformation("VoxTether controller started, hotkey: {Hotkey}, toggle hotkey: {ToggleHotkey}", 
+            _hotkeyService.Hotkey, _hotkeyService.ToggleHotkey);
     }
 
     /// <summary>
@@ -113,6 +120,13 @@ public class VoxTetherController
 
     private void OnHotkeyReleased(object? sender, EventArgs e)
     {
+        // Ignore if this was a toggle recording - toggle mode handles its own stop
+        if (_isToggleRecording)
+        {
+            _logger.LogDebug("Toggle recording in progress, ignoring hold hotkey release");
+            return;
+        }
+
         if (!_isRecording)
         {
             _logger.LogDebug("Not recording, ignoring hotkey release");
@@ -120,6 +134,24 @@ public class VoxTetherController
         }
 
         StopRecordingAndTranscribe();
+    }
+
+    private void OnToggleHotkeyPressed(object? sender, EventArgs e)
+    {
+        if (_isRecording)
+        {
+            // Stop recording
+            _isToggleRecording = false;
+            _logger.LogDebug("Toggle hotkey pressed - stopping recording");
+            StopRecordingAndTranscribe();
+        }
+        else
+        {
+            // Start recording in toggle mode
+            _isToggleRecording = true;
+            _logger.LogDebug("Toggle hotkey pressed - starting recording");
+            StartRecording();
+        }
     }
 
     private void StartRecording()
@@ -219,6 +251,28 @@ public class VoxTetherController
             if (!injected)
             {
                 _logger.LogWarning("Text injection failed or was skipped");
+            }
+
+            // Save audio file if enabled
+            if (_settingsService.Settings.SaveAudioRecordings)
+            {
+                try
+                {
+                    var savePath = !string.IsNullOrEmpty(_settingsService.Settings.AudioSavePath)
+                        ? _settingsService.Settings.AudioSavePath
+                        : SettingsService.AudioRecordingsPath;
+                    
+                    Directory.CreateDirectory(savePath);
+                    var savedFileName = Path.GetFileName(wavPath);
+                    var savedPath = Path.Combine(savePath, savedFileName);
+                    // Note: Filename already contains timestamp + GUID so collisions are extremely unlikely
+                    File.Copy(wavPath, savedPath, overwrite: false);
+                    _logger.LogInformation("Audio saved to: {Path}", savedPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to save audio file");
+                }
             }
 
             // Clean up temp file
