@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag -replace '^v', ''
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Run tests
+      run: dotnet test --configuration Release --verbosity normal
+
+    - name: Publish win-x64
+      run: |
+        dotnet publish src/VoxTether/VoxTether.csproj `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          -p:PublishSingleFile=false `
+          -p:Version=${{ steps.version.outputs.VERSION }} `
+          --output ./publish
+      shell: pwsh
+
+    - name: Download whisper.cpp
+      run: |
+        # Create whisper directory
+        New-Item -ItemType Directory -Force -Path ./publish/whisper
+        
+        # Download whisper.cpp release (using a known working release)
+        $whisperUrl = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-bin-x64.zip"
+        Invoke-WebRequest -Uri $whisperUrl -OutFile whisper-bin.zip
+        
+        # Extract whisper binary
+        Expand-Archive -Path whisper-bin.zip -DestinationPath ./whisper-temp -Force
+        Copy-Item ./whisper-temp/main.exe ./publish/whisper/main.exe -Force
+        
+        # Cleanup
+        Remove-Item -Recurse -Force ./whisper-temp
+        Remove-Item whisper-bin.zip
+      shell: pwsh
+
+    - name: Download default model
+      run: |
+        # Create models directory
+        New-Item -ItemType Directory -Force -Path ./publish/models
+        
+        # Download ggml-base model (good balance of quality and size)
+        $modelUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
+        Invoke-WebRequest -Uri $modelUrl -OutFile ./publish/models/ggml-base.bin
+      shell: pwsh
+
+    - name: Create portable ZIP
+      run: |
+        Compress-Archive -Path ./publish/* -DestinationPath ./VoxTether-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
+      shell: pwsh
+
+    - name: Install Inno Setup
+      run: |
+        choco install innosetup -y
+      shell: pwsh
+
+    - name: Build installer
+      run: |
+        # Update version in ISS file
+        $issContent = Get-Content -Path ./installer/VoxTether.iss -Raw
+        $issContent = $issContent -replace '#define MyAppVersion ".*"', '#define MyAppVersion "${{ steps.version.outputs.VERSION }}"'
+        Set-Content -Path ./installer/VoxTether.iss -Value $issContent
+        
+        # Build installer
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ./installer/VoxTether.iss
+      shell: pwsh
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ./VoxTether-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
+          ./installer/Output/VoxTether-Setup-${{ steps.version.outputs.VERSION }}.exe
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
