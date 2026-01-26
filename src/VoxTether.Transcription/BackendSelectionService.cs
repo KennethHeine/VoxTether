@@ -145,25 +145,35 @@ public class BackendSelectionService : IBackendSelectionService
         // and environment. This follows the "try-load" robustness principle.
         try
         {
-            // Check for NVIDIA driver hint via CUDA availability
+            // First try actual hardware detection
+            DetectHardware(diagnostics);
+
+            // Also check for backend availability (for backwards compatibility)
             if (IsBackendAvailable(TranscriptionBackendMode.Cuda))
             {
-                diagnostics.HasNvidiaGpu = true;
-                diagnostics.DetectedGpus.Add("NVIDIA GPU (inferred from CUDA backend availability)");
+                if (!diagnostics.HasNvidiaGpu)
+                {
+                    diagnostics.HasNvidiaGpu = true;
+                    diagnostics.DetectedGpus.Add("NVIDIA GPU (inferred from CUDA backend availability)");
+                }
             }
 
-            // Check for Intel OpenVINO availability
             if (IsBackendAvailable(TranscriptionBackendMode.OpenVino))
             {
-                diagnostics.HasIntelGpu = true;
-                diagnostics.DetectedGpus.Add("Intel GPU/NPU (inferred from OpenVINO backend availability)");
+                if (!diagnostics.HasIntelGpu)
+                {
+                    diagnostics.HasIntelGpu = true;
+                    diagnostics.DetectedGpus.Add("Intel GPU/NPU (inferred from OpenVINO backend availability)");
+                }
             }
 
-            // Check for Vulkan availability (cross-vendor)
             if (IsBackendAvailable(TranscriptionBackendMode.Vulkan))
             {
-                // Vulkan could be AMD, NVIDIA, or Intel - we can't tell without DXGI
-                diagnostics.DetectedGpus.Add("Vulkan-capable GPU (inferred from Vulkan backend availability)");
+                if (diagnostics.DetectedGpus.Count == 0 || 
+                    diagnostics.DetectedGpus.All(g => !g.Contains("Vulkan")))
+                {
+                    diagnostics.DetectedGpus.Add("Vulkan-capable GPU (inferred from Vulkan backend availability)");
+                }
             }
 
             // If no accelerated backends found, just note that CPU is available
@@ -183,6 +193,71 @@ public class BackendSelectionService : IBackendSelectionService
 
         _cachedGpuDiagnostics = diagnostics;
         return diagnostics;
+    }
+
+    /// <summary>
+    /// Detects GPU hardware by checking for vendor-specific drivers and environment hints.
+    /// This is a simple heuristic-based approach that avoids fragile COM interop.
+    /// </summary>
+    private void DetectHardware(GpuDiagnostics diagnostics)
+    {
+        try
+        {
+            // Check for NVIDIA GPU by looking for common NVIDIA environment variables/paths
+            var nvidiaPaths = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "NVIDIA Corporation"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "nvcuda.dll"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "nvapi64.dll")
+            };
+
+            if (nvidiaPaths.Any(p => Directory.Exists(p) || File.Exists(p)))
+            {
+                diagnostics.HasNvidiaGpu = true;
+                diagnostics.DetectedGpus.Add("NVIDIA GPU (detected from driver files)");
+                _logger.LogDebug("Detected NVIDIA GPU from driver files");
+            }
+
+            // Check for Intel GPU/CPU
+            var processorName = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "";
+            if (processorName.Contains("Intel", StringComparison.OrdinalIgnoreCase))
+            {
+                diagnostics.HasIntelGpu = true;
+                diagnostics.DetectedGpus.Add("Intel CPU/GPU (detected from processor)");
+                _logger.LogDebug("Detected Intel hardware");
+            }
+
+            // Check for AMD GPU by looking for AMD paths
+            var amdPaths = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "AMD"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "amdvlk64.dll"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "atiadlxx.dll")
+            };
+
+            if (amdPaths.Any(p => Directory.Exists(p) || File.Exists(p)))
+            {
+                diagnostics.HasAmdGpu = true;
+                diagnostics.DetectedGpus.Add("AMD GPU (detected from driver files)");
+                _logger.LogDebug("Detected AMD GPU from driver files");
+            }
+
+            // Check for Vulkan runtime
+            var vulkanPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "vulkan-1.dll");
+            if (File.Exists(vulkanPath))
+            {
+                if (diagnostics.DetectedGpus.Count == 0 || 
+                    diagnostics.DetectedGpus.All(g => !g.Contains("Vulkan")))
+                {
+                    diagnostics.DetectedGpus.Add("Vulkan runtime detected");
+                }
+                _logger.LogDebug("Detected Vulkan runtime");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Error during hardware detection, will rely on backend availability");
+        }
     }
 
     /// <inheritdoc />

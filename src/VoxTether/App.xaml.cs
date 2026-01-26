@@ -102,6 +102,14 @@ public partial class App : Application
             return service;
         });
 
+        // Backend download service
+        services.AddSingleton<IBackendDownloadService>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<BackendDownloadService>>();
+            var backendSelection = sp.GetRequiredService<IBackendSelectionService>();
+            return new BackendDownloadService(logger, backendSelection);
+        });
+
         // Core services
         services.AddSingleton<IAudioRecorder, NAudioRecorder>();
         services.AddSingleton<IHotkeyService, LowLevelHookHotkeyService>();
