@@ -20,8 +20,8 @@ public partial class RecordingOverlayWindow : Window
         _pulseAnimation = (Storyboard?)FindResource("PulseAnimation");
         _spinAnimation = (Storyboard?)FindResource("SpinAnimation");
         
-        // Position window at top center of primary screen
-        PositionWindow();
+        // Position window at top center of primary screen when loaded
+        Loaded += (_, _) => PositionWindow();
     }
 
     private void PositionWindow()
@@ -29,8 +29,12 @@ public partial class RecordingOverlayWindow : Window
         // Get the primary screen working area
         var screenWidth = SystemParameters.PrimaryScreenWidth;
         
+        // Use ActualWidth for accurate positioning after layout
+        var windowWidth = ActualWidth > 0 ? ActualWidth : Width;
+        if (double.IsNaN(windowWidth)) windowWidth = 160; // Fallback to default
+        
         // Center horizontally, position at top with small margin
-        Left = (screenWidth - Width) / 2;
+        Left = (screenWidth - windowWidth) / 2;
         Top = 10;
     }
 
@@ -49,8 +53,9 @@ public partial class RecordingOverlayWindow : Window
         // Start pulse animation
         _pulseAnimation?.Begin(this, true);
         
-        // Show the window
+        // Show the window and reposition
         Show();
+        PositionWindow();
     }
 
     /// <summary>
@@ -68,8 +73,9 @@ public partial class RecordingOverlayWindow : Window
         // Start spin animation
         _spinAnimation?.Begin(this, true);
         
-        // Show the window
+        // Show the window and reposition
         Show();
+        PositionWindow();
     }
 
     /// <summary>
