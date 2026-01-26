@@ -33,9 +33,9 @@ public class BackendDownloadTests
         // Assert
         Assert.NotNull(manifest);
         Assert.NotEmpty(manifest.Backends);
+        // Only CUDA is available as a pre-built binary from whisper.cpp releases
+        // Vulkan and OpenVINO require compilation from source
         Assert.Contains(manifest.Backends, b => b.Id == "cuda");
-        Assert.Contains(manifest.Backends, b => b.Id == "vulkan");
-        Assert.Contains(manifest.Backends, b => b.Id == "openvino");
     }
 
     [Fact]
@@ -107,14 +107,10 @@ public class BackendManifestTests
     {
         // Arrange & Act
         var cudaPackage = new BackendPackageInfo { Id = "cuda" };
-        var vulkanPackage = new BackendPackageInfo { Id = "vulkan" };
-        var openvinoPackage = new BackendPackageInfo { Id = "openvino" };
         var unknownPackage = new BackendPackageInfo { Id = "unknown" };
 
         // Assert
         Assert.Equal(TranscriptionBackendMode.Cuda, cudaPackage.GetBackendMode());
-        Assert.Equal(TranscriptionBackendMode.Vulkan, vulkanPackage.GetBackendMode());
-        Assert.Equal(TranscriptionBackendMode.OpenVino, openvinoPackage.GetBackendMode());
         Assert.Equal(TranscriptionBackendMode.CpuOnly, unknownPackage.GetBackendMode());
     }
 

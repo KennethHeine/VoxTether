@@ -1,12 +1,12 @@
 # Backend Download System
 
-VoxTether uses a hybrid backend distribution system that ships with the CPU backend by default and offers to download GPU acceleration backends on-demand based on detected client hardware.
+VoxTether uses a backend distribution system that ships with the CPU backend by default and offers to download the NVIDIA CUDA backend on-demand based on detected client hardware.
 
 ## Overview
 
 The backend download system allows users to:
 - Use VoxTether immediately with the included CPU backend
-- Download GPU-accelerated backends when suitable hardware is detected
+- Download the NVIDIA CUDA backend when an NVIDIA GPU is detected
 - Manage installed backends to save disk space
 - Use VoxTether offline after initial setup
 
@@ -18,23 +18,12 @@ The backend download system allows users to:
 - No additional downloads required
 - Suitable for testing and systems without GPU acceleration
 
-### NVIDIA CUDA
+### NVIDIA CUDA (Downloadable)
 - **Recommended for:** Systems with NVIDIA graphics cards
 - **Requirements:** NVIDIA GPU with CUDA support and up-to-date drivers
-- **Download size:** ~50 MB
+- **Download size:** ~60 MB
 - **Performance:** Fastest option for NVIDIA GPUs
-
-### Vulkan
-- **Recommended for:** Systems with AMD, NVIDIA, or Intel GPUs
-- **Requirements:** GPU with Vulkan support and Vulkan runtime installed
-- **Download size:** ~30 MB
-- **Performance:** Good cross-vendor GPU acceleration
-
-### Intel OpenVINO
-- **Recommended for:** Systems with Intel CPUs, integrated GPUs, or NPUs
-- **Requirements:** Intel CPU/GPU with OpenVINO runtime installed
-- **Download size:** ~40 MB
-- **Performance:** Optimized for Intel hardware acceleration
+- **Source:** Pre-built binaries from [ggml-org/whisper.cpp](https://github.com/ggml-org/whisper.cpp/releases)
 
 ## How It Works
 
@@ -43,19 +32,16 @@ The backend download system allows users to:
 When you launch VoxTether for the first time:
 
 1. The application detects your hardware (GPU, CPU)
-2. If GPU hardware is detected, VoxTether recommends appropriate backends
+2. If an NVIDIA GPU is detected, VoxTether recommends the CUDA backend
 3. You can choose to:
    - Download the recommended backend
    - Skip and use CPU-only mode
-   - Open settings to manually select backends
+   - Open settings to download later
 
 ### Hardware Detection
 
-VoxTether detects available hardware by checking for:
-- NVIDIA GPU: Presence of NVIDIA driver files and libraries
-- AMD GPU: Presence of AMD driver files and libraries  
-- Intel CPU/GPU: Processor identification and Intel driver files
-- Vulkan support: Presence of Vulkan runtime (vulkan-1.dll)
+VoxTether detects NVIDIA GPU hardware by checking for:
+- NVIDIA GPU: Presence of NVIDIA driver files and libraries (nvcuda.dll, nvapi64.dll)
 
 ### Backend Download Process
 
@@ -74,8 +60,8 @@ All operations show progress feedback in the UI.
 ### Via Settings Window
 
 In the VoxTether Settings window, you can:
-- View all available backends and their status
-- Download additional backends
+- View available backends and their status
+- Download the CUDA backend
 - Remove installed backends to free disk space
 - See download size and system requirements
 
@@ -87,40 +73,32 @@ Backends are stored in:
 ```
 
 For example:
-- `whisper\cpu\` - CPU backend (always present)
+- `whisper\` - CPU backend (always present, main.exe at root)
 - `whisper\cuda\` - NVIDIA CUDA backend (if downloaded)
-- `whisper\vulkan\` - Vulkan backend (if downloaded)
-- `whisper\openvino\` - OpenVINO backend (if downloaded)
 
 ## Manual Backend Installation
 
-For offline scenarios or custom deployments, you can manually install backends:
+For offline scenarios or custom deployments:
 
 ### Step 1: Obtain Backend Package
 
-Download the backend package (zip file) from:
-- GitHub Releases: `https://github.com/KennethHeine/VoxTether/releases`
-- Or from your organization's internal repository
-
-Backend packages are named:
-- `whisper-cuda.zip`
-- `whisper-vulkan.zip`
-- `whisper-openvino.zip`
+**For CUDA:**
+Download the pre-built binary from:
+- [ggml-org/whisper.cpp releases](https://github.com/ggml-org/whisper.cpp/releases) - Look for `whisper-cublas-*.zip`
 
 ### Step 2: Extract to Whisper Folder
 
 1. Navigate to your VoxTether installation directory
 2. Open the `whisper` folder
-3. Create a subfolder matching the backend name (`cuda`, `vulkan`, or `openvino`)
-4. Extract the zip file contents into that subfolder
+3. Create a `cuda` subfolder
+4. Extract the compiled binary and its dependencies into that subfolder
 
 Example structure:
 ```
 VoxTether\
   whisper\
-    cpu\
-      main.exe
-      (other files)
+    main.exe
+    (CPU backend files)
     cuda\
       main.exe
       cudnn_ops_infer64_8.dll
@@ -131,7 +109,7 @@ VoxTether\
 
 1. Launch VoxTether
 2. Right-click the tray icon and select "About"
-3. Check that the backend is listed as available
+3. Check that the CUDA backend is listed as available
 
 ## Hosting Custom Backend Downloads
 
@@ -150,7 +128,7 @@ Create a JSON file describing your backends:
       "name": "NVIDIA CUDA",
       "description": "GPU acceleration for NVIDIA graphics cards",
       "downloadUrl": "https://your-server.com/backends/whisper-cuda.zip",
-      "size": 52428800,
+      "size": 61582231,
       "checksum": "sha256:abc123...",
       "requirements": "NVIDIA GPU with CUDA support and up-to-date drivers"
     }
@@ -173,7 +151,7 @@ Currently, VoxTether uses an embedded manifest. To use a custom manifest, you wo
 Backend packages are ZIP files containing:
 
 - `main.exe` or `whisper.exe` - The whisper.cpp executable
-- Required DLLs (e.g., CUDA libraries, Vulkan libraries)
+- Required DLLs (e.g., CUDA libraries)
 - Any additional runtime dependencies
 
 The package structure should match:
@@ -205,17 +183,16 @@ whisper/
 
 ### Backend Not Detected After Download
 
-1. **Verify extraction**: Check that files were extracted to `whisper/<backend>/`
+1. **Verify extraction**: Check that files were extracted to `whisper/cuda/`
 2. **Check for main.exe**: Ensure `main.exe` or `whisper.exe` is present
 3. **Restart VoxTether**: Close and relaunch the application
 4. **Check logs**: Look for backend detection messages in the logs
 
 ### Downloaded Backend Not Performing Well
 
-1. **Verify drivers**: Ensure GPU drivers are up-to-date
+1. **Verify drivers**: Ensure NVIDIA GPU drivers are up-to-date
 2. **Check requirements**: Confirm your hardware meets backend requirements
-3. **Try different backend**: Vulkan may work better than CUDA on some systems
-4. **Fall back to CPU**: CPU mode always works as a reliable fallback
+3. **Fall back to CPU**: CPU mode always works as a reliable fallback
 
 ### Checksum Validation Failed
 

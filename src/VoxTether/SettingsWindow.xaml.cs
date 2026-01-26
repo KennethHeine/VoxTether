@@ -658,8 +658,6 @@ public partial class SettingsWindow : Window
                 {
                     "Auto" => TranscriptionBackendMode.Auto,
                     "Cuda" => TranscriptionBackendMode.Cuda,
-                    "Vulkan" => TranscriptionBackendMode.Vulkan,
-                    "OpenVino" => TranscriptionBackendMode.OpenVino,
                     _ => TranscriptionBackendMode.Auto
                 };
             }

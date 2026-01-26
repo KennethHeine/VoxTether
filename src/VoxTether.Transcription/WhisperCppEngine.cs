@@ -8,7 +8,7 @@ namespace VoxTether.Transcription;
 
 /// <summary>
 /// Transcription engine that wraps the whisper.cpp CLI.
-/// Supports multiple backend executables (CPU, CUDA, Vulkan, OpenVINO) for hardware acceleration.
+/// Supports CPU and CUDA backends for hardware acceleration.
 /// </summary>
 public class WhisperCppEngine : ITranscriptionEngine
 {

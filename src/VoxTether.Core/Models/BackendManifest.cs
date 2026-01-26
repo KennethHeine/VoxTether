@@ -24,7 +24,7 @@ public class BackendManifest
 public class BackendPackageInfo
 {
     /// <summary>
-    /// Backend identifier (cuda, vulkan, openvino).
+    /// Backend identifier (cuda).
     /// </summary>
     public string Id { get; set; } = string.Empty;
 
@@ -66,8 +66,6 @@ public class BackendPackageInfo
         return Id.ToLowerInvariant() switch
         {
             "cuda" => TranscriptionBackendMode.Cuda,
-            "vulkan" => TranscriptionBackendMode.Vulkan,
-            "openvino" => TranscriptionBackendMode.OpenVino,
             _ => TranscriptionBackendMode.CpuOnly
         };
     }

@@ -94,9 +94,7 @@ public partial class App : Application
                 return;
 
             // Check if any GPU backend is already installed
-            if (backendSelection.IsBackendAvailable(TranscriptionBackendMode.Cuda) ||
-                backendSelection.IsBackendAvailable(TranscriptionBackendMode.Vulkan) ||
-                backendSelection.IsBackendAvailable(TranscriptionBackendMode.OpenVino))
+            if (backendSelection.IsBackendAvailable(TranscriptionBackendMode.Cuda))
             {
                 return; // Already have a backend
             }
@@ -112,8 +110,6 @@ public partial class App : Application
                 return id switch
                 {
                     "cuda" => "NVIDIA CUDA",
-                    "vulkan" => "Vulkan",
-                    "openvino" => "Intel OpenVINO",
                     _ => id
                 };
             }));

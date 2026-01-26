@@ -265,8 +265,6 @@
                                           IsEnabled="{Binding ElementName=EnableHardwareAccelerationCheckBox, Path=IsChecked}">
                                     <ComboBoxItem Content="Auto (recommended)" Tag="Auto"/>
                                     <ComboBoxItem Content="NVIDIA CUDA" Tag="Cuda"/>
-                                    <ComboBoxItem Content="Vulkan" Tag="Vulkan"/>
-                                    <ComboBoxItem Content="Intel OpenVINO" Tag="OpenVino"/>
                                 </ComboBox>
                                 <TextBlock Text="Auto will select the best available backend based on your hardware." 
                                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" FontSize="11"/>

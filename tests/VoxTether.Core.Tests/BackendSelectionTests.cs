@@ -98,12 +98,10 @@ public class BackendSelectionTests
         // Act
         var backends = service.GetAvailableBackends();
 
-        // Assert - Should include CPU, CUDA, Vulkan, OpenVINO (not Auto)
-        Assert.Equal(4, backends.Count);
+        // Assert - Should include CPU and CUDA (not Auto)
+        Assert.Equal(2, backends.Count);
         Assert.Contains(backends, b => b.Backend == TranscriptionBackendMode.CpuOnly);
         Assert.Contains(backends, b => b.Backend == TranscriptionBackendMode.Cuda);
-        Assert.Contains(backends, b => b.Backend == TranscriptionBackendMode.Vulkan);
-        Assert.Contains(backends, b => b.Backend == TranscriptionBackendMode.OpenVino);
     }
 
     [Fact]
@@ -139,8 +137,6 @@ public class BackendSelectionTests
         Assert.Equal("Auto", IBackendSelectionService.GetDisplayName(TranscriptionBackendMode.Auto));
         Assert.Equal("CPU Only", IBackendSelectionService.GetDisplayName(TranscriptionBackendMode.CpuOnly));
         Assert.Equal("NVIDIA CUDA", IBackendSelectionService.GetDisplayName(TranscriptionBackendMode.Cuda));
-        Assert.Equal("Vulkan", IBackendSelectionService.GetDisplayName(TranscriptionBackendMode.Vulkan));
-        Assert.Equal("Intel OpenVINO", IBackendSelectionService.GetDisplayName(TranscriptionBackendMode.OpenVino));
     }
 
     [Fact]
