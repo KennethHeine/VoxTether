@@ -120,6 +120,38 @@ The CUDA runtime DLLs are not installed or not in the system PATH.
 **Solution:**
 Same as above - install CUDA Toolkit 11.8 or place DLLs manually.
 
+### Error: "CUDA runtime error" or Exit Code -1073740791 (0xC0000409)
+
+**Symptoms:**
+- Transcription fails immediately after recording stops
+- Log shows: `Whisper transcription failed. Exit code: -1073740791`
+- Log shows CUDA was initialized successfully: `ggml_cuda_init: found 1 CUDA devices`
+- The crash happens during `whisper_init_from_file_with_params_no_state: loading model`
+
+**Cause:**
+This error (STATUS_STACK_BUFFER_OVERRUN) typically indicates a version mismatch between the CUDA DLLs on your system and what the whisper.cpp binary was compiled against. This can happen when:
+- VoxTether's auto-downloaded CUDA DLLs are from a different cuBLAS patch version than what whisper.cpp was built with
+- There are multiple CUDA installations with conflicting DLL versions in the system PATH
+
+**Solutions:**
+
+1. **Install the Full CUDA Toolkit 11.8.0** (Recommended)
+   - Download from: https://developer.nvidia.com/cuda-11-8-0-download-archive
+   - This ensures all DLLs are from the same build and are fully compatible
+   - After installation, restart VoxTether
+
+2. **Use CPU Backend** (Fallback)
+   - Open Settings → Performance → Set backend to "CPU Only"
+   - This bypasses all CUDA dependencies
+
+3. **Clean Reinstall of CUDA DLLs**
+   - Delete the folder: `%LOCALAPPDATA%\VoxTether\whisper\cuda\Release\`
+   - Install the full CUDA Toolkit 11.8.0
+   - Restart VoxTether
+
+**Technical Details:**
+The exit code `-1073740791` is the Windows NTSTATUS code `STATUS_STACK_BUFFER_OVERRUN` (0xC0000409). While this sounds like a security violation, in this context it typically indicates that a DLL function was called with parameters from an incompatible version, causing memory corruption detected by Windows' stack protection.
+
 ### CUDA 12.x Installed But CUDA 11.8 Required
 
 **Symptoms:**
@@ -250,6 +282,8 @@ If you have multiple CUDA versions installed, ensure CUDA 11.8 bin directory app
 ## Automatic CUDA DLL Download
 
 VoxTether can automatically download the required CUDA 11.8 runtime DLLs from NVIDIA's redistribution site. This eliminates the need for users to manually install the full CUDA Toolkit.
+
+> **Important Compatibility Note:** The auto-downloaded DLLs are from NVIDIA's redistribution packages, which may be from a slightly different cuBLAS patch version than what the whisper.cpp binary was compiled against. In rare cases, this can cause a crash during transcription (exit code -1073740791). If you experience this issue, please install the full CUDA Toolkit 11.8.0 instead. See the troubleshooting section ["Error: CUDA runtime error or Exit Code -1073740791 (0xC0000409)"](#error-cuda-runtime-error-or-exit-code--1073740791-0xc0000409) for details.
 
 ### How to Download CUDA DLLs via Settings UI
 

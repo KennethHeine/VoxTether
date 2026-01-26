@@ -207,16 +207,34 @@ public class WhisperCppEngine : ITranscriptionEngine
                 var stderr = errorBuilder.ToString().Trim();
                 var stdout = outputBuilder.ToString().Trim();
                 
-                // Check for STATUS_DLL_NOT_FOUND (0xC0000135 = -1073741515)
-                // This typically means CUDA runtime DLLs are missing when using CUDA backend
+                // Check for Windows NTSTATUS error codes that indicate DLL or runtime issues
+                // STATUS_DLL_NOT_FOUND (0xC0000135 = -1073741515) - Missing DLL at load time
+                // STATUS_STACK_BUFFER_OVERRUN (0xC0000409 = -1073740791) - Often indicates DLL version mismatch during CUDA operations
                 const int STATUS_DLL_NOT_FOUND = unchecked((int)0xC0000135);
+                const int STATUS_STACK_BUFFER_OVERRUN = unchecked((int)0xC0000409);
                 
                 if (process.ExitCode == STATUS_DLL_NOT_FOUND)
                 {
-                    result.Error = "Missing required DLLs. If using CUDA backend, please install the NVIDIA CUDA Toolkit or switch to CPU backend in Settings.";
+                    result.Error = "Missing required DLLs. If using CUDA backend, please install the NVIDIA CUDA Toolkit 11.8 or switch to CPU backend in Settings.";
                     _logger.LogError("Whisper transcription failed due to missing DLLs (likely CUDA runtime). " +
-                        "Exit code: {ExitCode}. Consider switching to CPU backend or installing CUDA Toolkit.", 
+                        "Exit code: {ExitCode}. Consider switching to CPU backend or installing CUDA Toolkit 11.8.", 
                         process.ExitCode);
+                    return result;
+                }
+                
+                if (process.ExitCode == STATUS_STACK_BUFFER_OVERRUN)
+                {
+                    // This error often occurs when there's a version mismatch between CUDA DLLs
+                    // and what whisper.cpp was compiled against. The downloaded redistribution DLLs
+                    // may not be fully compatible with the pre-built whisper.cpp binary.
+                    result.Error = "CUDA runtime error during transcription. This is often caused by CUDA DLL version mismatch. " +
+                        "Please install the full NVIDIA CUDA Toolkit 11.8 from https://developer.nvidia.com/cuda-11-8-0-download-archive, " +
+                        "or switch to CPU backend in Settings. See docs/cuda-troubleshooting.md for more information.";
+                    _logger.LogError("Whisper transcription failed with STATUS_STACK_BUFFER_OVERRUN (0xC0000409). " +
+                        "This typically indicates CUDA DLL version mismatch. The auto-downloaded CUDA DLLs may not be fully compatible " +
+                        "with this whisper.cpp build. Install the full CUDA Toolkit 11.8 from https://developer.nvidia.com/cuda-11-8-0-download-archive " +
+                        "or switch to CPU backend. Exit code: {ExitCode}, stderr: {StdErr}", 
+                        process.ExitCode, stderr);
                     return result;
                 }
                 
