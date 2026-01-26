@@ -32,10 +32,7 @@ public class VoxTetherControllerIntegrationTests : TestBase, IDisposable
         TestResources.CreateDummyWavFile(testAudioPath);
 
         // Create a dummy model file for testing (controller checks for model existence)
-        var modelsDir = Path.Combine(_tempDir, "models");
-        Directory.CreateDirectory(modelsDir);
-        var testModelPath = Path.Combine(modelsDir, "test-model.bin");
-        File.WriteAllBytes(testModelPath, [0x00]); // Minimal dummy file
+        var testModelPath = TestResources.CreateDummyModelFile(_tempDir);
 
         _hotkeyService = new MockHotkeyService();
         _recorder = new MockAudioRecorder(testAudioPath);

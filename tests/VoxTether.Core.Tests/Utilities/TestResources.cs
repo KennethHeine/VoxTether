@@ -75,4 +75,22 @@ public static class TestResources
 
         File.WriteAllBytes(path, wavHeader);
     }
+
+    /// <summary>
+    /// Creates a dummy model file for testing.
+    /// The file is a placeholder - the VoxTetherController only checks for file existence,
+    /// while the actual model parsing is done by the mock transcription engine in tests.
+    /// </summary>
+    /// <param name="directory">The directory where the model file will be created.</param>
+    /// <param name="fileName">Optional file name (default: "test-model.bin").</param>
+    /// <returns>Full path to the created model file.</returns>
+    public static string CreateDummyModelFile(string directory, string fileName = "test-model.bin")
+    {
+        var modelsDir = Path.Combine(directory, "models");
+        Directory.CreateDirectory(modelsDir);
+        var modelPath = Path.Combine(modelsDir, fileName);
+        // Minimal placeholder file - controller only checks File.Exists()
+        File.WriteAllBytes(modelPath, [0x00]);
+        return modelPath;
+    }
 }
