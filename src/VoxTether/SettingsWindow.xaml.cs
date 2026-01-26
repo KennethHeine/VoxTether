@@ -1,13 +1,45 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Navigation;
 using VoxTether.Core.Interfaces;
 using VoxTether.Core.Models;
+using VoxTether.Core.Services;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MessageBox = System.Windows.MessageBox;
 
 namespace VoxTether;
+
+/// <summary>
+/// View model for model versions in the UI.
+/// </summary>
+public class ModelVersionViewModel
+{
+    public string Version { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public string DownloadUrl { get; set; } = string.Empty;
+    public int SizeMb { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public string SizeText => $"{SizeMb} MB";
+    public bool IsDownloaded { get; set; }
+    public string ButtonText => IsDownloaded ? "Downloaded" : "Download";
+    public bool IsEnabled => !IsDownloaded;
+}
+
+/// <summary>
+/// View model for models in the UI.
+/// </summary>
+public class ModelInfoViewModel
+{
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Quality { get; set; } = string.Empty;
+    public string Speed { get; set; } = string.Empty;
+    public string InfoUrl { get; set; } = string.Empty;
+    public List<ModelVersionViewModel> Versions { get; set; } = new();
+}
 
 /// <summary>
 /// Settings window for VoxTether configuration.
@@ -15,14 +47,28 @@ namespace VoxTether;
 public partial class SettingsWindow : Window
 {
     private readonly SettingsService _settingsService;
+    private readonly ModelDownloadService _downloadService;
     private readonly HashSet<Key> _pressedKeys = new();
     private bool _isCapturingHotkey;
+    private bool _isDownloading;
 
     public SettingsWindow(SettingsService settingsService)
     {
         InitializeComponent();
         _settingsService = settingsService;
+        _downloadService = new ModelDownloadService();
+        _downloadService.DownloadProgressChanged += OnDownloadProgressChanged;
+        _downloadService.StatusChanged += OnDownloadStatusChanged;
         LoadSettings();
+        LoadModelCatalog();
+        
+        // Dispose the download service when the window is closed
+        Closed += (s, e) =>
+        {
+            _downloadService.DownloadProgressChanged -= OnDownloadProgressChanged;
+            _downloadService.StatusChanged -= OnDownloadStatusChanged;
+            _downloadService.Dispose();
+        };
     }
 
     private void LoadSettings()
@@ -197,5 +243,136 @@ public partial class SettingsWindow : Window
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void LoadModelCatalog()
+    {
+        var models = ModelCatalog.GetAvailableModels();
+        var viewModels = models.Select(m => new ModelInfoViewModel
+        {
+            Name = m.Name,
+            Description = m.Description,
+            Quality = m.Quality,
+            Speed = m.Speed,
+            InfoUrl = m.InfoUrl,
+            Versions = m.Versions.Select(v => new ModelVersionViewModel
+            {
+                Version = v.Version,
+                FileName = v.FileName,
+                DownloadUrl = v.DownloadUrl,
+                SizeMb = v.SizeMb,
+                Description = v.Description,
+                IsDownloaded = _downloadService.IsModelDownloaded(v.FileName)
+            }).ToList()
+        }).ToList();
+
+        ModelCatalogList.ItemsSource = viewModels;
+    }
+
+    private void AllModelsLink_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = ModelCatalog.ModelsInfoUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to open link: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = e.Uri.AbsoluteUri,
+                UseShellExecute = true
+            });
+            e.Handled = true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to open link: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void DownloadButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isDownloading)
+        {
+            MessageBox.Show("A download is already in progress.", "Download In Progress", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (sender is System.Windows.Controls.Button button && button.Tag is ModelVersionViewModel versionVm)
+        {
+            _isDownloading = true;
+            DownloadProgressPanel.Visibility = Visibility.Visible;
+            DownloadProgressBar.Value = 0;
+            DownloadStatusText.Text = $"Starting download: {versionVm.FileName}...";
+
+            try
+            {
+                var modelVersion = new ModelVersion
+                {
+                    Version = versionVm.Version,
+                    FileName = versionVm.FileName,
+                    DownloadUrl = versionVm.DownloadUrl,
+                    SizeMb = versionVm.SizeMb,
+                    Description = versionVm.Description
+                };
+
+                var success = await _downloadService.DownloadModelAsync(modelVersion);
+
+                if (success)
+                {
+                    MessageBox.Show(
+                        $"Model '{versionVm.FileName}' downloaded successfully!\n\nYou can now select it from the model dropdown.",
+                        "Download Complete",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+
+                    // Refresh the model lists
+                    LoadModels();
+                    LoadModelCatalog();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Download failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isDownloading = false;
+                DownloadProgressPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+    }
+
+    private void CancelDownloadButton_Click(object sender, RoutedEventArgs e)
+    {
+        _downloadService.CancelDownload();
+    }
+
+    private void OnDownloadProgressChanged(int progress)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            DownloadProgressBar.Value = progress;
+        });
+    }
+
+    private void OnDownloadStatusChanged(string status)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            DownloadStatusText.Text = status;
+        });
     }
 }
