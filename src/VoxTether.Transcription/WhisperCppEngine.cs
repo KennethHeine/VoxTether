@@ -201,8 +201,29 @@ public class WhisperCppEngine : ITranscriptionEngine
 
             if (process.ExitCode != 0)
             {
-                result.Error = $"Whisper exited with code {process.ExitCode}: {errorBuilder}";
-                _logger.LogError(result.Error);
+                var stderr = errorBuilder.ToString().Trim();
+                var stdout = outputBuilder.ToString().Trim();
+                
+                // Include both stderr and stdout in error message for better diagnostics
+                // whisper.cpp often writes error info to stdout (e.g., model loading, CUDA initialization)
+                var errorDetails = new StringBuilder();
+                if (!string.IsNullOrEmpty(stderr))
+                {
+                    errorDetails.AppendLine($"stderr: {stderr}");
+                }
+                if (!string.IsNullOrEmpty(stdout))
+                {
+                    errorDetails.AppendLine($"stdout: {stdout}");
+                }
+                
+                result.Error = $"Whisper exited with code {process.ExitCode}";
+                if (errorDetails.Length > 0)
+                {
+                    result.Error += $"\n{errorDetails.ToString().Trim()}";
+                }
+                
+                _logger.LogError("Whisper transcription failed. Exit code: {ExitCode}, stderr: {StdErr}, stdout: {StdOut}", 
+                    process.ExitCode, stderr, stdout);
                 return result;
             }
 
