@@ -33,7 +33,10 @@ public class SettingsTests
         var json = JsonSerializer.Serialize(settings);
         
         Assert.Contains("Hotkey", json);
-        Assert.Contains("Ctrl + Shift + R", json);
+        // Verify roundtrip: deserialize and check value
+        var deserialized = JsonSerializer.Deserialize<VoxTetherSettings>(json);
+        Assert.NotNull(deserialized);
+        Assert.Equal("Ctrl + Shift + R", deserialized.Hotkey);
     }
 
     [Fact]
