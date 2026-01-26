@@ -47,13 +47,15 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
     // CUDA Runtime DLL download information from NVIDIA redistribution site
     // These files are licensed for redistribution per NVIDIA's CUDA EULA
     // See: https://developer.download.nvidia.com/compute/cuda/redist/
-    private const string CudaRuntimeUrl = "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-11.8.89-archive.zip";
-    private const long CudaRuntimeSize = 3_000_000; // ~3MB
-    private const string CudaRuntimeChecksum = "sha256:pending"; // Checksum validation skipped for NVIDIA redistribution files
+    // Version constants for easier maintenance
+    private const string CudaRuntimeVersion = "11.8.89";
+    private const string CublasVersion = "11.11.3.6";
     
-    private const string CublasUrl = "https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/libcublas-windows-x86_64-11.11.3.6-archive.zip";
+    private static readonly string CudaRuntimeUrl = $"https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-{CudaRuntimeVersion}-archive.zip";
+    private const long CudaRuntimeSize = 3_000_000; // ~3MB
+    
+    private static readonly string CublasUrl = $"https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/libcublas-windows-x86_64-{CublasVersion}-archive.zip";
     private const long CublasSize = 420_000_000; // ~400MB
-    private const string CublasChecksum = "sha256:pending"; // Checksum validation skipped for NVIDIA redistribution files
     
     // Required DLL files for CUDA 11.8 backend
     private static readonly string[] RequiredCudaDlls = ["cublas64_11.dll", "cublasLt64_11.dll", "cudart64_110.dll"];
@@ -469,7 +471,6 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
             if (!await DownloadFileAsync(CublasUrl, cublasZip, (downloaded, total) =>
             {
                 var currentTotal = CudaRuntimeSize + downloaded;
-                var percent = (int)((currentTotal * 100) / totalSize);
                 ReportProgress(progress, backendId, BackendDownloadStatus.Downloading,
                     currentTotal, totalSize,
                     $"Downloading cuBLAS... {FormatUtility.FormatBytes(downloaded)} / {FormatUtility.FormatBytes(CublasSize)}");
