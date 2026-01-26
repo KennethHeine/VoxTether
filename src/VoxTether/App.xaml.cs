@@ -61,12 +61,95 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
+        // Check for recommended backend downloads (first-run experience)
+        CheckAndOfferBackendDownload();
+
         // Create controller and start
         _controller = _serviceProvider.GetRequiredService<VoxTetherController>();
         _trayIconManager = _serviceProvider.GetRequiredService<TrayIconManager>();
 
         _trayIconManager.Initialize();
         _controller.Start();
+    }
+
+    private void CheckAndOfferBackendDownload()
+    {
+        try
+        {
+            var settingsService = _serviceProvider?.GetRequiredService<SettingsService>();
+            var backendSelection = _serviceProvider?.GetRequiredService<IBackendSelectionService>();
+            var backendDownload = _serviceProvider?.GetRequiredService<IBackendDownloadService>();
+
+            if (settingsService == null || backendSelection == null || backendDownload == null)
+                return;
+
+            var settings = settingsService.Settings;
+
+            // Only offer if hardware acceleration is enabled
+            if (!settings.EnableHardwareAcceleration)
+                return;
+
+            // Check if any GPU backend is already installed
+            if (backendSelection.IsBackendAvailable(TranscriptionBackendMode.Cuda) ||
+                backendSelection.IsBackendAvailable(TranscriptionBackendMode.Vulkan) ||
+                backendSelection.IsBackendAvailable(TranscriptionBackendMode.OpenVino))
+            {
+                return; // Already have a backend
+            }
+
+            // Get recommended backends based on hardware
+            var recommended = backendDownload.GetRecommendedBackends();
+            if (recommended.Count == 0)
+                return; // No hardware detected
+
+            // Show recommendation dialog
+            var recommendedNames = string.Join(", ", recommended.Select(id =>
+            {
+                return id switch
+                {
+                    "cuda" => "NVIDIA CUDA",
+                    "vulkan" => "Vulkan",
+                    "openvino" => "Intel OpenVINO",
+                    _ => id
+                };
+            }));
+
+            var result = MessageBox.Show(
+                $"VoxTether detected compatible GPU hardware and recommends downloading the {recommendedNames} backend(s) for faster transcription.\n\n" +
+                "You can download backends now from Settings, or skip to use CPU-only mode.\n\n" +
+                "Would you like to open Settings to download backends now?",
+                "GPU Acceleration Available",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                // We'll open settings after the tray icon is initialized
+                // Set a flag or queue it to open
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (_trayIconManager != null)
+                    {
+                        // The tray icon manager has a method to open settings
+                        // We'll need to call it, but we need to ensure it's initialized first
+                        System.Threading.Tasks.Task.Delay(500).ContinueWith(_ =>
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                var audioRecorder = _serviceProvider?.GetRequiredService<IAudioRecorder>();
+                                var window = new SettingsWindow(settingsService, audioRecorder, backendSelection, backendDownload);
+                                window.ShowDialog();
+                            });
+                        });
+                    }
+                }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't crash - this is not critical
+            System.Diagnostics.Debug.WriteLine($"Error checking backend download: {ex.Message}");
+        }
     }
 
     private void ConfigureServices(IServiceCollection services)

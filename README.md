@@ -91,6 +91,47 @@ VoxTether comes with a default speech recognition model (ggml-base.bin). You can
 | ggml-medium.bin | ~1.5 GB | Great | Slow |
 | ggml-large-v3.bin | ~3 GB | Best | Very Slow |
 
+## GPU Acceleration
+
+VoxTether supports GPU acceleration for faster transcription using various backends. The application ships with a CPU backend by default and offers on-demand downloads of GPU-accelerated backends.
+
+### Available Backends
+
+- **CPU Only** (included) - Works on any system, no additional downloads required
+- **NVIDIA CUDA** - For NVIDIA graphics cards (fastest for NVIDIA GPUs)
+- **Vulkan** - Cross-vendor GPU acceleration (AMD, NVIDIA, Intel)
+- **Intel OpenVINO** - Optimized for Intel CPUs, integrated GPUs, and NPUs
+
+### First-Run Experience
+
+On first launch, VoxTether will:
+1. Detect your GPU hardware
+2. Recommend appropriate backends for your system
+3. Offer to download the recommended backend(s)
+
+You can skip this and use CPU-only mode, or download backends later from Settings.
+
+### Downloading Backends
+
+1. Open Settings from the tray menu
+2. Navigate to the **Performance** tab
+3. Scroll to **Backend Management**
+4. Click **Download** next to the backend you want to install
+
+Download sizes:
+- CUDA: ~50 MB
+- Vulkan: ~30 MB
+- OpenVINO: ~40 MB
+
+### Managing Backends
+
+In Settings → Performance → Backend Management, you can:
+- Download additional backends
+- Remove installed backends to free disk space
+- View backend status and requirements
+
+For more details, see [Backend Download System Documentation](docs/backend-download-system.md).
+
 ## Configuration
 
 Settings are stored in `%APPDATA%\VoxTether\settings.json`
@@ -108,7 +149,9 @@ Settings are stored in `%APPDATA%\VoxTether\settings.json`
   "showRecordingIndicator": true,
   "copyToClipboard": true,
   "fallbackToTyping": true,
-  "clipboardDelayMs": 100
+  "clipboardDelayMs": 100,
+  "enableHardwareAcceleration": true,
+  "transcriptionBackend": "Auto"
 }
 ```
 
@@ -128,6 +171,14 @@ Use "auto" for automatic detection, or specify a language code:
 - `ko` - Korean
 
 ## Troubleshooting
+
+### GPU Acceleration Not Working
+
+1. Ensure you have downloaded the appropriate backend for your GPU
+2. Check that GPU drivers are up to date
+3. Try different backends (Vulkan often works well across vendors)
+4. Check logs for backend-specific errors
+5. Fall back to CPU mode if GPU acceleration issues persist
 
 ### Microphone Not Working
 
