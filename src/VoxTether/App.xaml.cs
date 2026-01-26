@@ -140,7 +140,8 @@ public partial class App : Application
             var updateService = sp.GetRequiredService<IUpdateService>();
             var audioRecorder = sp.GetRequiredService<IAudioRecorder>();
             var backendService = sp.GetRequiredService<IBackendSelectionService>();
-            return new TrayIconManager(logger, settingsService, controller, updateService, audioRecorder, backendService);
+            var backendDownloadService = sp.GetRequiredService<IBackendDownloadService>();
+            return new TrayIconManager(logger, settingsService, controller, updateService, audioRecorder, backendService, backendDownloadService);
         });
     }
 

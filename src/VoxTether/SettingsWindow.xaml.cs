@@ -52,6 +52,79 @@ public class BackendStatusViewModel
 }
 
 /// <summary>
+/// View model for backend download management in the UI.
+/// </summary>
+public class BackendManagementViewModel : System.ComponentModel.INotifyPropertyChanged
+{
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public long Size { get; set; }
+    public string SizeText => $"Download size: {FormatBytes(Size)}";
+    
+    private bool _isInstalled;
+    public bool IsInstalled
+    {
+        get => _isInstalled;
+        set
+        {
+            _isInstalled = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsInstalled)));
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(StatusText)));
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(StatusColor)));
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ButtonText)));
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ButtonEnabled)));
+        }
+    }
+    
+    private bool _isDownloading;
+    public bool IsDownloading
+    {
+        get => _isDownloading;
+        set
+        {
+            _isDownloading = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsDownloading)));
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ButtonText)));
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ButtonEnabled)));
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ProgressVisibility)));
+        }
+    }
+    
+    private int _downloadProgress;
+    public int DownloadProgress
+    {
+        get => _downloadProgress;
+        set
+        {
+            _downloadProgress = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(DownloadProgress)));
+        }
+    }
+
+    public string StatusText => IsInstalled ? "Installed" : "Not installed";
+    public string StatusColor => IsInstalled ? "#00FF00" : "#808080";
+    public string ButtonText => IsDownloading ? "Downloading..." : (IsInstalled ? "Remove" : "Download");
+    public bool ButtonEnabled => !IsDownloading;
+    public Visibility ProgressVisibility => IsDownloading ? Visibility.Visible : Visibility.Collapsed;
+
+    private string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}
+
+/// <summary>
 /// Settings window for VoxTether configuration.
 /// </summary>
 public partial class SettingsWindow : Window
@@ -60,6 +133,7 @@ public partial class SettingsWindow : Window
     private readonly ModelDownloadService _downloadService;
     private readonly IAudioRecorder? _audioRecorder;
     private readonly IBackendSelectionService? _backendService;
+    private readonly IBackendDownloadService? _backendDownloadService;
     private readonly HashSet<Key> _pressedKeys = new();
     private bool _isCapturingHotkey;
     private bool _isCapturingToggleHotkey;
@@ -67,12 +141,13 @@ public partial class SettingsWindow : Window
     private bool _isTestingMicrophone;
     private System.Windows.Threading.DispatcherTimer? _testTimer;
 
-    public SettingsWindow(SettingsService settingsService, IAudioRecorder? audioRecorder = null, IBackendSelectionService? backendService = null)
+    public SettingsWindow(SettingsService settingsService, IAudioRecorder? audioRecorder = null, IBackendSelectionService? backendService = null, IBackendDownloadService? backendDownloadService = null)
     {
         InitializeComponent();
         _settingsService = settingsService;
         _audioRecorder = audioRecorder;
         _backendService = backendService;
+        _backendDownloadService = backendDownloadService;
         _downloadService = new ModelDownloadService();
         _downloadService.DownloadProgressChanged += OnDownloadProgressChanged;
         _downloadService.StatusChanged += OnDownloadStatusChanged;
@@ -818,6 +893,111 @@ public partial class SettingsWindow : Window
             ActiveBackendText.Text = "CPU (service not available)";
             DetectedGpusList.ItemsSource = new[] { "(Diagnostics unavailable)" };
             AvailableBackendsList.ItemsSource = new[] { new BackendStatusViewModel { Name = "CPU Only", IsAvailable = true } };
+        }
+        
+        // Load backend management UI
+        LoadBackendManagement();
+    }
+
+    private async void LoadBackendManagement()
+    {
+        if (_backendDownloadService == null)
+        {
+            BackendManagementList.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        try
+        {
+            var manifest = await _backendDownloadService.GetManifestAsync();
+            var viewModels = manifest.Backends.Select(backend => new BackendManagementViewModel
+            {
+                Id = backend.Id,
+                Name = backend.Name,
+                Description = backend.Description,
+                Size = backend.Size,
+                IsInstalled = _backendDownloadService.IsBackendInstalled(backend.Id)
+            }).ToList();
+
+            BackendManagementList.ItemsSource = viewModels;
+        }
+        catch (Exception ex)
+        {
+            BackendDownloadStatusText.Text = $"Error loading backend manifest: {ex.Message}";
+            BackendDownloadStatusText.Visibility = Visibility.Visible;
+        }
+    }
+
+    private async void BackendDownloadButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button button || button.Tag is not string backendId)
+            return;
+
+        var viewModel = BackendManagementList.ItemsSource?
+            .Cast<BackendManagementViewModel>()
+            .FirstOrDefault(vm => vm.Id == backendId);
+
+        if (viewModel == null || _backendDownloadService == null)
+            return;
+
+        if (viewModel.IsInstalled)
+        {
+            // Remove backend
+            var result = MessageBox.Show(
+                $"Remove {viewModel.Name} backend? This will free up approximately {viewModel.SizeText.Replace("Download size: ", "")} of disk space.",
+                "Remove Backend",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                var success = await _backendDownloadService.RemoveBackendAsync(backendId);
+                if (success)
+                {
+                    viewModel.IsInstalled = false;
+                    BackendDownloadStatusText.Text = $"{viewModel.Name} backend removed successfully.";
+                    BackendDownloadStatusText.Visibility = Visibility.Visible;
+                    RefreshBackendDiagnostics();
+                }
+                else
+                {
+                    BackendDownloadStatusText.Text = $"Failed to remove {viewModel.Name} backend.";
+                    BackendDownloadStatusText.Visibility = Visibility.Visible;
+                }
+            }
+        }
+        else
+        {
+            // Download backend
+            viewModel.IsDownloading = true;
+            BackendDownloadStatusText.Text = $"Downloading {viewModel.Name} backend...";
+            BackendDownloadStatusText.Visibility = Visibility.Visible;
+
+            var progress = new Progress<BackendDownloadProgress>(p =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    viewModel.DownloadProgress = p.PercentComplete;
+                    BackendDownloadStatusText.Text = $"{viewModel.Name}: {p.Message}";
+                });
+            });
+
+            var success = await _backendDownloadService.DownloadBackendAsync(backendId, progress);
+            
+            viewModel.IsDownloading = false;
+            
+            if (success)
+            {
+                viewModel.IsInstalled = true;
+                viewModel.DownloadProgress = 0;
+                BackendDownloadStatusText.Text = $"{viewModel.Name} backend installed successfully!";
+                RefreshBackendDiagnostics();
+            }
+            else
+            {
+                viewModel.DownloadProgress = 0;
+                BackendDownloadStatusText.Text = $"Failed to download {viewModel.Name} backend. Check logs for details.";
+            }
         }
     }
 
