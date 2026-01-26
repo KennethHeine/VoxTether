@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
+using VoxTether.Core.Interfaces;
 using VoxTether.Core.Models;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
@@ -22,6 +23,7 @@ public class TrayIconManager : IDisposable
     private readonly ILogger<TrayIconManager> _logger;
     private readonly SettingsService _settingsService;
     private readonly VoxTetherController _controller;
+    private readonly IUpdateService _updateService;
     
     private NotifyIcon? _notifyIcon;
     private ContextMenuStrip? _contextMenu;
@@ -34,11 +36,13 @@ public class TrayIconManager : IDisposable
     public TrayIconManager(
         ILogger<TrayIconManager> logger,
         SettingsService settingsService,
-        VoxTetherController controller)
+        VoxTetherController controller,
+        IUpdateService updateService)
     {
         _logger = logger;
         _settingsService = settingsService;
         _controller = controller;
+        _updateService = updateService;
     }
 
     /// <summary>
@@ -103,6 +107,13 @@ public class TrayIconManager : IDisposable
         var testItem = new ToolStripMenuItem("Test Microphone");
         testItem.Click += async (_, _) => await TestMicrophone();
         menu.Items.Add(testItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        // Check for Updates
+        var updateItem = new ToolStripMenuItem("Check for Updates...");
+        updateItem.Click += async (_, _) => await CheckForUpdates();
+        menu.Items.Add(updateItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
@@ -182,6 +193,61 @@ public class TrayIconManager : IDisposable
         var result = await _controller.TestMicrophoneAsync();
         
         ShowNotification("Test Result", result);
+    }
+
+    private async Task CheckForUpdates()
+    {
+        ShowNotification("Checking for Updates", "Please wait...");
+        
+        try
+        {
+            var currentVersion = App.GetVersion();
+            var updateInfo = await _updateService.CheckForUpdatesAsync(currentVersion);
+
+            if (updateInfo == null)
+            {
+                MessageBox.Show(
+                    "Unable to check for updates. Please check your internet connection.",
+                    "Update Check Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (updateInfo.IsNewerVersion)
+            {
+                var result = MessageBox.Show(
+                    $"A new version of VoxTether is available!\n\n" +
+                    $"Current version: v{currentVersion}\n" +
+                    $"Latest version: v{updateInfo.Version}\n\n" +
+                    "Would you like to open the download page?",
+                    "Update Available",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    _updateService.OpenReleasePage(updateInfo);
+                }
+            }
+            else
+            {
+                MessageBox.Show(
+                    $"You are running the latest version (v{currentVersion}).",
+                    "No Updates Available",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during update check");
+            MessageBox.Show(
+                "An error occurred while checking for updates.",
+                "Update Check Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private void OnStartWithWindowsChanged(object? sender, EventArgs e)
