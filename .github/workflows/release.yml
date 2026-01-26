@@ -68,6 +68,9 @@ jobs:
         Expand-Archive -Path whisper-bin.zip -DestinationPath ./whisper-temp -Force
         Copy-Item ./whisper-temp/main.exe ./publish/whisper/main.exe -Force
         
+        # Copy whisper DLL (required by main.exe)
+        Copy-Item ./whisper-temp/*.dll ./publish/whisper/ -Force
+        
         # Cleanup
         Remove-Item -Recurse -Force ./whisper-temp
         Remove-Item whisper-bin.zip
