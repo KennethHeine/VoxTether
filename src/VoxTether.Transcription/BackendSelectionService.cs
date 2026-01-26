@@ -530,15 +530,51 @@ public class BackendSelectionService : IBackendSelectionService
             };
             
             using var process = new Process { StartInfo = startInfo };
+            
+            // Capture output to verify the process actually ran successfully
+            // Using a simple flag with lock for thread-safe output detection
+            var outputLock = new object();
+            var hasReceivedOutput = false;
+            
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                {
+                    lock (outputLock)
+                    {
+                        hasReceivedOutput = true;
+                    }
+                }
+            };
+            
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                {
+                    lock (outputLock)
+                    {
+                        hasReceivedOutput = true;
+                    }
+                }
+            };
+            
             process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
             
             // Wait for the process to complete with a short timeout
             var completed = process.WaitForExit(ValidationTimeoutMs);
             
-            // If process is still running after timeout, it at least started successfully
+            // If process is still running after timeout, check if it produced any output
             if (!completed)
             {
-                // Process is still running, which means it at least started successfully
+                // Get output captured so far (thread-safe read)
+                bool hasOutput;
+                lock (outputLock)
+                {
+                    hasOutput = hasReceivedOutput;
+                }
+                
                 // Kill the process tree to ensure no orphaned processes
                 try 
                 { 
@@ -549,8 +585,21 @@ public class BackendSelectionService : IBackendSelectionService
                     // Fallback to simple kill if tree kill fails
                     try { process.Kill(); } catch { /* Ignore */ }
                 }
-                _logger.LogDebug("Executable validation passed (process still running after timeout): {Path}", execPath);
-                return (true, null);
+                
+                // If the process produced output, it was running correctly
+                // If no output, it's likely blocked by a Windows error dialog (e.g., missing DLL)
+                if (hasOutput)
+                {
+                    _logger.LogDebug("Executable validation passed (process running with output): {Path}", execPath);
+                    return (true, null);
+                }
+                else
+                {
+                    // Process stuck without output - likely a Windows error dialog for missing DLLs
+                    const string TimeoutReason = "Process timed out without producing output (possible missing DLL or system error dialog)";
+                    _logger.LogWarning("Executable appears blocked (no output after timeout), likely missing DLL: {Path}", execPath);
+                    return (false, TimeoutReason);
+                }
             }
             
             // Process completed - WaitForExit() returned true, so process.ExitCode is available
