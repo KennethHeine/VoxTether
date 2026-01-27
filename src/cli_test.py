@@ -233,11 +233,11 @@ def cmd_inject(args: argparse.Namespace) -> int:
     success = injector.inject(text)
 
     if success:
-        print("✓ Text injected successfully")
+        print("[OK] Text injected successfully")
         if mode == InjectionMode.CLIPBOARD:
             print("Text is now in your clipboard. Use Ctrl+V to paste.")
     else:
-        print("✗ Text injection failed")
+        print("[FAIL] Text injection failed")
         return 1
 
     return 0
@@ -336,7 +336,7 @@ def cmd_models(args: argparse.Namespace) -> int:
         downloaded = manager.get_downloaded_models()
 
         for name, info in manager.get_available_models().items():
-            status = "✓ Downloaded" if name in downloaded else "  Not downloaded"
+            status = "[OK] Downloaded" if name in downloaded else "  Not downloaded"
             print(f"\n{name} ({info.size_mb} MB) - {status}")
             print(f"  Description: {info.description}")
             print(f"  Recommended for: {info.recommended_for}")
@@ -387,9 +387,9 @@ def cmd_models(args: argparse.Namespace) -> int:
 
         try:
             path = manager.download_model(args.model, progress_callback=progress)
-            print(f"\n✓ Model downloaded to: {path}")
+            print(f"\n[OK] Model downloaded to: {path}")
         except Exception as e:
-            print(f"\n✗ Download failed: {e}")
+            print(f"\n[FAIL] Download failed: {e}")
             return 1
 
     elif args.action == "delete":
@@ -402,9 +402,9 @@ def cmd_models(args: argparse.Namespace) -> int:
             return 0
 
         if manager.delete_model(args.model):
-            print(f"✓ Model '{args.model}' deleted")
+            print(f"[OK] Model '{args.model}' deleted")
         else:
-            print(f"✗ Failed to delete model '{args.model}'")
+            print(f"[FAIL] Failed to delete model '{args.model}'")
             return 1
 
     elif args.action == "path":
@@ -479,11 +479,11 @@ def cmd_full_test(args: argparse.Namespace) -> int:
     try:
         service = SettingsService()
         settings = service.settings
-        print(f"   ✓ Settings loaded from: {service.settings_path}")
-        print(f"   ✓ Model: {settings.model_name}, Device: {settings.device}")
+        print(f"   [OK] Settings loaded from: {service.settings_path}")
+        print(f"   [OK] Model: {settings.model_name}, Device: {settings.device}")
         results.append(("Settings", True, None))
     except Exception as e:
-        print(f"   ✗ Settings failed: {e}")
+        print(f"   [FAIL] Settings failed: {e}")
         results.append(("Settings", False, str(e)))
 
     # 2. Test Model Manager
@@ -492,11 +492,11 @@ def cmd_full_test(args: argparse.Namespace) -> int:
         manager = ModelManager()
         available = manager.get_available_models()
         downloaded = manager.get_downloaded_models()
-        print(f"   ✓ Available models: {len(available)}")
-        print(f"   ✓ Downloaded models: {', '.join(downloaded) if downloaded else 'None'}")
+        print(f"   [OK] Available models: {len(available)}")
+        print(f"   [OK] Downloaded models: {', '.join(downloaded) if downloaded else 'None'}")
         results.append(("Model Manager", True, None))
     except Exception as e:
-        print(f"   ✗ Model Manager failed: {e}")
+        print(f"   [FAIL] Model Manager failed: {e}")
         results.append(("Model Manager", False, str(e)))
 
     # 3. Test Audio Devices (optional, may not work in CI)
@@ -508,7 +508,7 @@ def cmd_full_test(args: argparse.Namespace) -> int:
         recorder = AudioRecorder()
         devices = recorder.get_input_devices()
         if devices:
-            print(f"   ✓ Found {len(devices)} audio input device(s)")
+            print(f"   [OK] Found {len(devices)} audio input device(s)")
         else:
             print("   ! No audio input devices found (OK in headless environments)")
         results.append(("Audio System", True, None))
@@ -517,7 +517,7 @@ def cmd_full_test(args: argparse.Namespace) -> int:
         print("   (This is OK in headless/CI environments)")
         results.append(("Audio System", True, "Not available in this environment"))
     except Exception as e:
-        print(f"   ✗ Audio System failed: {e}")
+        print(f"   [FAIL] Audio System failed: {e}")
         results.append(("Audio System", False, str(e)))
 
     # 4. Test Transcriber Device Info
@@ -525,14 +525,14 @@ def cmd_full_test(args: argparse.Namespace) -> int:
     try:
         transcriber = Transcriber()
         device_info = transcriber.get_device_info()
-        print(f"   ✓ Device type: {device_info.device_type}")
+        print(f"   [OK] Device type: {device_info.device_type}")
         if device_info.cuda_available:
-            print(f"   ✓ CUDA available: {device_info.device_name}")
+            print(f"   [OK] CUDA available: {device_info.device_name}")
         else:
-            print("   ✓ CUDA not available (CPU mode)")
+            print("   [OK] CUDA not available (CPU mode)")
         results.append(("Transcriber", True, None))
     except Exception as e:
-        print(f"   ✗ Transcriber failed: {e}")
+        print(f"   [FAIL] Transcriber failed: {e}")
         results.append(("Transcriber", False, str(e)))
 
     # 5. Test with audio file if provided
@@ -563,21 +563,21 @@ def cmd_full_test(args: argparse.Namespace) -> int:
                 if transcriber.load_model():
                     result = transcriber.transcribe(audio_path)
                     if result.success:
-                        print(f"   ✓ Transcription successful in {result.duration_seconds:.2f}s")
-                        print(f"   ✓ Text: {result.text[:100]}{'...' if len(result.text) > 100 else ''}")
+                        print(f"   [OK] Transcription successful in {result.duration_seconds:.2f}s")
+                        print(f"   [OK] Text: {result.text[:100]}{'...' if len(result.text) > 100 else ''}")
                         results.append(("Transcription", True, None))
                     else:
-                        print(f"   ✗ Transcription failed: {result.error}")
+                        print(f"   [FAIL] Transcription failed: {result.error}")
                         results.append(("Transcription", False, result.error))
                     transcriber.unload_model()
                 else:
-                    print("   ✗ Failed to load model")
+                    print("   [FAIL] Failed to load model")
                     results.append(("Transcription", False, "Failed to load model"))
             except Exception as e:
-                print(f"   ✗ Transcription test failed: {e}")
+                print(f"   [FAIL] Transcription test failed: {e}")
                 results.append(("Transcription", False, str(e)))
         else:
-            print(f"   ✗ Audio file not found: {audio_path}")
+            print(f"   [FAIL] Audio file not found: {audio_path}")
             results.append(("Transcription", False, "Audio file not found"))
     else:
         print("\n5. Skipping Transcription test (no audio file provided)")
@@ -593,15 +593,15 @@ def cmd_full_test(args: argparse.Namespace) -> int:
             # Verify
             content = injector.get_clipboard_content()
             if content == test_text:
-                print("   ✓ Clipboard injection verified")
+                print("   [OK] Clipboard injection verified")
             else:
-                print("   ✓ Text copied (clipboard verification not available)")
+                print("   [OK] Text copied (clipboard verification not available)")
             results.append(("Text Injection", True, None))
         else:
-            print("   ✗ Text injection failed")
+            print("   [FAIL] Text injection failed")
             results.append(("Text Injection", False, "Injection failed"))
     except Exception as e:
-        print(f"   ✗ Text Injection failed: {e}")
+        print(f"   [FAIL] Text Injection failed: {e}")
         results.append(("Text Injection", False, str(e)))
 
     # Summary
@@ -613,7 +613,7 @@ def cmd_full_test(args: argparse.Namespace) -> int:
     failed = len(results) - passed
 
     for name, success, error in results:
-        status = "✓ PASS" if success else "✗ FAIL"
+        status = "[OK] PASS" if success else "[FAIL] FAIL"
         print(f"  {status}: {name}" + (f" ({error})" if error and not success else ""))
 
     print("-" * 60)

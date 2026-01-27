@@ -247,7 +247,12 @@ class TestCLIAudioSystem:
         if result.returncode == 0:
             assert "Audio Input Devices" in result.stdout or "No audio input devices" in result.stdout
         else:
-            assert "Audio system not available" in result.stdout or "PortAudio" in result.stdout
+            # When there are no audio devices or PortAudio is not available
+            assert (
+                "Audio system not available" in result.stdout
+                or "PortAudio" in result.stdout
+                or "No audio input devices" in result.stdout
+            )
 
 
 class TestCLIDirectImport:
