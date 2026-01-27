@@ -25,15 +25,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # .NET setup (for legacy C# version)
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Restore .NET dependencies
-        run: dotnet restore
-
       # Python setup (for new Python version)
       - name: Setup Python
         uses: actions/setup-python@v6
