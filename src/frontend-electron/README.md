@@ -44,11 +44,33 @@ npm run pack
 npm run build
 ```
 
+### Testing
+
+The Electron frontend includes end-to-end tests using Playwright:
+
+```bash
+# Run all Playwright tests
+npm test
+
+# Run tests with Playwright UI
+npm run test:ui
+
+# Run tests in headed mode (visible browser)
+npm run test:headed
+```
+
+For CI environments without a display, use xvfb:
+
+```bash
+xvfb-run npm test
+```
+
 ## Project Structure
 
 ```
 frontend-electron/
 ├── package.json           # Project configuration
+├── playwright.config.js   # Playwright test configuration
 ├── src/
 │   ├── main.js           # Electron main process
 │   ├── preload.js        # Preload script for secure IPC
@@ -56,6 +78,8 @@ frontend-electron/
 │       ├── index.html    # Main UI HTML
 │       ├── styles.css    # Styles (Fluent Design inspired)
 │       └── renderer.js   # UI logic and event handling
+├── tests/
+│   └── electron.spec.js  # Playwright E2E tests
 ├── assets/
 │   └── icon.ico          # Application icon (optional)
 └── dist/                 # Build output (gitignored)
@@ -97,6 +121,7 @@ The Electron frontend communicates with the Python backend via HTTP REST API:
 | Electron | 40.x | Desktop framework |
 | Node.js | 20.x | Runtime |
 | electron-builder | 25.x | Build and packaging |
+| Playwright | 1.55.x | End-to-end testing |
 
 ## API Endpoints Used
 
