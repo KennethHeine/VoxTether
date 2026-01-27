@@ -51,46 +51,8 @@ jobs:
         path: src/backend/dist/vox-backend.exe
         retention-days: 7
 
-  # Build the WinUI 3 frontend (legacy .NET)
-  build-frontend-dotnet:
-    name: Build Frontend (.NET)
-    runs-on: windows-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
-
-    - name: Restore dependencies
-      run: dotnet restore src/frontend/VoxTether.sln
-
-    - name: Build frontend
-      run: |
-        dotnet build src/frontend/VoxTether.sln -c Release --no-restore
-      shell: pwsh
-
-    - name: Publish frontend
-      run: |
-        dotnet publish src/frontend/VoxTether/VoxTether.csproj `
-          -c Release `
-          -r win-x64 `
-          --self-contained `
-          -p:PublishSingleFile=false `
-          -o build/output
-      shell: pwsh
-
-    - name: Upload frontend artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-dotnet-build
-        path: build/output/
-        retention-days: 7
-
   # Build the Electron frontend
-  build-frontend-electron:
+  build-frontend:
     name: Build Frontend (Electron)
     runs-on: windows-latest
 
@@ -123,14 +85,14 @@ jobs:
         npm run pack
       shell: pwsh
 
-    - name: Upload Electron frontend artifact
+    - name: Upload frontend artifact
       uses: actions/upload-artifact@v4
       with:
-        name: frontend-electron-build
+        name: frontend-build
         path: src/frontend-electron/dist/
         retention-days: 7
 
-  # Run tests for legacy Python code
+  # Run tests for Python code
   test-python:
     name: Test Python
     runs-on: windows-latest
@@ -170,7 +132,7 @@ jobs:
   build-complete:
     name: Build Complete
     runs-on: windows-latest
-    needs: [build-backend, build-frontend-dotnet, build-frontend-electron, test-python]
+    needs: [build-backend, build-frontend, test-python]
 
     steps:
     - uses: actions/checkout@v4
@@ -181,35 +143,22 @@ jobs:
         name: backend-build
         path: build/output/backend/
 
-    - name: Download .NET frontend artifact
+    - name: Download frontend artifact
       uses: actions/download-artifact@v4
       with:
-        name: frontend-dotnet-build
-        path: build/output-dotnet/
-
-    - name: Download Electron frontend artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-electron-build
-        path: build/output-electron/
+        name: frontend-build
+        path: build/output/
 
     - name: Verify build
       run: |
         Write-Host "Checking build artifacts..."
         
-        # Check .NET frontend
-        if (-not (Test-Path "build/output-dotnet/VoxTether.exe")) {
-          Write-Warning ".NET Frontend executable not found!"
-        } else {
-          Write-Host ".NET Frontend build OK" -ForegroundColor Green
-        }
-        
         # Check Electron frontend
-        if (Test-Path "build/output-electron/win-unpacked/VoxTether.exe") {
+        if (Test-Path "build/output/win-unpacked/VoxTether.exe") {
           Write-Host "Electron Frontend build OK" -ForegroundColor Green
         } else {
           Write-Warning "Electron Frontend executable not found in expected location"
-          Get-ChildItem -Path "build/output-electron" -Recurse | Format-Table Name, Length
+          Get-ChildItem -Path "build/output" -Recurse | Format-Table Name, Length
         }
         
         # Check backend
@@ -223,20 +172,9 @@ jobs:
         Write-Host "Build verification passed!" -ForegroundColor Green
       shell: pwsh
 
-    - name: Upload combined build (Electron)
+    - name: Upload combined build
       uses: actions/upload-artifact@v4
       with:
-        name: voxtether-electron-build
-        path: |
-          build/output-electron/
-          build/output/backend/
-        retention-days: 7
-
-    - name: Upload combined build (.NET)
-      uses: actions/upload-artifact@v4
-      with:
-        name: voxtether-dotnet-build
-        path: |
-          build/output-dotnet/
-          build/output/backend/
+        name: voxtether-build
+        path: build/output/
         retention-days: 7

@@ -9,13 +9,15 @@ This guide explains how to run VoxTether from source for development purposes.
 | Software | Version | Purpose |
 |----------|---------|---------|
 | Python | 3.11+ | Backend runtime |
-| .NET SDK | 8.0+ | Frontend build |
+| Node.js | 20.x+ | Frontend runtime |
+| npm | 10.x+ | Package management |
 | Git | Latest | Source control |
 
 **Check installations:**
 ```powershell
 python --version   # Should be 3.11+
-dotnet --version   # Should be 8.0+
+node --version     # Should be 20.x+
+npm --version      # Should be 10.x+
 git --version
 ```
 
@@ -100,10 +102,10 @@ Open a **new terminal** (keep the backend running).
 
 ```powershell
 # Navigate to frontend
-cd src/frontend
+cd src/frontend-electron
 
-# Restore dependencies
-dotnet restore VoxTether.sln
+# Install dependencies
+npm install
 ```
 
 ---
@@ -111,8 +113,11 @@ dotnet restore VoxTether.sln
 ## Step 5: Run the Frontend
 
 ```powershell
-# Run the WinUI 3 application
-dotnet run --project VoxTether
+# Run the Electron application
+npm start
+
+# Or with debug mode (opens DevTools)
+npm run dev
 ```
 
 VoxTether will start and appear in your system tray.
@@ -170,14 +175,14 @@ python -m uvicorn main:app --host 127.0.0.1 --port 5678 --reload
 
 **Terminal 2 (Frontend):**
 ```powershell
-cd src/frontend
-dotnet run --project VoxTether
+cd src/frontend-electron
+npm start
 ```
 
 ### Hot Reload
 
 - **Backend**: The `--reload` flag enables automatic reloading when Python files change
-- **Frontend**: Restart the application to pick up changes
+- **Frontend**: Restart the Electron app to pick up changes (or use DevTools reload)
 
 ### Running Tests
 
@@ -193,9 +198,9 @@ cd ../..
 pip install -r requirements-dev.txt
 pytest tests/
 
-# Frontend tests
-cd src/frontend
-dotnet test
+# Frontend linting
+cd src/frontend-electron
+npm run lint
 ```
 
 ### Linting
@@ -205,6 +210,10 @@ dotnet test
 cd src/backend
 pip install ruff
 ruff check .
+
+# Frontend linting
+cd src/frontend-electron
+npm run lint
 
 # Legacy code linting
 cd ../..
@@ -236,10 +245,12 @@ Output:
 ```
 VoxTether/
 ├── src/
-│   ├── frontend/          # WinUI 3 (.NET 8.0)
-│   │   ├── VoxTether/     # Main app
-│   │   ├── VoxTether.Core/
-│   │   └── VoxTether.Infrastructure/
+│   ├── frontend-electron/ # Electron frontend
+│   │   ├── src/
+│   │   │   ├── main.js    # Main process
+│   │   │   ├── preload.js # IPC bridge
+│   │   │   └── renderer/  # UI files
+│   │   └── package.json
 │   ├── backend/           # Python FastAPI
 │   │   ├── api/           # REST endpoints
 │   │   ├── services/      # Business logic
@@ -271,9 +282,9 @@ VoxTether/
 1. Ensure backend is running on port 5678
 2. Check the backend URL in Settings
 
-### "dotnet: command not found"
+### "node: command not found"
 
-Install .NET 8.0 SDK from [dot.net](https://dot.net/download).
+Install Node.js 20.x from [nodejs.org](https://nodejs.org/).
 
 ### Hotkey not working
 
@@ -294,3 +305,4 @@ Install .NET 8.0 SDK from [dot.net](https://dot.net/download).
 - [README](../README.md) - Project overview
 - [Installation Guide](INSTALLATION.md) - End-user installation
 - [Architecture](ARCHITECTURE.md) - Technical architecture
+- [Changelog](CHANGELOG.md) - Version history

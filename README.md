@@ -7,7 +7,7 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 - **Push-to-talk recording**: Press and hold a global hotkey to record, release to transcribe
 - **GPU acceleration**: Native CUDA 12 support with automatic fallback to CPU
 - **Fully offline**: Uses faster-whisper for local speech-to-text, no internet required after model download
-- **Modern Windows UI**: Available in WinUI 3 (.NET) or Electron versions
+- **Modern UI**: Built with Electron for a clean, Windows 11 Fluent-inspired interface
 - **Text insertion**: Automatically types transcribed text at your cursor position
 - **System tray**: Runs quietly in the background
 - **Model management**: Download models on-demand from HuggingFace
@@ -16,9 +16,7 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 ## Architecture
 
 VoxTether uses a hybrid architecture:
-- **Frontend**: Choose from:
-  - **Electron** (Recommended) - Cross-platform, modern JavaScript/HTML/CSS UI
-  - **WinUI 3** (.NET 8.0) - Native Windows UI with Fluent Design
+- **Frontend**: Electron 40.x - Modern JavaScript/HTML/CSS UI with system tray integration
 - **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
 
 See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
@@ -45,8 +43,6 @@ See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
 
 ### From Source (Development)
 
-#### Option A: Electron Frontend (Recommended)
-
 ```powershell
 # Clone the repository
 git clone https://github.com/KennethHeine/VoxTether.git
@@ -65,28 +61,6 @@ python -m uvicorn main:app --port 5678
 cd src/frontend-electron
 npm install
 npm start
-```
-
-#### Option B: WinUI 3 Frontend (.NET)
-
-```powershell
-# Clone the repository
-git clone https://github.com/KennethHeine/VoxTether.git
-cd VoxTether
-
-# --- Backend (Python) ---
-cd src/backend
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-# Run backend server
-python -m uvicorn main:app --port 5678
-
-# --- Frontend (WinUI 3) --- (in a new terminal)
-cd src/frontend
-dotnet restore VoxTether.sln
-dotnet run --project VoxTether
 ```
 
 ### GPU Acceleration (Optional)
@@ -124,7 +98,6 @@ Right-click the VoxTether tray icon to access:
 - **Test Microphone** - Record a 2-second test and show the transcription
 - **Open Models Folder** - Access downloaded models
 - **Open Logs** - Access log files for troubleshooting
-- **Check for Updates...** - Check for new versions on GitHub
 - **About** - Show version and configuration info
 - **Exit** - Close VoxTether
 
@@ -155,14 +128,15 @@ Settings are stored in `%APPDATA%\VoxTether\settings.json`
 
 ```json
 {
-  "hotkey": "ctrl+shift+space",
-  "model_name": "small",
+  "hotkey": "Ctrl+Shift+Space",
+  "modelName": "small",
   "language": "auto",
-  "device": "auto",
-  "compute_type": "auto",
-  "show_notifications": true,
-  "show_recording_indicator": true,
-  "output_mode": "clipboard"
+  "outputMode": "ClipboardAndPaste",
+  "showNotifications": true,
+  "showRecordingIndicator": true,
+  "startMinimized": true,
+  "startWithWindows": false,
+  "theme": "system"
 }
 ```
 
@@ -253,17 +227,12 @@ python -m src.main --version
 ```
 VoxTether/
 ├── src/
-│   ├── frontend-electron/       # Electron Frontend (Recommended)
+│   ├── frontend-electron/       # Electron Frontend
 │   │   ├── src/
 │   │   │   ├── main.js          # Electron main process
 │   │   │   ├── preload.js       # Secure IPC bridge
 │   │   │   └── renderer/        # UI (HTML/CSS/JS)
 │   │   └── package.json
-│   │
-│   ├── frontend/                # WinUI 3 Frontend (.NET 8.0)
-│   │   ├── VoxTether/           # Main WinUI 3 application
-│   │   ├── VoxTether.Core/      # Interfaces and models
-│   │   └── VoxTether.Infrastructure/ # Platform implementations
 │   │
 │   ├── backend/                 # Python Backend (FastAPI)
 │   │   ├── api/                 # REST API endpoints
@@ -293,10 +262,6 @@ pytest
 # Electron frontend (lint only)
 cd src/frontend-electron
 npm run lint
-
-# .NET frontend tests
-cd src/frontend
-dotnet test
 ```
 
 ### Building for Release
@@ -346,6 +311,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper) - Fast Whisper transcription
 - [CTranslate2](https://github.com/OpenNMT/CTranslate2) - Efficient inference engine
-- [WinUI 3](https://github.com/microsoft/microsoft-ui-xaml) - Modern Windows UI framework
-- [H.NotifyIcon](https://github.com/HavenDV/H.NotifyIcon) - System tray support for WinUI
-- [NAudio](https://github.com/naudio/NAudio) - Audio recording
+- [Electron](https://www.electronjs.org/) - Cross-platform desktop framework

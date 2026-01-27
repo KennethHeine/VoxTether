@@ -1,5 +1,5 @@
 # Build script for VoxTether
-# Builds both frontend (WinUI 3) and backend (Python)
+# Builds both frontend (Electron) and backend (Python)
 
 param(
     [switch]$Release,
@@ -64,32 +64,37 @@ if (-not $FrontendOnly) {
     Write-Host "Backend built successfully!" -ForegroundColor Green
 }
 
-# Build Frontend
+# Build Frontend (Electron)
 if (-not $BackendOnly) {
     Write-Host ""
-    Write-Host "Building WinUI 3 Frontend..." -ForegroundColor Yellow
+    Write-Host "Building Electron Frontend..." -ForegroundColor Yellow
     
-    $FrontendDir = "$RootDir\src\frontend"
+    $FrontendDir = "$RootDir\src\frontend-electron"
     $FrontendOutput = "$OutputDir"
     
-    $Configuration = if ($Release) { "Release" } else { "Debug" }
+    # Install dependencies
+    Push-Location $FrontendDir
+    npm install
     
-    # Restore and build
-    dotnet restore "$FrontendDir\VoxTether.sln"
-    dotnet publish "$FrontendDir\VoxTether\VoxTether.csproj" `
-        -c $Configuration `
-        -r win-x64 `
-        --self-contained `
-        -p:PublishSingleFile=false `
-        -p:Version=$Version `
-        -o $FrontendOutput
+    # Build with electron-builder
+    if ($Release) {
+        npm run build
+    } else {
+        npm run pack
+    }
+    Pop-Location
     
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Frontend build failed!"
-        exit 1
+    # Copy build output
+    if (Test-Path "$FrontendDir\dist\win-unpacked") {
+        Copy-Item "$FrontendDir\dist\win-unpacked\*" $FrontendOutput -Recurse
     }
     
-    Write-Host "Frontend built successfully!" -ForegroundColor Green
+    if (-not (Test-Path "$FrontendOutput\VoxTether.exe")) {
+        Write-Warning "Frontend executable not found at expected location"
+        Get-ChildItem -Path "$FrontendDir\dist" -Recurse | Format-Table Name, Length
+    } else {
+        Write-Host "Frontend built successfully!" -ForegroundColor Green
+    }
 }
 
 # Create release package (ZIP)
@@ -129,7 +134,6 @@ Getting Started:
 
 Requirements:
 - Windows 10/11 (64-bit)
-- .NET 8.0 Runtime (bundled)
 - For GPU acceleration: NVIDIA GPU with CUDA support
 
 For more information, visit:
