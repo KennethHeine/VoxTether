@@ -291,6 +291,7 @@ pytest tests/ --cov=src --cov-report=html
 ## Additional Resources
 
 - [README](../README.md) - Project overview
+- [Running Locally](RUNNING-LOCALLY.md) - Step-by-step guide for running with Python
 - [Architecture](ARCHITECTURE.md) - Technical architecture
 - [GitHub Releases](https://github.com/KennethHeine/VoxTether/releases) - Download builds
 - [Issues](https://github.com/KennethHeine/VoxTether/issues) - Report bugs
