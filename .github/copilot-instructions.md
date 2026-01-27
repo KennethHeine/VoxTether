@@ -2,13 +2,14 @@
 
 ## Project Overview
 
-VoxTether is a push-to-talk dictation application for Windows 10/11. It provides fully offline speech-to-text using whisper.cpp. The project is built with C# and .NET 8.0, using WPF for the UI.
+VoxTether is a push-to-talk dictation application for Windows 10/11. It provides fully offline speech-to-text using faster-whisper. The project is built with Python 3.10+.
 
 **Key characteristics:**
-- Windows-only desktop application (WPF)
-- Targets `net8.0-windows`
-- Uses NAudio for audio recording
-- Uses whisper.cpp (external executable) for transcription
+- Windows-only desktop application
+- Uses faster-whisper for transcription (native CUDA 12 support)
+- Uses sounddevice for audio recording
+- Uses pystray for system tray
+- Uses keyboard for global hotkeys
 - MIT License
 
 ## Build and Test Commands
@@ -18,27 +19,51 @@ VoxTether is a push-to-talk dictation application for Windows 10/11. It provides
 ### Required Commands (in order)
 
 ```bash
-# 1. Restore dependencies (always run first)
-dotnet restore
+# 1. Create virtual environment (first time only)
+python -m venv venv
+venv\Scripts\activate
 
-# 2. Build the solution
-dotnet build --configuration Release
+# 2. Install dependencies
+pip install -r requirements.txt
 
-# 3. Run tests (requires Windows - see note below)
-dotnet test --configuration Release
+# 3. Install dev dependencies (for testing)
+pip install -r requirements-dev.txt
+
+# 4. Run tests
+pytest
+
+# 5. Run linting
+ruff check src/ tests/
+```
+
+### Running the Application
+
+```bash
+# Run the application
+python -m src.main
+
+# Run with debug logging
+python -m src.main --debug
+
+# Run healthcheck
+python -m src.main --healthcheck
 ```
 
 ### Important Notes
 
-- **Tests require Windows**: The project targets `net8.0-windows` with WPF/WinForms. Tests will fail on Linux/macOS due to missing `Microsoft.WindowsDesktop.App` runtime. The CI workflow runs on `windows-latest`.
-- **No linting**: There are no linting tools configured. Follow standard C# conventions.
-- **Build time**: Full build typically takes 10-15 seconds.
-- **No additional setup**: Dependencies are managed via NuGet; no npm, pip, or other package managers needed.
+- **Windows only**: The application uses Windows-specific features for keyboard hooks and system tray.
+- **Linting**: Use ruff for linting (`ruff check src/ tests/`).
+- **Testing**: Use pytest for testing.
+- **GPU optional**: CUDA 12 support is optional; the app falls back to CPU mode.
 
-### Publishing
+### Building Executable
 
 ```bash
-dotnet publish src/VoxTether/VoxTether.csproj -c Release -r win-x64 --self-contained
+# Build single .exe with PyInstaller
+python build.py
+
+# Build with debug console
+python build.py --debug
 ```
 
 ## Project Architecture
@@ -46,46 +71,40 @@ dotnet publish src/VoxTether/VoxTether.csproj -c Release -r win-x64 --self-conta
 ```
 VoxTether/
 ├── src/
-│   ├── VoxTether/                    # WPF application (entry point)
-│   │   ├── App.xaml(.cs)             # Application startup, DI setup
-│   │   ├── VoxTetherController.cs    # Main controller logic
-│   │   ├── TrayIconManager.cs        # System tray management
-│   │   ├── SettingsWindow.xaml(.cs)  # Settings UI
-│   │   └── ModelSetupWindow.xaml(.cs)# First-run model setup
-│   ├── VoxTether.Core/               # Interfaces and core services
-│   │   ├── Interfaces/               # Key abstractions (IAudioRecorder, etc.)
-│   │   ├── Models/                   # Data models (VoxTetherSettings, etc.)
-│   │   └── Services/                 # Core services (SettingsService, etc.)
-│   ├── VoxTether.Infrastructure/     # Platform implementations
-│   │   ├── NAudioRecorder.cs         # Audio recording via NAudio
-│   │   ├── ClipboardTextInjector.cs  # Text injection via clipboard
-│   │   └── LowLevelHookHotkeyService.cs # Global hotkey hook
-│   └── VoxTether.Transcription/      # Transcription implementations
-│       ├── WhisperCppEngine.cs       # whisper.cpp process wrapper
-│       ├── BackendSelectionService.cs# GPU/CPU backend selection
-│       └── BackendDownloadService.cs # Backend download management
-├── tests/
-│   └── VoxTether.Core.Tests/         # Unit tests (xUnit)
-├── docs/                             # Additional documentation
-├── installer/                        # Inno Setup installer script
-├── VoxTether.slnx                    # Solution file
-└── README.md
+│   ├── __init__.py           # Package init, version
+│   ├── main.py               # Entry point, VoxTetherApp
+│   ├── tray.py               # System tray management
+│   ├── hotkey.py             # Global hotkey listener
+│   ├── recorder.py           # Audio recording
+│   ├── transcriber.py        # faster-whisper integration
+│   ├── injector.py           # Text injection
+│   ├── settings.py           # Settings management
+│   ├── model_manager.py      # Model download/management
+│   └── ui/
+│       ├── settings_window.py  # Settings dialog (tkinter)
+│       └── model_setup.py      # First-run model setup
+├── tests/                    # Unit tests (pytest)
+├── assets/
+│   └── icon.ico             # Application icon
+├── docs/                    # Documentation
+├── requirements.txt         # Runtime dependencies
+├── requirements-dev.txt     # Development dependencies
+├── pyproject.toml          # Project configuration
+└── build.py                # PyInstaller build script
 ```
 
-## Key Interfaces
+## Key Components
 
-New implementations should follow the interface-based architecture:
-
-| Interface | Purpose | Implementation Location |
-|-----------|---------|------------------------|
-| `IAudioRecorder` | Audio recording to WAV | VoxTether.Infrastructure |
-| `ITranscriptionEngine` | Speech-to-text | VoxTether.Transcription |
-| `ITextInjector` | Text insertion | VoxTether.Infrastructure |
-| `IHotkeyService` | Global hotkey detection | VoxTether.Infrastructure |
-| `ITextPostProcessor` | Post-processing hook | VoxTether.Transcription |
-| `IBackendDownloadService` | Backend management | VoxTether.Transcription |
-| `IBackendSelectionService` | GPU/CPU backend selection | VoxTether.Transcription |
-| `IUpdateService` | Update checking | VoxTether.Core.Services |
+| Component | File | Library | Purpose |
+|-----------|------|---------|---------|
+| **VoxTetherApp** | `main.py` | - | Main controller, orchestrates all components |
+| **TrayManager** | `tray.py` | pystray | System tray icon with context menu |
+| **HotkeyListener** | `hotkey.py` | keyboard | Global push-to-talk hotkey detection |
+| **AudioRecorder** | `recorder.py` | sounddevice, soundfile | Records microphone to 16kHz mono WAV |
+| **Transcriber** | `transcriber.py` | faster-whisper | GPU/CPU speech-to-text |
+| **TextInjector** | `injector.py` | pyperclip, keyboard | Clipboard paste or keyboard simulation |
+| **SettingsService** | `settings.py` | json | Load/save user preferences |
+| **ModelManager** | `model_manager.py` | huggingface_hub | Download/manage Whisper models |
 
 ## CI/CD Pipeline
 
@@ -93,57 +112,64 @@ New implementations should follow the interface-based architecture:
 
 Runs on every PR to `main`:
 1. Checkout code
-2. Setup .NET 8.0
-3. `dotnet restore`
-4. `dotnet build --no-restore --configuration Release`
-5. `dotnet test --no-build --configuration Release`
+2. Setup Python 3.11
+3. Install dependencies
+4. Run linting (ruff)
+5. Run tests (pytest)
 
 ### Release Workflow (`.github/workflows/release.yml`)
 
-Manually triggered with version input. Builds, tests, creates portable ZIP and installer.
+Manually triggered with version input. Builds, tests, creates portable ZIP with PyInstaller.
 
 ## Code Style Guidelines
 
-- **Naming**: PascalCase for public members, `_camelCase` for private fields
-- **Nullability**: Nullable reference types enabled (`<Nullable>enable</Nullable>`)
-- **Implicit usings**: Enabled (`<ImplicitUsings>enable</ImplicitUsings>`)
-- **Interfaces**: Define in VoxTether.Core/Interfaces/, implement in Infrastructure or Transcription
-- **Tests**: Use xUnit, place in tests/VoxTether.Core.Tests/
+- **Python**: Follow PEP 8 style guidelines
+- **Type hints**: Use type hints where appropriate
+- **Linting**: Use ruff for linting
+- **Formatting**: Use black for formatting (optional)
 
 ## Configuration Files
 
 | File | Purpose |
 |------|---------|
-| `VoxTether.slnx` | Solution file (XML format) |
-| `*.csproj` | Project files with dependencies |
+| `pyproject.toml` | Project configuration, dependencies |
+| `requirements.txt` | Runtime dependencies |
+| `requirements-dev.txt` | Development dependencies |
 | `.github/workflows/ci.yml` | CI pipeline |
 | `.github/dependabot.yml` | Automated dependency updates |
-| `.gitignore` | Standard .NET gitignore |
-| `installer/VoxTether.iss` | Inno Setup installer script |
+| `.gitignore` | Git ignore patterns |
+| `build.py` | PyInstaller build script |
 
 ## Dependency Management
 
-Dependencies are declared in `.csproj` files:
-- **VoxTether**: Microsoft.Extensions.Logging, Microsoft.Extensions.DependencyInjection
-- **VoxTether.Core**: Microsoft.Extensions.Logging, Microsoft.Extensions.Logging.Abstractions, System.Text.Json
-- **VoxTether.Infrastructure**: NAudio
-- **VoxTether.Transcription**: (no external packages, references Core only)
-- **Tests**: xUnit, Microsoft.NET.Test.Sdk, coverlet.collector
+Dependencies are declared in `requirements.txt` and `pyproject.toml`:
+- **faster-whisper**: Speech-to-text engine
+- **sounddevice**: Audio recording
+- **soundfile**: WAV file handling
+- **pystray**: System tray
+- **keyboard**: Global hotkeys
+- **pyperclip**: Clipboard access
+- **Pillow**: Image handling for icons
+- **huggingface-hub**: Model downloads
 
 ## Testing
 
-- **Framework**: xUnit
-- **Location**: `tests/VoxTether.Core.Tests/`
-- **Run tests**: `dotnet test` (Windows only)
-- Add tests for new functionality following existing patterns in the test project.
+- **Framework**: pytest
+- **Location**: `tests/`
+- **Run tests**: `pytest`
+- **Coverage**: `pytest --cov=src --cov-report=html`
+- Add tests for new functionality following existing patterns in the test directory.
 
 ## Troubleshooting
 
-### Build fails with Windows targeting errors
-The project requires the Windows SDK. On Linux/macOS, builds will succeed but tests will fail. This is expected - use the CI pipeline for full validation.
+### Tests fail with import errors
+Make sure you're in a virtual environment and have installed all dependencies.
 
-### Missing whisper.cpp binary
-The whisper.cpp binary is downloaded during release builds, not during development. Tests mock the transcription engine.
+### CUDA not available
+Install CUDA packages: `pip install nvidia-cublas-cu12 nvidia-cudnn-cu12`
+
+### Keyboard hooks not working
+Run as Administrator or check if another application is blocking keyboard hooks.
 
 ## Trust These Instructions
 
