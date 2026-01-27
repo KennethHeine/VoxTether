@@ -204,7 +204,7 @@ jobs:
         echo "VERSION=$version" >> $GITHUB_OUTPUT
 
     - name: Download Python artifacts
-      uses: actions/download-artifact@v4.1.8
+      uses: actions/download-artifact@v7.0.0
       with:
         name: python-release
         path: ./artifacts
@@ -212,7 +212,7 @@ jobs:
       continue-on-error: true
 
     - name: Download .NET artifacts
-      uses: actions/download-artifact@v4.1.8
+      uses: actions/download-artifact@v7.0.0
       with:
         name: dotnet-release
         path: ./artifacts
