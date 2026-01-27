@@ -1,11 +1,12 @@
 name: Release
+
 run-name: Release ${{ inputs.version }}
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.0.0)'
+        description: 'Version to release (e.g., 2.0.0)'
         required: true
         type: string
 
@@ -13,77 +14,201 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build and Test
+  # Build the Python backend
+  build-backend:
+    name: Build Backend
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: 'src/backend/requirements.txt'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r src/backend/requirements.txt
+        pip install pyinstaller
+
+    - name: Build backend
+      run: |
+        cd src/backend
+        pyinstaller --onefile --name vox-backend main.py
+      shell: pwsh
+
+    - name: Upload backend artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-build
+        path: src/backend/dist/vox-backend.exe
+
+  # Build the WinUI 3 frontend
+  build-frontend:
+    name: Build Frontend
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
 
     - name: Validate and set version
       id: version
       run: |
         $version = "${{ github.event.inputs.version }}"
-        # Remove 'v' prefix if provided
         $version = $version -replace '^v', ''
-        # Validate semver format (basic validation for X.Y.Z with optional prerelease/metadata)
         if (-not ($version -match '^\d+\.\d+\.\d+(-[\w-]+(\.[\w-]+)*)?(\+[\w-]+(\.[\w-]+)*)?$')) {
-          Write-Error "Invalid version format: $version. Expected format: X.Y.Z (e.g., 1.0.0)"
+          Write-Error "Invalid version format: $version. Expected format: X.Y.Z (e.g., 2.0.0)"
           exit 1
         }
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
       shell: pwsh
 
-    - name: Setup Python
-      uses: actions/setup-python@v6
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
       with:
-        python-version: '3.11'
-        cache: 'pip'
-        cache-dependency-path: 'requirements*.txt'
+        dotnet-version: '8.0.x'
 
-    - name: Install dependencies
+    - name: Restore dependencies
+      run: dotnet restore src/frontend/VoxTether.sln
+
+    - name: Publish frontend
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-
-    - name: Run tests
-      run: pytest tests/ -v --tb=short
-
-    - name: Update version in pyproject.toml
-      run: |
-        $content = Get-Content -Path pyproject.toml -Raw
-        $content = $content -replace 'version = ".*"', 'version = "${{ steps.version.outputs.VERSION }}"'
-        Set-Content -Path pyproject.toml -Value $content
+        dotnet publish src/frontend/VoxTether/VoxTether.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained `
+          -p:PublishSingleFile=false `
+          -p:Version=${{ steps.version.outputs.VERSION }} `
+          -o build/output
       shell: pwsh
 
-    - name: Build executable with PyInstaller
-      run: python build.py --output dist
+    - name: Upload frontend artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: build/output/
+
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+  # Create installer and release
+  create-release:
+    name: Create Release
+    runs-on: windows-latest
+    needs: [build-backend, build-frontend]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download backend artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-build
+        path: build/output/backend/
+
+    - name: Download frontend artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: build/output/
+
+    - name: Cache Inno Setup
+      id: cache-innosetup
+      uses: actions/cache@v4
+      with:
+        path: C:\Program Files (x86)\Inno Setup 6
+        key: innosetup-6
+
+    - name: Install Inno Setup
+      if: steps.cache-innosetup.outputs.cache-hit != 'true'
+      run: |
+        choco install innosetup -y
+      shell: pwsh
+
+    - name: Create installer
+      run: |
+        $env:VOXTETHER_VERSION = "${{ needs.build-frontend.outputs.version }}"
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\VoxTether.iss
+      shell: pwsh
 
     - name: Create portable ZIP
       run: |
-        Compress-Archive -Path ./dist/VoxTether.exe -DestinationPath ./VoxTether-${{ steps.version.outputs.VERSION }}-win-x64.zip
+        $version = "${{ needs.build-frontend.outputs.version }}"
+        $packageDir = "build\VoxTether-$version-win-x64"
+        
+        # Create package directory
+        New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+        
+        # Copy files
+        Copy-Item "build\output\*" $packageDir -Recurse -Exclude "backend"
+        New-Item -ItemType Directory -Path "$packageDir\backend" -Force | Out-Null
+        Copy-Item "build\output\backend\vox-backend.exe" "$packageDir\backend\"
+        
+        # Create README
+        @"
+VoxTether $version
+==================
+
+Push-to-talk dictation for Windows. Fully offline speech-to-text.
+
+Getting Started:
+1. Run VoxTether.exe
+2. On first run, you'll be prompted to download a speech recognition model
+3. Press Ctrl+Shift+Space (default hotkey) to record
+4. Release to transcribe and paste the text
+
+Requirements:
+- Windows 10/11 (64-bit)
+- For GPU acceleration: NVIDIA GPU with CUDA support
+
+For more information, visit:
+https://github.com/KennethHeine/VoxTether
+
+License: MIT
+"@ | Out-File "$packageDir\README.txt" -Encoding UTF8
+        
+        # Copy license
+        if (Test-Path "LICENSE") {
+          Copy-Item "LICENSE" "$packageDir\LICENSE.txt"
+        }
+        
+        # Create ZIP
+        Compress-Archive -Path "$packageDir\*" -DestinationPath "build\VoxTether-$version-win-x64.zip"
       shell: pwsh
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v${{ steps.version.outputs.VERSION }}
-        name: VoxTether v${{ steps.version.outputs.VERSION }}
+        tag_name: v${{ needs.build-frontend.outputs.version }}
+        name: VoxTether v${{ needs.build-frontend.outputs.version }}
         body: |
-          ## VoxTether v${{ steps.version.outputs.VERSION }}
+          ## VoxTether v${{ needs.build-frontend.outputs.version }}
           
           Push-to-talk dictation for Windows. Fully offline using faster-whisper.
           
-          ### Download
+          ### Downloads
           
-          - `VoxTether-${{ steps.version.outputs.VERSION }}-win-x64.zip` - Portable executable
+          - **`VoxTether-${{ needs.build-frontend.outputs.version }}-Setup.exe`** - Windows installer (recommended)
+          - **`VoxTether-${{ needs.build-frontend.outputs.version }}-win-x64.zip`** - Portable ZIP
           
           ### Installation
           
+          **Using Installer (Recommended):**
+          1. Download and run `VoxTether-${{ needs.build-frontend.outputs.version }}-Setup.exe`
+          2. Follow the installation wizard
+          3. Launch VoxTether from the Start Menu
+          
+          **Using Portable ZIP:**
           1. Download and extract the ZIP file
           2. Run `VoxTether.exe`
-          3. On first launch, you'll be prompted to download a speech recognition model
+          
+          ### First Run
+          
+          On first launch, you'll be prompted to download a speech recognition model (recommended: "small" model).
           
           ### Requirements
           
@@ -91,7 +216,17 @@ jobs:
           - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
           
           See [Installation Guide](https://github.com/KennethHeine/VoxTether/blob/main/docs/INSTALLATION.md) for detailed instructions.
-        files: ./VoxTether-${{ steps.version.outputs.VERSION }}-win-x64.zip
+          
+          ### Architecture
+          
+          This release uses a hybrid architecture:
+          - **Frontend**: WinUI 3 (.NET 8.0) - Modern Windows UI
+          - **Backend**: Python FastAPI - faster-whisper transcription
+          
+          See [Architecture Documentation](https://github.com/KennethHeine/VoxTether/blob/main/docs/ARCHITECTURE.md) for details.
+        files: |
+          build/installer/VoxTether-${{ needs.build-frontend.outputs.version }}-Setup.exe
+          build/VoxTether-${{ needs.build-frontend.outputs.version }}-win-x64.zip
         generate_release_notes: true
         draft: false
         prerelease: false

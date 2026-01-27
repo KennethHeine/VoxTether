@@ -1,171 +1,136 @@
-# Running VoxTether Locally with Python
+# Running VoxTether Locally (Development)
 
-This guide explains how to run VoxTether directly with Python on your Windows PC, without building a standalone executable.
+This guide explains how to run VoxTether from source for development purposes.
 
 ## Prerequisites
 
-### 1. Python Installation
+### Required Software
 
-You need Python 3.10 or later installed on your system.
+| Software | Version | Purpose |
+|----------|---------|---------|
+| Python | 3.11+ | Backend runtime |
+| .NET SDK | 8.0+ | Frontend build |
+| Git | Latest | Source control |
 
-**Check if Python is installed:**
+**Check installations:**
 ```powershell
-python --version
-```
-
-If Python is not installed, download it from [python.org](https://www.python.org/downloads/windows/).
-
-> **Important:** During installation, check the box **"Add Python to PATH"** to make Python accessible from the command line.
-
-### 2. Git (Optional)
-
-Git is recommended for cloning the repository, but you can also download the source as a ZIP file.
-
-**Check if Git is installed:**
-```powershell
+python --version   # Should be 3.11+
+dotnet --version   # Should be 8.0+
 git --version
 ```
 
-If Git is not installed, download it from [git-scm.com](https://git-scm.com/download/win).
-
-### 3. Hardware Requirements
+### Hardware Requirements
 
 | Requirement | Minimum | Recommended |
 |------------|---------|-------------|
 | OS | Windows 10 (64-bit) | Windows 11 |
 | RAM | 4 GB | 8 GB |
-| Disk Space | 500 MB + model size | 2 GB |
+| Disk Space | 2 GB | 4 GB |
 | GPU | None (CPU works) | NVIDIA with CUDA 12 |
 
 ---
 
 ## Step 1: Get the Source Code
 
-### Option A: Clone with Git (Recommended)
-
 ```powershell
 git clone https://github.com/KennethHeine/VoxTether.git
 cd VoxTether
 ```
 
-### Option B: Download ZIP
-
-1. Go to [github.com/KennethHeine/VoxTether](https://github.com/KennethHeine/VoxTether)
-2. Click the green **"Code"** button
-3. Select **"Download ZIP"**
-4. Extract the ZIP to a folder (e.g., `C:\VoxTether`)
-5. Open PowerShell and navigate to the folder:
-   ```powershell
-   cd C:\VoxTether
-   ```
-
 ---
 
-## Step 2: Create a Virtual Environment
+## Step 2: Set Up the Backend
 
-A virtual environment keeps VoxTether's dependencies separate from your system Python.
+The backend is a Python FastAPI server that handles transcription.
 
 ```powershell
-# Create the virtual environment
+# Navigate to backend
+cd src/backend
+
+# Create virtual environment
 python -m venv venv
-```
 
----
+# Verify venv was created
+if (Test-Path "venv\Scripts\Activate.ps1") { 
+    Write-Host "Virtual environment created successfully" 
+} else { 
+    Write-Error "Failed to create virtual environment" 
+}
 
-## Step 3: Activate the Virtual Environment
-
-You need to activate the virtual environment before installing dependencies or running the app.
-
-**PowerShell:**
-```powershell
+# Activate virtual environment
 .\venv\Scripts\Activate.ps1
-```
 
-**Command Prompt (cmd.exe):**
-```cmd
-venv\Scripts\activate.bat
+# Install dependencies
+pip install -r requirements.txt
 ```
-
-> **Note:** You'll see `(venv)` at the beginning of your prompt when the virtual environment is active.
 
 ### Troubleshooting: PowerShell Execution Policy
 
-If you get an error about script execution being disabled, run this command:
+If you get an error about script execution being disabled:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-Then try activating again.
+---
+
+## Step 3: Run the Backend
+
+With the virtual environment active:
+
+```powershell
+# Start the backend server
+python -m uvicorn main:app --host 127.0.0.1 --port 5678 --reload
+```
+
+The backend will start and listen on `http://127.0.0.1:5678`.
+
+**Verify it's running:**
+```powershell
+curl http://127.0.0.1:5678/api/health
+```
+
+You should see: `{"status":"ok",...}`
 
 ---
 
-## Step 4: Install Dependencies
+## Step 4: Set Up the Frontend
 
-With the virtual environment active, install the required packages:
-
-```powershell
-pip install -r requirements.txt
-```
-
-This will install all necessary dependencies:
-- `faster-whisper` - Speech-to-text engine
-- `sounddevice` - Audio recording
-- `pystray` - System tray support
-- `keyboard` - Global hotkey detection
-- And other supporting packages
-
----
-
-## Step 5: Run VoxTether
-
-### Basic Run
+Open a **new terminal** (keep the backend running).
 
 ```powershell
-python -m src.main
-```
+# Navigate to frontend
+cd src/frontend
 
-VoxTether will start and appear in your system tray (near the clock).
-
-### First Run
-
-On first launch, VoxTether will:
-1. Detect your GPU hardware
-2. Prompt you to download a speech recognition model
-3. Show the default hotkey configuration
-
-### Run with Debug Logging
-
-For troubleshooting, run with debug output:
-
-```powershell
-python -m src.main --debug
-```
-
-### Run Healthcheck
-
-Verify your system configuration:
-
-```powershell
-python -m src.main --healthcheck
+# Restore dependencies
+dotnet restore VoxTether.sln
 ```
 
 ---
 
-## Step 6: GPU Acceleration (Optional)
-
-By default, VoxTether uses CPU for transcription. For faster performance with NVIDIA GPUs:
+## Step 5: Run the Frontend
 
 ```powershell
+# Run the WinUI 3 application
+dotnet run --project VoxTether
+```
+
+VoxTether will start and appear in your system tray.
+
+---
+
+## GPU Acceleration (Optional)
+
+For faster transcription with NVIDIA GPUs:
+
+```powershell
+# In the backend virtual environment
+cd src/backend
+.\venv\Scripts\Activate.ps1
 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
 ```
 
-Verify GPU detection:
-```powershell
-python -m src.main --healthcheck
-```
-
-Look for `✓ CUDA available` in the output.
+Restart the backend after installing.
 
 ---
 
@@ -183,130 +148,149 @@ Right-click the VoxTether tray icon to access:
 
 | Menu Item | Description |
 |-----------|-------------|
-| Settings... | Configure hotkey, model, and options |
-| Test Microphone | Record a 2-second test and show transcription |
+| Settings... | Open settings window |
+| Test Microphone | Record and transcribe a 2-second test |
 | Open Models Folder | Access downloaded models |
-| Open Logs | Access log files |
-| Check for Updates... | Check for new versions |
-| About | Show version info |
+| Open Logs Folder | Access log files |
+| About | Show version and system info |
 | Exit | Close VoxTether |
 
 ---
 
-## Stopping VoxTether
+## Development Workflow
 
-1. Right-click the tray icon
-2. Select **Exit**
+### Running Both Components
 
-Or press `Ctrl+C` in the PowerShell window where it's running.
-
----
-
-## Running Again Later
-
-Each time you want to run VoxTether, you need to:
-
-1. Open PowerShell
-2. Navigate to the VoxTether folder
-3. Activate the virtual environment
-4. Run the app
-
-**Quick commands:**
+**Terminal 1 (Backend):**
 ```powershell
-cd C:\path\to\VoxTether
+cd src/backend
 .\venv\Scripts\Activate.ps1
-python -m src.main
+python -m uvicorn main:app --host 127.0.0.1 --port 5678 --reload
+```
+
+**Terminal 2 (Frontend):**
+```powershell
+cd src/frontend
+dotnet run --project VoxTether
+```
+
+### Hot Reload
+
+- **Backend**: The `--reload` flag enables automatic reloading when Python files change
+- **Frontend**: Restart the application to pick up changes
+
+### Running Tests
+
+```powershell
+# Backend tests
+cd src/backend
+.\venv\Scripts\Activate.ps1
+pip install pytest
+pytest
+
+# Legacy Python tests
+cd ../..
+pip install -r requirements-dev.txt
+pytest tests/
+
+# Frontend tests
+cd src/frontend
+dotnet test
+```
+
+### Linting
+
+```powershell
+# Backend linting
+cd src/backend
+pip install ruff
+ruff check .
+
+# Legacy code linting
+cd ../..
+ruff check src/ tests/
 ```
 
 ---
 
-## Updating VoxTether
-
-If you cloned with Git:
+## Building for Release
 
 ```powershell
-cd C:\path\to\VoxTether
-git pull
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python -m src.main
+# Build everything
+cd build
+.\build.ps1 -Release -Version "2.0.0"
+
+# Build with installer
+.\build.ps1 -Release -CreateInstaller -Version "2.0.0"
 ```
 
-If you downloaded as ZIP, download the latest version and extract it over the existing folder.
+Output:
+- `build/output/` - Application files
+- `build/VoxTether-x.x.x-win-x64.zip` - Portable ZIP
+- `build/installer/VoxTether-x.x.x-Setup.exe` - Windows installer
+
+---
+
+## Project Structure
+
+```
+VoxTether/
+├── src/
+│   ├── frontend/          # WinUI 3 (.NET 8.0)
+│   │   ├── VoxTether/     # Main app
+│   │   ├── VoxTether.Core/
+│   │   └── VoxTether.Infrastructure/
+│   ├── backend/           # Python FastAPI
+│   │   ├── api/           # REST endpoints
+│   │   ├── services/      # Business logic
+│   │   └── main.py        # Entry point
+│   └── (legacy)           # Original Python UI
+├── build/                 # Build scripts
+├── installer/             # Inno Setup script
+├── docs/                  # Documentation
+└── tests/                 # Unit tests
+```
 
 ---
 
 ## Troubleshooting
 
-### "python is not recognized"
+### Backend won't start
 
-Python is not in your PATH. Either:
-- Reinstall Python and check "Add Python to PATH"
-- Use the full path to Python (e.g., `C:\Python311\python.exe`)
+1. Check if port 5678 is in use:
+   ```powershell
+   netstat -ano | findstr 5678
+   ```
+2. Try a different port:
+   ```powershell
+   python -m uvicorn main:app --port 5679
+   ```
 
-### "No module named src"
+### Frontend can't connect to backend
 
-Make sure you're in the VoxTether root directory (where `src/` folder is located).
+1. Ensure backend is running on port 5678
+2. Check the backend URL in Settings
 
-### "Script cannot be loaded because running scripts is disabled"
+### "dotnet: command not found"
 
-Run this in PowerShell:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+Install .NET 8.0 SDK from [dot.net](https://dot.net/download).
 
 ### Hotkey not working
 
-1. Check if another app is using the same hotkey
-2. Try running PowerShell as Administrator:
-   ```powershell
-   Start-Process powershell -Verb RunAs
-   ```
+1. Another app may be using the same hotkey
+2. Try running as Administrator
+3. Check Windows Focus Assist settings
 
 ### No audio recording
 
 1. Check Windows Sound settings → Recording
-2. Ensure your microphone is set as default
-3. Use **Test Microphone** from the tray menu
-
-### GPU not detected
-
-1. Ensure NVIDIA drivers are up to date
-2. Install CUDA packages:
-   ```powershell
-   pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
-   ```
-3. Run healthcheck:
-   ```powershell
-   python -m src.main --healthcheck
-   ```
-
----
-
-## Summary of Commands
-
-```powershell
-# One-time setup
-git clone https://github.com/KennethHeine/VoxTether.git
-cd VoxTether
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-# Run the app
-python -m src.main
-
-# Run with debug logging
-python -m src.main --debug
-
-# Run healthcheck
-python -m src.main --healthcheck
-```
+2. Ensure microphone is set as default device
+3. Use "Test Microphone" from tray menu
 
 ---
 
 ## See Also
 
 - [README](../README.md) - Project overview
-- [Installation Guide](INSTALLATION.md) - All installation options
-- [Architecture](ARCHITECTURE.md) - Technical details
+- [Installation Guide](INSTALLATION.md) - End-user installation
+- [Architecture](ARCHITECTURE.md) - Technical architecture

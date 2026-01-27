@@ -1,88 +1,177 @@
 # VoxTether Architecture
 
-This document describes the architecture of VoxTether, a push-to-talk dictation application.
+This document describes the hybrid architecture of VoxTether, a push-to-talk dictation application for Windows.
 
 ## Overview
 
-VoxTether is a push-to-talk dictation application that provides offline speech-to-text transcription using faster-whisper.
+VoxTether uses a hybrid architecture combining:
 
-| Technology | Description |
-|-----------|-------------|
-| **Language** | Python 3.10+ |
-| **Transcription** | faster-whisper (CTranslate2) |
-| **GPU Support** | CUDA 12 (native) |
-| **UI** | pystray (system tray) + tkinter (dialogs) |
+- **Frontend**: WinUI 3 (.NET 8.0) - Modern Windows UI with Fluent Design
+- **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Frontend** | WinUI 3 / .NET 8.0 | Windows UI, system tray, hotkeys, audio recording |
+| **Backend** | Python / FastAPI | Transcription engine, model management |
+| **Transcription** | faster-whisper (CTranslate2) | GPU/CPU speech-to-text |
+| **GPU Support** | CUDA 12 (native) | Hardware acceleration |
 
 ---
 
-## High-Level Architecture
+## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         User Interaction                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────┐    ┌──────────────┐    ┌───────────────────────┐  │
-│  │ System Tray │    │  Settings UI │    │  Model Setup Window   │  │
-│  │   Manager   │    │    Window    │    │  (First Run)          │  │
-│  └──────┬──────┘    └──────┬───────┘    └───────────┬───────────┘  │
-│         │                  │                        │              │
-├─────────┴──────────────────┴────────────────────────┴──────────────┤
-│                         Main Controller                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────────┐  ┌─────────────┐  ┌────────────┐  ┌────────────┐ │
-│  │   Hotkey     │  │    Audio    │  │Transcription│ │    Text    │ │
-│  │   Listener   │  │  Recorder   │  │   Engine   │  │  Injector  │ │
-│  └──────┬───────┘  └──────┬──────┘  └──────┬─────┘  └──────┬─────┘ │
-│         │                 │                │               │       │
-├─────────┴─────────────────┴────────────────┴───────────────┴───────┤
-│                     Platform / Hardware Layer                       │
-├─────────────────────────────────────────────────────────────────────┤
-│  Windows Keyboard │  Microphone  │  GPU/CPU   │  Clipboard/Input   │
-│       Hooks       │    Input     │   Compute  │      Simulation    │
-└───────────────────┴──────────────┴────────────┴────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        User's Windows PC                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────┐                               │
+│  │         VoxTether.exe (Frontend)         │                               │
+│  │       .NET 8.0 WinUI 3 Application       │                               │
+│  ├─────────────────────────────────────────┤                               │
+│  │  • System Tray Icon (H.NotifyIcon)       │                               │
+│  │  • Global Hotkey Detection               │                               │
+│  │  • Audio Recording (NAudio)              │                               │
+│  │  • Settings UI (XAML + Fluent Design)    │                               │
+│  │  • Text Injection (Clipboard/SendKeys)   │                               │
+│  └─────────────────┬───────────────────────┘                               │
+│                    │                                                        │
+│                    │ HTTP REST API                                          │
+│                    │ (localhost:5678)                                       │
+│                    ▼                                                        │
+│  ┌─────────────────────────────────────────┐                               │
+│  │      vox-backend.exe (Backend)          │                               │
+│  │      Python + FastAPI + PyInstaller     │                               │
+│  ├─────────────────────────────────────────┤                               │
+│  │  • REST API for transcription           │                               │
+│  │  • faster-whisper integration           │                               │
+│  │  • Model management (HuggingFace)       │                               │
+│  │  • CUDA/CPU device management           │                               │
+│  └─────────────────┬───────────────────────┘                               │
+│                    │                                                        │
+│                    ▼                                                        │
+│  ┌─────────────────────────────────────────┐                               │
+│  │           GPU (CUDA) / CPU               │                               │
+│  │     (faster-whisper processing)          │                               │
+│  └─────────────────────────────────────────┘                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Component Responsibilities
+
+### Frontend (WinUI 3 / .NET 8.0)
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `VoxTether.exe` | `src/frontend/VoxTether/` | Main WinUI 3 application |
+| `TrayIconManager` | `Services/TrayIconManager.cs` | System tray icon and menu |
+| `VoxTetherController` | `Services/VoxTetherController.cs` | Orchestrates recording workflow |
+| `BackendClient` | `Services/BackendClient.cs` | HTTP client for backend API |
+| `BackendProcessManager` | `Services/BackendProcessManager.cs` | Starts/stops backend process |
+| `NAudioRecorder` | `VoxTether.Infrastructure/` | Audio recording using NAudio |
+| `LowLevelHookHotkeyService` | `VoxTether.Infrastructure/` | Global keyboard hooks |
+| `ClipboardTextInjector` | `VoxTether.Infrastructure/` | Text injection via clipboard |
+| `SettingsService` | `Services/SettingsService.cs` | User settings management |
+
+### Backend (Python / FastAPI)
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `main.py` | `src/backend/` | FastAPI application entry point |
+| `TranscriberService` | `services/transcriber.py` | faster-whisper integration |
+| `ModelManager` | `services/model_manager.py` | Model download and management |
+| `health.py` | `api/health.py` | Health check endpoints |
+| `transcribe.py` | `api/transcribe.py` | Transcription endpoints |
+| `models.py` | `api/models.py` | Model management endpoints |
+
+---
+
+## REST API
+
+The frontend communicates with the backend via HTTP REST API on `localhost:5678`.
+
+### Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `GET` | `/api/health` | Health check and status |
+| `GET` | `/api/devices` | Get GPU/CPU device info |
+| `POST` | `/api/transcribe` | Transcribe audio file |
+| `GET` | `/api/models` | List available models |
+| `POST` | `/api/models/{name}/download` | Download a model (SSE) |
+| `POST` | `/api/models/{name}/load` | Load a model |
+| `DELETE` | `/api/models/{name}` | Delete a model |
+| `POST` | `/api/settings` | Update transcription settings |
+
+### Example: Transcription Request
+
+```http
+POST /api/transcribe
+Content-Type: multipart/form-data
+
+file: <audio.wav>
+language: auto
+translate: false
+```
+
+**Response:**
+```json
+{
+  "text": "Hello, this is a test.",
+  "language": "en",
+  "duration": 0.82,
+  "success": true
+}
 ```
 
 ---
 
 ## Core Workflow
 
-VoxTether implements a push-to-talk workflow:
-
-1. **Hotkey Press** → Start recording audio from microphone
-2. **Hotkey Release** → Stop recording, create WAV file
-3. **Transcription** → Send audio to speech-to-text engine
-4. **Text Injection** → Insert transcribed text at cursor position
-5. **Cleanup** → Delete temporary audio file
-
 ```
-User holds hotkey          User releases hotkey
-       │                          │
-       ▼                          ▼
-┌─────────────┐             ┌──────────────┐
-│ Start Audio │             │ Stop Audio   │
-│  Recording  │───────────▶ │  Recording   │
-└─────────────┘             └──────┬───────┘
-                                   │
-                                   ▼
-                            ┌──────────────┐
-                            │ Save to WAV  │
-                            │    File      │
-                            └──────┬───────┘
-                                   │
-                                   ▼
-                            ┌──────────────┐
-                            │  Transcribe  │
-                            │    Audio     │
-                            └──────┬───────┘
-                                   │
-                                   ▼
-                            ┌──────────────┐
-                            │ Inject Text  │
-                            │ (Clipboard/  │
-                            │  Typing)     │
-                            └──────────────┘
+User holds hotkey              User releases hotkey
+       │                              │
+       ▼                              ▼
+┌─────────────┐               ┌──────────────┐
+│ Start Audio │               │ Stop Audio   │
+│  Recording  │──────────────▶│  Recording   │
+│  (NAudio)   │               │  (NAudio)    │
+└─────────────┘               └──────┬───────┘
+                                     │
+                                     ▼
+                              ┌──────────────┐
+                              │ Save to WAV  │
+                              │    File      │
+                              └──────┬───────┘
+                                     │
+                                     ▼
+                              ┌──────────────┐
+                              │  HTTP POST   │
+                              │  to Backend  │
+                              │ /api/transcribe
+                              └──────┬───────┘
+                                     │
+                                     ▼
+                              ┌──────────────┐
+                              │ Backend runs │
+                              │faster-whisper│
+                              └──────┬───────┘
+                                     │
+                                     ▼
+                              ┌──────────────┐
+                              │ Return JSON  │
+                              │  with text   │
+                              └──────┬───────┘
+                                     │
+                                     ▼
+                              ┌──────────────┐
+                              │ Inject Text  │
+                              │ (Clipboard + │
+                              │  Ctrl+V)     │
+                              └──────────────┘
 ```
 
 ---
@@ -92,165 +181,224 @@ User holds hotkey          User releases hotkey
 ```
 VoxTether/
 ├── src/
-│   ├── __init__.py          # Package init, version
-│   ├── main.py              # Entry point, VoxTetherApp class
-│   ├── tray.py              # TrayManager - system tray icon/menu
-│   ├── hotkey.py            # HotkeyListener - global hotkey detection
-│   ├── recorder.py          # AudioRecorder - microphone to WAV
-│   ├── transcriber.py       # Transcriber - faster-whisper integration
-│   ├── injector.py          # TextInjector - clipboard/typing output
-│   ├── settings.py          # Settings and SettingsService
-│   ├── model_manager.py     # Model download and management
-│   └── ui/
-│       ├── settings_window.py   # Settings dialog (tkinter)
-│       └── model_setup.py       # First-run model setup
-├── tests/                   # Unit tests
-├── assets/                  # Application assets
-│   └── icon.ico
-├── docs/                    # Documentation
-├── requirements.txt         # Runtime dependencies
-├── requirements-dev.txt     # Dev dependencies
-├── pyproject.toml          # Project configuration
-└── build.py                 # PyInstaller build script
+│   ├── frontend/                     # WinUI 3 Frontend
+│   │   ├── VoxTether/                # Main WinUI 3 project
+│   │   │   ├── App.xaml              # Application entry
+│   │   │   ├── MainWindow.xaml       # Settings window
+│   │   │   ├── Views/                # Settings pages
+│   │   │   │   ├── GeneralSettingsPage.xaml
+│   │   │   │   ├── AudioSettingsPage.xaml
+│   │   │   │   ├── ModelsPage.xaml
+│   │   │   │   └── AboutPage.xaml
+│   │   │   ├── ViewModels/           # MVVM view models
+│   │   │   ├── Services/             # Application services
+│   │   │   │   ├── BackendClient.cs
+│   │   │   │   ├── BackendProcessManager.cs
+│   │   │   │   ├── SettingsService.cs
+│   │   │   │   ├── TrayIconManager.cs
+│   │   │   │   └── VoxTetherController.cs
+│   │   │   └── Assets/               # Icons and resources
+│   │   ├── VoxTether.Core/           # Interfaces and models
+│   │   │   ├── Interfaces/
+│   │   │   │   ├── IAudioRecorder.cs
+│   │   │   │   ├── IBackendClient.cs
+│   │   │   │   ├── IHotkeyService.cs
+│   │   │   │   └── ITextInjector.cs
+│   │   │   └── Models/
+│   │   │       └── VoxTetherSettings.cs
+│   │   ├── VoxTether.Infrastructure/  # Platform implementations
+│   │   │   ├── NAudioRecorder.cs
+│   │   │   ├── ClipboardTextInjector.cs
+│   │   │   └── LowLevelHookHotkeyService.cs
+│   │   └── VoxTether.sln             # Solution file
+│   │
+│   ├── backend/                      # Python Backend
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── health.py
+│   │   │   ├── transcribe.py
+│   │   │   └── models.py
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── transcriber.py
+│   │   │   └── model_manager.py
+│   │   ├── main.py                   # FastAPI entry point
+│   │   ├── config.py                 # Configuration
+│   │   └── requirements.txt
+│   │
+│   └── (legacy Python code)          # Original Python implementation
+│       ├── main.py
+│       ├── tray.py
+│       └── ...
+│
+├── installer/
+│   └── VoxTether.iss                 # Inno Setup script
+│
+├── build/
+│   └── build.ps1                     # Build script
+│
+├── docs/
+│   ├── ARCHITECTURE.md               # This document
+│   ├── INSTALLATION.md               # Installation guide
+│   └── HYBRID-ARCHITECTURE-PLAN.md   # Original planning doc
+│
+├── .github/workflows/
+│   ├── ci.yml                        # CI pipeline
+│   └── release.yml                   # Release pipeline
+│
+└── README.md
 ```
 
 ---
 
-## Component Details
+## Frontend Technologies
 
-| Component | File | Library | Purpose |
-|-----------|------|---------|---------|
-| **VoxTetherApp** | `main.py` | - | Main controller, orchestrates all components |
-| **TrayManager** | `tray.py` | pystray | System tray icon with context menu |
-| **HotkeyListener** | `hotkey.py` | keyboard | Global push-to-talk hotkey detection |
-| **AudioRecorder** | `recorder.py` | sounddevice, soundfile | Records microphone to 16kHz mono WAV |
-| **Transcriber** | `transcriber.py` | faster-whisper | GPU/CPU speech-to-text |
-| **TextInjector** | `injector.py` | pyperclip, keyboard | Clipboard paste or keyboard simulation |
-| **SettingsService** | `settings.py` | json | Load/save user preferences |
-| **ModelManager** | `model_manager.py` | huggingface_hub | Download/manage Whisper models |
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| .NET | 8.0 | Runtime |
+| WinUI 3 | 1.5 | UI Framework |
+| Windows App SDK | 1.5 | Windows integration |
+| NAudio | 2.2 | Audio recording |
+| H.NotifyIcon | 2.1 | System tray |
+| CommunityToolkit.Mvvm | 8.2 | MVVM framework |
 
 ---
 
-## Transcription Engine
+## Backend Technologies
 
-VoxTether uses **faster-whisper** which wraps CTranslate2:
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     faster-whisper Library                          │
-├─────────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐    ┌─────────────────┐    ┌───────────────────┐   │
-│  │   Whisper   │───▶│   CTranslate2   │───▶│  GPU (CUDA 12)    │   │
-│  │   Model     │    │   Inference     │    │  or CPU (AVX2)    │   │
-│  │  (from HF)  │    │   Engine        │    │                   │   │
-│  └─────────────┘    └─────────────────┘    └───────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**Key advantages:**
-- Native CUDA 12 support via CTranslate2
-- Direct HuggingFace model loading (no GGML conversion)
-- Automatic GPU/CPU detection and fallback
-- VAD (Voice Activity Detection) filtering
-- 4-8x faster than original OpenAI Whisper
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Python | 3.11+ | Runtime |
+| FastAPI | 0.109+ | Web framework |
+| faster-whisper | 1.0+ | Transcription |
+| uvicorn | 0.27+ | ASGI server |
+| huggingface-hub | 0.20+ | Model downloads |
 
 ---
 
-## Dependencies
+## Process Management
 
-```
-faster-whisper    → Speech-to-text engine
-sounddevice       → Audio recording (PortAudio bindings)
-soundfile         → WAV file handling
-pystray           → System tray (Windows/macOS/Linux)
-keyboard          → Global hotkey hooks
-pyperclip         → Cross-platform clipboard
-Pillow            → Tray icon image handling
-huggingface_hub   → Model downloads
-numpy             → Numerical operations
-tqdm              → Progress bars
-```
+The frontend manages the backend process lifecycle:
 
----
+1. **Startup**: Frontend starts → Launches `backend/vox-backend.exe` → Waits for health check
+2. **Runtime**: Frontend sends HTTP requests to backend
+3. **Shutdown**: Frontend terminates → Kills backend process
 
-## Data Flow
-
-### Settings Storage
-
-Settings are stored in:
-- `%APPDATA%\VoxTether\settings.json`
-
-**Settings structure:**
-```json
+```csharp
+// BackendProcessManager.cs
+public async Task StartAsync()
 {
-  "hotkey": "ctrl+shift+space",
-  "model_name": "small",
-  "device": "auto",
-  "compute_type": "auto",
-  "language": "auto",
-  "show_notifications": true,
-  "show_recording_indicator": true,
-  "output_mode": "clipboard",
-  "first_run_completed": true
+    _process = Process.Start(new ProcessStartInfo
+    {
+        FileName = "backend/vox-backend.exe",
+        CreateNoWindow = true,
+        UseShellExecute = false,
+    });
+    
+    await WaitForHealthyAsync(timeout: TimeSpan.FromSeconds(30));
 }
 ```
 
-### Model Storage
-
-| Location | Purpose |
-|----------|---------|
-| `%APPDATA%\VoxTether\models\` | User models directory |
-| HuggingFace cache | Downloaded CTranslate2 models |
-
-### Logs
-
-Logs are stored in:
-- `%APPDATA%\VoxTether\logs\voxtether.log`
-
 ---
 
-## Extensibility
+## Data Storage
 
-Extend VoxTether by:
-1. Adding new modules to `src/`
-2. Subclassing existing classes
-3. Modifying `VoxTetherApp` initialization
+| Data | Location |
+|------|----------|
+| Settings | `%APPDATA%\VoxTether\settings.json` |
+| Models | `%APPDATA%\VoxTether\models\` |
+| Logs | `%APPDATA%\VoxTether\logs\` |
 
-**Example: Custom Post-Processor**
-```python
-class CustomPostProcessor:
-    def process(self, text: str) -> str:
-        # Custom processing (e.g., LLM integration)
-        return text.strip()
+### Settings Structure
 
-# Use in transcribe_and_inject
-processed_text = post_processor.process(result.text)
+```json
+{
+  "Hotkey": "Ctrl+Shift+Space",
+  "ModelName": "small",
+  "Language": "auto",
+  "OutputMode": "ClipboardAndPaste",
+  "ShowNotifications": true,
+  "ShowRecordingIndicator": true,
+  "AudioDeviceId": -1,
+  "ClipboardDelayMs": 50,
+  "BackendPort": 5678,
+  "StartMinimized": true,
+  "StartWithWindows": false,
+  "Theme": "System"
+}
 ```
 
 ---
 
-## Audio Recording
+## Build and Release
 
-| Aspect | Details |
-|--------|---------|
-| **Library** | sounddevice (PortAudio) |
-| **Format** | 16kHz mono WAV |
-| **Device Selection** | Device index |
-| **Temp Storage** | System temp directory |
+### Local Development
+
+```powershell
+# Build backend
+cd src/backend
+pip install -r requirements.txt
+python -m uvicorn main:app --port 5678
+
+# Build frontend (new terminal)
+cd src/frontend
+dotnet build
+dotnet run --project VoxTether
+```
+
+### Release Build
+
+```powershell
+# Build everything + create installer
+cd build
+.\build.ps1 -Release -CreateInstaller -Version "2.0.0"
+```
+
+### CI/CD Pipeline
+
+```
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ build-backend│    │build-frontend│    │  test-python │
+│   (Python)   │    │  (WinUI 3)   │    │   (pytest)   │
+└──────┬───────┘    └──────┬───────┘    └──────┬───────┘
+       │                   │                   │
+       └───────────────────┴───────────────────┘
+                           │
+                           ▼
+                  ┌──────────────────┐
+                  │  build-complete  │
+                  │ (verify + upload)│
+                  └──────────────────┘
+```
 
 ---
 
-## Text Injection
+## Security
 
-| Aspect | Details |
-|--------|---------|
-| **Clipboard** | pyperclip |
-| **Typing** | keyboard.write() |
-| **Modes** | clipboard / focused_app |
+- Backend binds to `127.0.0.1` only (localhost)
+- No authentication required (local-only communication)
+- Temporary audio files deleted after transcription
+- No telemetry or network calls (except HuggingFace downloads)
+
+---
+
+## Performance Targets
+
+| Metric | Target |
+|--------|--------|
+| Frontend startup | < 1 second |
+| Backend startup | < 5 seconds |
+| Model loading | < 30 seconds |
+| Recording latency | < 100ms |
+| Transcription (8s audio, GPU) | < 1 second |
+| Transcription (8s audio, CPU) | < 8 seconds |
+| Idle memory (frontend + backend) | < 150 MB |
+| Active memory (with model) | < 1.5 GB |
 
 ---
 
 ## See Also
 
 - [Installation Guide](INSTALLATION.md) - Setup instructions
-- [README](../README.md) - Project overview and quick start
+- [README](../README.md) - Project overview
+- [Hybrid Architecture Plan](HYBRID-ARCHITECTURE-PLAN.md) - Original design document
