@@ -2,31 +2,48 @@
 
 This guide explains how to run VoxTether from source for development purposes.
 
+## Architecture Overview
+
+VoxTether uses a client-server architecture:
+- **Server (Backend)**: Python FastAPI service that handles transcription
+- **Client (Frontend)**: Electron desktop application
+
+The backend runs as a standalone Python server (no PyInstaller or exe bundling needed).
+
 ## Prerequisites
 
 ### Required Software
 
 | Software | Version | Purpose |
 |----------|---------|---------|
-| Python | 3.11+ | Backend runtime |
-| .NET SDK | 8.0+ | Frontend build |
+| Python | 3.13+ | Backend server |
+| Node.js | 20.x+ | Frontend client |
+| npm | 10.x+ | Package management |
 | Git | Latest | Source control |
 
 **Check installations:**
 ```powershell
-python --version   # Should be 3.11+
-dotnet --version   # Should be 8.0+
+python --version   # Should be 3.13+
+node --version     # Should be 20.x+
+npm --version      # Should be 10.x+
 git --version
 ```
 
 ### Hardware Requirements
 
+**Server (Backend):**
 | Requirement | Minimum | Recommended |
 |------------|---------|-------------|
-| OS | Windows 10 (64-bit) | Windows 11 |
+| OS | Any (Windows, Linux, macOS) | Linux/Windows |
 | RAM | 4 GB | 8 GB |
 | Disk Space | 2 GB | 4 GB |
 | GPU | None (CPU works) | NVIDIA with CUDA 12 |
+
+**Client (Frontend):**
+| Requirement | Minimum |
+|------------|---------|
+| OS | Windows 10 (64-bit) |
+| RAM | 2 GB |
 
 ---
 
@@ -39,9 +56,9 @@ cd VoxTether
 
 ---
 
-## Step 2: Set Up the Backend
+## Step 2: Set Up the Backend Server
 
-The backend is a Python FastAPI server that handles transcription.
+The backend is a Python FastAPI server that handles transcription. It runs independently from the client.
 
 ```powershell
 # Navigate to backend
@@ -100,10 +117,10 @@ Open a **new terminal** (keep the backend running).
 
 ```powershell
 # Navigate to frontend
-cd src/frontend
+cd src/frontend-electron
 
-# Restore dependencies
-dotnet restore VoxTether.sln
+# Install dependencies
+npm install
 ```
 
 ---
@@ -111,8 +128,11 @@ dotnet restore VoxTether.sln
 ## Step 5: Run the Frontend
 
 ```powershell
-# Run the WinUI 3 application
-dotnet run --project VoxTether
+# Run the Electron application
+npm start
+
+# Or with debug mode (opens DevTools)
+npm run dev
 ```
 
 VoxTether will start and appear in your system tray.
@@ -170,14 +190,14 @@ python -m uvicorn main:app --host 127.0.0.1 --port 5678 --reload
 
 **Terminal 2 (Frontend):**
 ```powershell
-cd src/frontend
-dotnet run --project VoxTether
+cd src/frontend-electron
+npm start
 ```
 
 ### Hot Reload
 
 - **Backend**: The `--reload` flag enables automatic reloading when Python files change
-- **Frontend**: Restart the application to pick up changes
+- **Frontend**: Restart the Electron app to pick up changes (or use DevTools reload)
 
 ### Running Tests
 
@@ -193,9 +213,9 @@ cd ../..
 pip install -r requirements-dev.txt
 pytest tests/
 
-# Frontend tests
-cd src/frontend
-dotnet test
+# Frontend linting
+cd src/frontend-electron
+npm run lint
 ```
 
 ### Linting
@@ -205,6 +225,10 @@ dotnet test
 cd src/backend
 pip install ruff
 ruff check .
+
+# Frontend linting
+cd src/frontend-electron
+npm run lint
 
 # Legacy code linting
 cd ../..
@@ -236,10 +260,12 @@ Output:
 ```
 VoxTether/
 ├── src/
-│   ├── frontend/          # WinUI 3 (.NET 8.0)
-│   │   ├── VoxTether/     # Main app
-│   │   ├── VoxTether.Core/
-│   │   └── VoxTether.Infrastructure/
+│   ├── frontend-electron/ # Electron frontend
+│   │   ├── src/
+│   │   │   ├── main.js    # Main process
+│   │   │   ├── preload.js # IPC bridge
+│   │   │   └── renderer/  # UI files
+│   │   └── package.json
 │   ├── backend/           # Python FastAPI
 │   │   ├── api/           # REST endpoints
 │   │   ├── services/      # Business logic
@@ -271,9 +297,9 @@ VoxTether/
 1. Ensure backend is running on port 5678
 2. Check the backend URL in Settings
 
-### "dotnet: command not found"
+### "node: command not found"
 
-Install .NET 8.0 SDK from [dot.net](https://dot.net/download).
+Install Node.js 20.x from [nodejs.org](https://nodejs.org/).
 
 ### Hotkey not working
 
@@ -294,3 +320,4 @@ Install .NET 8.0 SDK from [dot.net](https://dot.net/download).
 - [README](../README.md) - Project overview
 - [Installation Guide](INSTALLATION.md) - End-user installation
 - [Architecture](ARCHITECTURE.md) - Technical architecture
+- [Changelog](CHANGELOG.md) - Version history

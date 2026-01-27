@@ -7,65 +7,76 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 - **Push-to-talk recording**: Press and hold a global hotkey to record, release to transcribe
 - **GPU acceleration**: Native CUDA 12 support with automatic fallback to CPU
 - **Fully offline**: Uses faster-whisper for local speech-to-text, no internet required after model download
-- **Modern Windows UI**: Built with WinUI 3 for native Windows 11 Fluent Design
+- **Modern UI**: Built with Electron for a clean, Windows 11 Fluent-inspired interface
 - **Text insertion**: Automatically types transcribed text at your cursor position
 - **System tray**: Runs quietly in the background
 - **Model management**: Download models on-demand from HuggingFace
 - **Privacy-first**: No network calls, no telemetry, all processing is local
+- **Client-Server Architecture**: Flexible deployment with separate frontend and backend
 
 ## Architecture
 
-VoxTether uses a hybrid architecture:
-- **Frontend**: WinUI 3 (.NET 8.0) - Native Windows UI, system tray, hotkey detection, audio recording
-- **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
+VoxTether uses a client-server architecture:
+- **Client (Frontend)**: Electron 40.x - Desktop application with UI and system tray
+- **Server (Backend)**: Python FastAPI - Speech-to-text transcription service running on localhost
+
+The backend runs as a separate Python server, which can be on the same machine (localhost) or on a different server on your network.
 
 See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
 
 ## Requirements
 
+### Client (Electron App)
 - Windows 10/11 (64-bit)
+
+### Server (Python Backend)
+- Python 3.13+
 - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
 
 ## Installation
 
-### Windows Installer (Recommended)
+### Quick Start (Development)
 
-1. Download `VoxTether-x.x.x-Setup.exe` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
-2. Run the installer and follow the wizard
-3. Launch VoxTether from the Start Menu
-4. On first launch, download a speech recognition model
-
-### Portable ZIP
-
-1. Download `VoxTether-x.x.x-win-x64.zip` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
-2. Extract and run `VoxTether.exe`
-3. Follow the first-run setup to download a model
-
-### From Source (Development)
-
+**Terminal 1 - Start Backend Server:**
 ```powershell
-# Clone the repository
-git clone https://github.com/KennethHeine/VoxTether.git
-cd VoxTether
-
-# --- Backend (Python) ---
 cd src/backend
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# Run backend server
-python -m uvicorn main:app --port 5678
-
-# --- Frontend (WinUI 3) --- (in a new terminal)
-cd src/frontend
-dotnet restore VoxTether.sln
-dotnet run --project VoxTether
+python -m uvicorn main:app --host 127.0.0.1 --port 5678
 ```
+
+**Terminal 2 - Start Frontend Client:**
+```powershell
+cd src/frontend-electron
+npm install
+npm start
+```
+
+### Production Deployment
+
+**Server Setup (one machine with GPU):**
+```bash
+# Clone repo and setup backend
+git clone https://github.com/KennethHeine/VoxTether.git
+cd VoxTether/src/backend
+pip install -r requirements.txt
+
+# Optional: GPU acceleration
+pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
+
+# Run server (accessible on local network)
+python -m uvicorn main:app --host 0.0.0.0 --port 5678
+```
+
+**Client Setup (any Windows machine):**
+1. Download the Electron client from [Releases](https://github.com/KennethHeine/VoxTether/releases)
+2. Configure the backend server address in Settings
+3. Start using push-to-talk!
 
 ### GPU Acceleration (Optional)
 
-For GPU acceleration with NVIDIA GPUs:
+For GPU acceleration with NVIDIA GPUs (on the server):
 
 ```powershell
 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
@@ -98,7 +109,6 @@ Right-click the VoxTether tray icon to access:
 - **Test Microphone** - Record a 2-second test and show the transcription
 - **Open Models Folder** - Access downloaded models
 - **Open Logs** - Access log files for troubleshooting
-- **Check for Updates...** - Check for new versions on GitHub
 - **About** - Show version and configuration info
 - **Exit** - Close VoxTether
 
@@ -129,14 +139,15 @@ Settings are stored in `%APPDATA%\VoxTether\settings.json`
 
 ```json
 {
-  "hotkey": "ctrl+shift+space",
-  "model_name": "small",
+  "hotkey": "Ctrl+Shift+Space",
+  "modelName": "small",
   "language": "auto",
-  "device": "auto",
-  "compute_type": "auto",
-  "show_notifications": true,
-  "show_recording_indicator": true,
-  "output_mode": "clipboard"
+  "outputMode": "ClipboardAndPaste",
+  "showNotifications": true,
+  "showRecordingIndicator": true,
+  "startMinimized": true,
+  "startWithWindows": false,
+  "theme": "system"
 }
 ```
 
@@ -227,10 +238,12 @@ python -m src.main --version
 ```
 VoxTether/
 ├── src/
-│   ├── frontend/                # WinUI 3 Frontend (.NET 8.0)
-│   │   ├── VoxTether/           # Main WinUI 3 application
-│   │   ├── VoxTether.Core/      # Interfaces and models
-│   │   └── VoxTether.Infrastructure/ # Platform implementations
+│   ├── frontend-electron/       # Electron Frontend
+│   │   ├── src/
+│   │   │   ├── main.js          # Electron main process
+│   │   │   ├── preload.js       # Secure IPC bridge
+│   │   │   └── renderer/        # UI (HTML/CSS/JS)
+│   │   └── package.json
 │   │
 │   ├── backend/                 # Python Backend (FastAPI)
 │   │   ├── api/                 # REST API endpoints
@@ -257,9 +270,9 @@ cd src/backend
 pip install pytest
 pytest
 
-# .NET frontend tests
-cd src/frontend
-dotnet test
+# Electron frontend (lint only)
+cd src/frontend-electron
+npm run lint
 ```
 
 ### Building for Release
@@ -309,6 +322,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper) - Fast Whisper transcription
 - [CTranslate2](https://github.com/OpenNMT/CTranslate2) - Efficient inference engine
-- [WinUI 3](https://github.com/microsoft/microsoft-ui-xaml) - Modern Windows UI framework
-- [H.NotifyIcon](https://github.com/HavenDV/H.NotifyIcon) - System tray support for WinUI
-- [NAudio](https://github.com/naudio/NAudio) - Audio recording
+- [Electron](https://www.electronjs.org/) - Cross-platform desktop framework

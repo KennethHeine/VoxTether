@@ -26,8 +26,16 @@ def _has_missing_dependencies(result: subprocess.CompletedProcess) -> bool:
     Returns:
         True if dependencies are missing, False otherwise.
     """
-    if result.returncode != 0 and "ModuleNotFoundError" in result.stderr:
-        return True
+    if result.returncode != 0:
+        # Check for Python module import errors
+        if "ModuleNotFoundError" in result.stderr:
+            return True
+        # Check for PortAudio library not available (required by sounddevice)
+        if "PortAudio library not found" in result.stderr:
+            return True
+        # Check for OSError related to audio libraries
+        if "OSError" in result.stderr and "PortAudio" in result.stderr:
+            return True
     return False
 
 
@@ -156,6 +164,9 @@ class TestCLITool:
         )
         if _has_missing_dependencies(result):
             pytest.skip("VoxTether dependencies not installed (pyperclip)")
+        # Skip if clipboard mechanism is not available (headless/CI environments)
+        if "could not find a copy/paste mechanism" in result.stdout.lower():
+            pytest.skip("No clipboard mechanism available in this environment")
         assert result.returncode == 0
         assert "clipboard" in result.stdout.lower()
 

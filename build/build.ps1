@@ -1,10 +1,9 @@
 # Build script for VoxTether
-# Builds both frontend (WinUI 3) and backend (Python)
+# Builds the Electron frontend. Backend is deployed as Python source.
 
 param(
     [switch]$Release,
     [switch]$FrontendOnly,
-    [switch]$BackendOnly,
     [switch]$CreateInstaller,
     [string]$Version = "2.0.0"
 )
@@ -19,6 +18,10 @@ Write-Host "VoxTether Build Script" -ForegroundColor Cyan
 Write-Host "======================" -ForegroundColor Cyan
 Write-Host "Version: $Version" -ForegroundColor Gray
 Write-Host ""
+Write-Host "Architecture: Client-Server" -ForegroundColor Gray
+Write-Host "  - Frontend: Electron (client)" -ForegroundColor Gray
+Write-Host "  - Backend: Python FastAPI (server on localhost)" -ForegroundColor Gray
+Write-Host ""
 
 # Create output directory
 if (Test-Path $OutputDir) {
@@ -26,78 +29,42 @@ if (Test-Path $OutputDir) {
 }
 New-Item -ItemType Directory -Path $OutputDir | Out-Null
 
-# Build Backend
-if (-not $FrontendOnly) {
-    Write-Host "Building Python Backend..." -ForegroundColor Yellow
-    
-    $BackendDir = "$RootDir\src\backend"
-    $BackendOutput = "$OutputDir\backend"
-    
-    # Create virtual environment if needed
-    if (-not (Test-Path "$BackendDir\venv")) {
-        Write-Host "Creating virtual environment..."
-        python -m venv "$BackendDir\venv"
-    }
-    
-    # Activate and install dependencies
-    & "$BackendDir\venv\Scripts\pip.exe" install -r "$BackendDir\requirements.txt" -q
-    & "$BackendDir\venv\Scripts\pip.exe" install pyinstaller -q
-    
-    # Build with PyInstaller
-    Write-Host "Building with PyInstaller..."
-    Push-Location $BackendDir
-    & "$BackendDir\venv\Scripts\pyinstaller.exe" `
-        --onefile `
-        --name "vox-backend" `
-        --distpath $BackendOutput `
-        --workpath "$BuildDir\pyinstaller-work" `
-        --specpath "$BuildDir\pyinstaller-spec" `
-        --noconfirm `
-        main.py
-    Pop-Location
-    
-    if (-not (Test-Path "$BackendOutput\vox-backend.exe")) {
-        Write-Error "Backend build failed!"
-        exit 1
-    }
-    
-    Write-Host "Backend built successfully!" -ForegroundColor Green
+# Build Frontend (Electron)
+Write-Host "Building Electron Frontend..." -ForegroundColor Yellow
+
+$FrontendDir = "$RootDir\src\frontend-electron"
+$FrontendOutput = "$OutputDir"
+
+# Install dependencies
+Push-Location $FrontendDir
+npm install
+
+# Build with electron-builder
+if ($Release) {
+    npm run build
+} else {
+    npm run pack
+}
+Pop-Location
+
+# Copy build output
+if (Test-Path "$FrontendDir\dist\win-unpacked") {
+    Copy-Item "$FrontendDir\dist\win-unpacked\*" $FrontendOutput -Recurse
 }
 
-# Build Frontend
-if (-not $BackendOnly) {
-    Write-Host ""
-    Write-Host "Building WinUI 3 Frontend..." -ForegroundColor Yellow
-    
-    $FrontendDir = "$RootDir\src\frontend"
-    $FrontendOutput = "$OutputDir"
-    
-    $Configuration = if ($Release) { "Release" } else { "Debug" }
-    
-    # Restore and build
-    dotnet restore "$FrontendDir\VoxTether.sln"
-    dotnet publish "$FrontendDir\VoxTether\VoxTether.csproj" `
-        -c $Configuration `
-        -r win-x64 `
-        --self-contained `
-        -p:PublishSingleFile=false `
-        -p:Version=$Version `
-        -o $FrontendOutput
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Frontend build failed!"
-        exit 1
-    }
-    
+if (-not (Test-Path "$FrontendOutput\VoxTether.exe")) {
+    Write-Warning "Frontend executable not found at expected location"
+    Get-ChildItem -Path "$FrontendDir\dist" -Recurse | Format-Table Name, Length
+} else {
     Write-Host "Frontend built successfully!" -ForegroundColor Green
 }
 
 # Create release package (ZIP)
-if ($Release -and -not $FrontendOnly -and -not $BackendOnly) {
+if ($Release) {
     Write-Host ""
     Write-Host "Creating release package..." -ForegroundColor Yellow
     
-    $PackageName = "VoxTether-$Version-win-x64"
+    $PackageName = "VoxTether-Client-$Version-win-x64"
     $PackageDir = "$BuildDir\$PackageName"
     $PackageZip = "$BuildDir\$PackageName.zip"
     
@@ -108,29 +75,32 @@ if ($Release -and -not $FrontendOnly -and -not $BackendOnly) {
     New-Item -ItemType Directory -Path $PackageDir | Out-Null
     
     # Copy frontend
-    Copy-Item "$OutputDir\*" $PackageDir -Recurse -Exclude "backend"
-    
-    # Copy backend
-    New-Item -ItemType Directory -Path "$PackageDir\backend" | Out-Null
-    Copy-Item "$OutputDir\backend\vox-backend.exe" "$PackageDir\backend\"
+    Copy-Item "$OutputDir\*" $PackageDir -Recurse
     
     # Create README
     @"
-VoxTether $Version
-==================
+VoxTether Client $Version
+==========================
 
 Push-to-talk dictation for Windows. Fully offline speech-to-text.
 
+This is the CLIENT application. The backend server must be running separately.
+
 Getting Started:
-1. Run VoxTether.exe
-2. On first run, you'll be prompted to download a speech recognition model
-3. Press Ctrl+Shift+Space (default hotkey) to record
-4. Release to transcribe and paste the text
+1. Ensure the Python backend server is running on your server/localhost
+2. Run VoxTether.exe
+3. On first run, configure the backend server address if needed
+4. Press Ctrl+Shift+Space (default hotkey) to record
+5. Release to transcribe and paste the text
+
+Backend Server Setup:
+  cd src/backend
+  pip install -r requirements.txt
+  python -m uvicorn main:app --host 0.0.0.0 --port 5678
 
 Requirements:
 - Windows 10/11 (64-bit)
-- .NET 8.0 Runtime (bundled)
-- For GPU acceleration: NVIDIA GPU with CUDA support
+- Network access to the backend server
 
 For more information, visit:
 https://github.com/KennethHeine/VoxTether
@@ -153,7 +123,7 @@ License: MIT
 }
 
 # Create installer
-if ($CreateInstaller -and -not $FrontendOnly -and -not $BackendOnly) {
+if ($CreateInstaller) {
     Write-Host ""
     Write-Host "Creating Windows installer..." -ForegroundColor Yellow
     

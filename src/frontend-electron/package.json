@@ -1,0 +1,74 @@
+{
+  "name": "voxtether-electron",
+  "version": "2.0.0",
+  "description": "Push-to-talk dictation for Windows - Electron frontend",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --debug",
+    "build": "electron-builder --win --x64",
+    "pack": "electron-builder --dir",
+    "lint": "eslint src/",
+    "test": "echo \"Tests run via main test suite\" && exit 0"
+  },
+  "author": "Kenneth Heine",
+  "license": "MIT",
+  "keywords": [
+    "voxtether",
+    "speech-to-text",
+    "dictation",
+    "whisper",
+    "push-to-talk",
+    "electron"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KennethHeine/VoxTether.git"
+  },
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^26.5.0",
+    "eslint": "^9.18.0"
+  },
+  "dependencies": {
+    "node-global-key-listener": "^0.3.0"
+  },
+  "build": {
+    "appId": "com.voxtether.app",
+    "productName": "VoxTether",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico"
+    }
+  }
+}

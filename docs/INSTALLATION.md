@@ -260,7 +260,7 @@ Remove-Item -Recurse "$env:APPDATA\VoxTether"
 ### Prerequisites
 
 - Windows 10/11 (64-bit)
-- Python 3.11+
+- Python 3.13+
 - .NET 8.0 SDK
 - (Optional) Inno Setup 6 for creating installers
 

@@ -1,82 +1,95 @@
 # VoxTether Architecture
 
-This document describes the hybrid architecture of VoxTether, a push-to-talk dictation application for Windows.
+This document describes the client-server architecture of VoxTether, a push-to-talk dictation application.
 
 ## Overview
 
-VoxTether uses a hybrid architecture combining:
+VoxTether uses a **client-server architecture** with complete separation of frontend and backend:
 
-- **Frontend**: WinUI 3 (.NET 8.0) - Modern Windows UI with Fluent Design
-- **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
+- **Client (Frontend)**: Electron 40.x - Desktop application with UI and system tray
+- **Server (Backend)**: Python FastAPI - Speech-to-text transcription service
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Frontend** | WinUI 3 / .NET 8.0 | Windows UI, system tray, hotkeys, audio recording |
-| **Backend** | Python / FastAPI | Transcription engine, model management |
-| **Transcription** | faster-whisper (CTranslate2) | GPU/CPU speech-to-text |
-| **GPU Support** | CUDA 12 (native) | Hardware acceleration |
+The backend runs as a standalone Python server. It does NOT require PyInstaller or any executable bundling - just Python with the required packages.
+
+| Component | Technology | Deployment |
+|-----------|------------|------------|
+| **Client** | Electron 40.x | Windows desktop application |
+| **Server** | Python / FastAPI | Python script on any machine |
+| **Transcription** | faster-whisper (CTranslate2) | Runs on server |
+| **GPU Support** | CUDA 12 (native) | Server-side only |
 
 ---
 
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        User's Windows PC                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────┐                               │
-│  │         VoxTether.exe (Frontend)         │                               │
-│  │       .NET 8.0 WinUI 3 Application       │                               │
-│  ├─────────────────────────────────────────┤                               │
-│  │  • System Tray Icon (H.NotifyIcon)       │                               │
-│  │  • Global Hotkey Detection               │                               │
-│  │  • Audio Recording (NAudio)              │                               │
-│  │  • Settings UI (XAML + Fluent Design)    │                               │
-│  │  • Text Injection (Clipboard/SendKeys)   │                               │
-│  └─────────────────┬───────────────────────┘                               │
-│                    │                                                        │
-│                    │ HTTP REST API                                          │
-│                    │ (localhost:5678)                                       │
-│                    ▼                                                        │
-│  ┌─────────────────────────────────────────┐                               │
-│  │      vox-backend.exe (Backend)          │                               │
-│  │      Python + FastAPI + PyInstaller     │                               │
-│  ├─────────────────────────────────────────┤                               │
-│  │  • REST API for transcription           │                               │
-│  │  • faster-whisper integration           │                               │
-│  │  • Model management (HuggingFace)       │                               │
-│  │  • CUDA/CPU device management           │                               │
-│  └─────────────────┬───────────────────────┘                               │
-│                    │                                                        │
-│                    ▼                                                        │
-│  ┌─────────────────────────────────────────┐                               │
-│  │           GPU (CUDA) / CPU               │                               │
-│  │     (faster-whisper processing)          │                               │
-│  └─────────────────────────────────────────┘                               │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          CLIENT (User's Windows PC)                          │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌─────────────────────────────────────────┐                               │
+│   │         VoxTether.exe (Electron)         │                               │
+│   ├─────────────────────────────────────────┤                               │
+│   │  • System Tray Icon                      │                               │
+│   │  • Global Hotkey Detection               │                               │
+│   │  • Settings UI (HTML/CSS/JS)             │                               │
+│   │  • Text Injection (Clipboard)            │                               │
+│   │  • Audio Recording (Web Audio API)       │                               │
+│   └─────────────────┬───────────────────────┘                               │
+│                     │                                                        │
+└─────────────────────┼────────────────────────────────────────────────────────┘
+                      │
+                      │ HTTP REST API
+                      │ (localhost:5678 or network)
+                      ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         SERVER (Same machine or remote)                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌─────────────────────────────────────────┐                               │
+│   │      Python Backend (FastAPI + Uvicorn)  │                               │
+│   ├─────────────────────────────────────────┤                               │
+│   │  • REST API for transcription            │                               │
+│   │  • faster-whisper integration            │                               │
+│   │  • Model management (HuggingFace)        │                               │
+│   │  • CUDA/CPU device management            │                               │
+│   └─────────────────┬───────────────────────┘                               │
+│                     │                                                        │
+│                     ▼                                                        │
+│   ┌─────────────────────────────────────────┐                               │
+│   │           GPU (CUDA) / CPU               │                               │
+│   │     (faster-whisper processing)          │                               │
+│   └─────────────────────────────────────────┘                               │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Deployment Options
+
+### Option 1: Same Machine (localhost)
+Both client and server run on the same Windows PC. The server binds to `127.0.0.1:5678`.
+
+### Option 2: Network Deployment
+The server runs on a dedicated machine (with GPU), and multiple clients connect over the network. The server binds to `0.0.0.0:5678`.
 
 ---
 
 ## Component Responsibilities
 
-### Frontend (WinUI 3 / .NET 8.0)
+### Client (Electron)
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `VoxTether.exe` | `src/frontend/VoxTether/` | Main WinUI 3 application |
-| `TrayIconManager` | `Services/TrayIconManager.cs` | System tray icon and menu |
-| `VoxTetherController` | `Services/VoxTetherController.cs` | Orchestrates recording workflow |
-| `BackendClient` | `Services/BackendClient.cs` | HTTP client for backend API |
-| `BackendProcessManager` | `Services/BackendProcessManager.cs` | Starts/stops backend process |
-| `NAudioRecorder` | `VoxTether.Infrastructure/` | Audio recording using NAudio |
-| `LowLevelHookHotkeyService` | `VoxTether.Infrastructure/` | Global keyboard hooks |
-| `ClipboardTextInjector` | `VoxTether.Infrastructure/` | Text injection via clipboard |
-| `SettingsService` | `Services/SettingsService.cs` | User settings management |
+| `main.js` | `src/frontend-electron/src/` | Electron main process, window management |
+| `preload.js` | `src/frontend-electron/src/` | Secure IPC bridge to renderer |
+| `renderer/` | `src/frontend-electron/src/` | UI (HTML/CSS/JS) |
+| System Tray | `main.js` | Tray icon and context menu |
+| Backend Client | `main.js` | HTTP client for backend API |
+| Settings Service | `main.js` | Load/save user preferences |
 
-### Backend (Python / FastAPI)
+### Server (Python / FastAPI)
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
@@ -181,38 +194,18 @@ User holds hotkey              User releases hotkey
 ```
 VoxTether/
 ├── src/
-│   ├── frontend/                     # WinUI 3 Frontend
-│   │   ├── VoxTether/                # Main WinUI 3 project
-│   │   │   ├── App.xaml              # Application entry
-│   │   │   ├── MainWindow.xaml       # Settings window
-│   │   │   ├── Views/                # Settings pages
-│   │   │   │   ├── GeneralSettingsPage.xaml
-│   │   │   │   ├── AudioSettingsPage.xaml
-│   │   │   │   ├── ModelsPage.xaml
-│   │   │   │   └── AboutPage.xaml
-│   │   │   ├── ViewModels/           # MVVM view models
-│   │   │   ├── Services/             # Application services
-│   │   │   │   ├── BackendClient.cs
-│   │   │   │   ├── BackendProcessManager.cs
-│   │   │   │   ├── SettingsService.cs
-│   │   │   │   ├── TrayIconManager.cs
-│   │   │   │   └── VoxTetherController.cs
-│   │   │   └── Assets/               # Icons and resources
-│   │   ├── VoxTether.Core/           # Interfaces and models
-│   │   │   ├── Interfaces/
-│   │   │   │   ├── IAudioRecorder.cs
-│   │   │   │   ├── IBackendClient.cs
-│   │   │   │   ├── IHotkeyService.cs
-│   │   │   │   └── ITextInjector.cs
-│   │   │   └── Models/
-│   │   │       └── VoxTetherSettings.cs
-│   │   ├── VoxTether.Infrastructure/  # Platform implementations
-│   │   │   ├── NAudioRecorder.cs
-│   │   │   ├── ClipboardTextInjector.cs
-│   │   │   └── LowLevelHookHotkeyService.cs
-│   │   └── VoxTether.sln             # Solution file
+│   ├── frontend-electron/           # Electron Frontend
+│   │   ├── src/
+│   │   │   ├── main.js              # Electron main process
+│   │   │   ├── preload.js           # Secure IPC bridge
+│   │   │   └── renderer/            # UI files
+│   │   │       ├── index.html       # Main HTML
+│   │   │       ├── styles.css       # Styles
+│   │   │       └── renderer.js      # UI logic
+│   │   ├── assets/                  # Icons and resources
+│   │   └── package.json             # Dependencies and build config
 │   │
-│   ├── backend/                      # Python Backend
+│   ├── backend/                     # Python Backend
 │   │   ├── api/
 │   │   │   ├── __init__.py
 │   │   │   ├── health.py
@@ -222,29 +215,29 @@ VoxTether/
 │   │   │   ├── __init__.py
 │   │   │   ├── transcriber.py
 │   │   │   └── model_manager.py
-│   │   ├── main.py                   # FastAPI entry point
-│   │   ├── config.py                 # Configuration
+│   │   ├── main.py                  # FastAPI entry point
+│   │   ├── config.py                # Configuration
 │   │   └── requirements.txt
 │   │
-│   └── (legacy Python code)          # Original Python implementation
+│   └── (legacy Python code)         # Original Python implementation
 │       ├── main.py
 │       ├── tray.py
 │       └── ...
 │
 ├── installer/
-│   └── VoxTether.iss                 # Inno Setup script
+│   └── VoxTether.iss                # Inno Setup script
 │
 ├── build/
-│   └── build.ps1                     # Build script
+│   └── build.ps1                    # Build script
 │
 ├── docs/
-│   ├── ARCHITECTURE.md               # This document
-│   ├── INSTALLATION.md               # Installation guide
-│   └── HYBRID-ARCHITECTURE-PLAN.md   # Original planning doc
+│   ├── ARCHITECTURE.md              # This document
+│   ├── INSTALLATION.md              # Installation guide
+│   └── CHANGELOG.md                 # Version history
 │
 ├── .github/workflows/
-│   ├── ci.yml                        # CI pipeline
-│   └── release.yml                   # Release pipeline
+│   ├── ci.yml                       # CI pipeline
+│   └── release.yml                  # Release pipeline
 │
 └── README.md
 ```
@@ -255,12 +248,10 @@ VoxTether/
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| .NET | 8.0 | Runtime |
-| WinUI 3 | 1.5 | UI Framework |
-| Windows App SDK | 1.5 | Windows integration |
-| NAudio | 2.2 | Audio recording |
-| H.NotifyIcon | 2.1 | System tray |
-| CommunityToolkit.Mvvm | 8.2 | MVVM framework |
+| Electron | 40.x | Desktop framework |
+| Node.js | 20.x | Runtime |
+| electron-builder | 26.x | Build and packaging |
+| HTML/CSS/JS | - | UI implementation |
 
 ---
 
@@ -268,7 +259,7 @@ VoxTether/
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Python | 3.11+ | Runtime |
+| Python | 3.13+ | Runtime |
 | FastAPI | 0.109+ | Web framework |
 | faster-whisper | 1.0+ | Transcription |
 | uvicorn | 0.27+ | ASGI server |
@@ -284,18 +275,15 @@ The frontend manages the backend process lifecycle:
 2. **Runtime**: Frontend sends HTTP requests to backend
 3. **Shutdown**: Frontend terminates → Kills backend process
 
-```csharp
-// BackendProcessManager.cs
-public async Task StartAsync()
-{
-    _process = Process.Start(new ProcessStartInfo
-    {
-        FileName = "backend/vox-backend.exe",
-        CreateNoWindow = true,
-        UseShellExecute = false,
+```javascript
+// main.js - Backend process management
+async function startBackend() {
+    backendProcess = spawn(backendPath, [], {
+        stdio: isDebug ? 'inherit' : 'ignore',
+        detached: false
     });
     
-    await WaitForHealthyAsync(timeout: TimeSpan.FromSeconds(30));
+    await waitForBackend(30000);  // Wait up to 30 seconds
 }
 ```
 
@@ -341,9 +329,9 @@ pip install -r requirements.txt
 python -m uvicorn main:app --port 5678
 
 # Build frontend (new terminal)
-cd src/frontend
-dotnet build
-dotnet run --project VoxTether
+cd src/frontend-electron
+npm install
+npm start
 ```
 
 ### Release Build
@@ -359,7 +347,7 @@ cd build
 ```
 ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
 │ build-backend│    │build-frontend│    │  test-python │
-│   (Python)   │    │  (WinUI 3)   │    │   (pytest)   │
+│   (Python)   │    │  (Electron)  │    │   (pytest)   │
 └──────┬───────┘    └──────┬───────┘    └──────┬───────┘
        │                   │                   │
        └───────────────────┴───────────────────┘
