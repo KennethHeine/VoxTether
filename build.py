@@ -71,6 +71,7 @@ def build(
         cmd.extend(["--add-data", f"{assets_dir}{os.pathsep}assets"])
     
     # Hidden imports for PyInstaller to find
+    # NOTE: When adding new modules to src/, remember to add them here
     hidden_imports = [
         # Application modules
         "src",
