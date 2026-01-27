@@ -7,7 +7,7 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 - **Push-to-talk recording**: Press and hold a global hotkey to record, release to transcribe
 - **GPU acceleration**: Native CUDA 12 support with automatic fallback to CPU
 - **Fully offline**: Uses faster-whisper for local speech-to-text, no internet required after model download
-- **Modern Windows UI**: Built with WinUI 3 for native Windows 11 look and feel
+- **Modern Windows UI**: Built with WinUI 3 for native Windows 11 Fluent Design
 - **Text insertion**: Automatically types transcribed text at your cursor position
 - **System tray**: Runs quietly in the background
 - **Model management**: Download models on-demand from HuggingFace
@@ -19,17 +19,23 @@ VoxTether uses a hybrid architecture:
 - **Frontend**: WinUI 3 (.NET 8.0) - Native Windows UI, system tray, hotkey detection, audio recording
 - **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
 
-See [Architecture Documentation](docs/HYBRID-ARCHITECTURE-PLAN.md) for details.
+See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
 
 ## Requirements
 
 - Windows 10/11 (64-bit)
-- .NET 8.0 Runtime (bundled in release)
 - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
 
 ## Installation
 
-### Pre-built Executable (Easiest)
+### Windows Installer (Recommended)
+
+1. Download `VoxTether-x.x.x-Setup.exe` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
+2. Run the installer and follow the wizard
+3. Launch VoxTether from the Start Menu
+4. On first launch, download a speech recognition model
+
+### Portable ZIP
 
 1. Download `VoxTether-x.x.x-win-x64.zip` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
 2. Extract and run `VoxTether.exe`
@@ -37,7 +43,7 @@ See [Architecture Documentation](docs/HYBRID-ARCHITECTURE-PLAN.md) for details.
 
 ### From Source (Development)
 
-```bash
+```powershell
 # Clone the repository
 git clone https://github.com/KennethHeine/VoxTether.git
 cd VoxTether
@@ -45,7 +51,7 @@ cd VoxTether
 # --- Backend (Python) ---
 cd src/backend
 python -m venv venv
-venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
 # Run backend server
@@ -53,7 +59,7 @@ python -m uvicorn main:app --port 5678
 
 # --- Frontend (WinUI 3) --- (in a new terminal)
 cd src/frontend
-dotnet build
+dotnet restore VoxTether.sln
 dotnet run --project VoxTether
 ```
 
@@ -61,15 +67,13 @@ dotnet run --project VoxTether
 
 For GPU acceleration with NVIDIA GPUs:
 
-```bash
+```powershell
 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
 ```
 
 Or install CUDA 12 Toolkit from NVIDIA.
 
 > 📖 **For detailed installation options, GPU setup, and troubleshooting, see [Installation Guide](docs/INSTALLATION.md).**
->
-> 📖 **For the architecture overview, see [Hybrid Architecture Plan](docs/HYBRID-ARCHITECTURE-PLAN.md).**
 
 ## Usage
 
@@ -264,21 +268,31 @@ dotnet test
 # Build both frontend and backend
 cd build
 .\build.ps1 -Release -Version "2.0.0"
+
+# Build with Windows installer
+.\build.ps1 -Release -CreateInstaller -Version "2.0.0"
 ```
 
-This creates a `VoxTether-2.0.0-win-x64.zip` with:
-- `VoxTether.exe` - WinUI 3 frontend
-- `backend/vox-backend.exe` - Python backend (PyInstaller)
+This creates:
+- `build/output/` - Application files
+- `build/VoxTether-2.0.0-win-x64.zip` - Portable ZIP
+- `build/installer/VoxTether-2.0.0-Setup.exe` - Windows installer (if `-CreateInstaller`)
+
+### CI/CD
+
+The project uses GitHub Actions for continuous integration and release:
+
+- **CI Pipeline** (`.github/workflows/ci.yml`): Builds frontend, backend, and runs tests on every PR
+- **Release Pipeline** (`.github/workflows/release.yml`): Creates Windows installer and portable ZIP for releases
 
 ### Releases
 
 To create a new release:
 
-1. Update version in `build/build.ps1`
-2. Build with `.\build.ps1 -Release`
-3. Create a git tag and push
-
-The GitHub Actions workflow will automatically build and publish to GitHub Releases.
+1. Go to Actions → Release workflow
+2. Click "Run workflow"
+3. Enter the version number (e.g., `2.0.0`)
+4. The workflow builds everything and creates a GitHub Release with installer and portable ZIP
 
 ## Privacy
 
