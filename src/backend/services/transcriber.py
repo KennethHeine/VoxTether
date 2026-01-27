@@ -1,6 +1,7 @@
 """Transcription service using faster-whisper."""
 
 import asyncio
+import atexit
 import logging
 import subprocess
 import time
@@ -15,6 +16,12 @@ logger = logging.getLogger(__name__)
 
 # Thread pool for blocking operations
 _executor = ThreadPoolExecutor(max_workers=2)
+
+# Register cleanup at shutdown
+def _cleanup_executor():
+    _executor.shutdown(wait=False)
+
+atexit.register(_cleanup_executor)
 
 
 @dataclass

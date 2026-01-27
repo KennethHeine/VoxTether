@@ -120,14 +120,15 @@ public class BackendClient : IBackendClient
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var reader = new StreamReader(stream);
             
+            const string dataPrefix = "data: ";
             while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
             {
                 var line = await reader.ReadLineAsync(cancellationToken);
                 
-                if (string.IsNullOrEmpty(line) || !line.StartsWith("data: "))
+                if (string.IsNullOrEmpty(line) || !line.StartsWith(dataPrefix) || line.Length <= dataPrefix.Length)
                     continue;
                 
-                var json = line.Substring(6); // Remove "data: " prefix
+                var json = line.Substring(dataPrefix.Length); // Remove "data: " prefix
                 var progressData = JsonSerializer.Deserialize<DownloadProgressResponse>(json, JsonOptions);
                 
                 if (progressData != null)

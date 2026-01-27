@@ -189,7 +189,14 @@ public class VoxTetherController : IDisposable
                 }
 
                 // Clean up temp file
-                try { File.Delete(_currentRecordingPath); } catch { }
+                try 
+                { 
+                    File.Delete(_currentRecordingPath); 
+                }
+                catch (IOException ex)
+                {
+                    _logger.LogDebug(ex, "Could not delete temp file: {Path}", _currentRecordingPath);
+                }
             }
         }
         catch (Exception ex)

@@ -7,15 +7,24 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 - **Push-to-talk recording**: Press and hold a global hotkey to record, release to transcribe
 - **GPU acceleration**: Native CUDA 12 support with automatic fallback to CPU
 - **Fully offline**: Uses faster-whisper for local speech-to-text, no internet required after model download
+- **Modern Windows UI**: Built with WinUI 3 for native Windows 11 look and feel
 - **Text insertion**: Automatically types transcribed text at your cursor position
 - **System tray**: Runs quietly in the background
 - **Model management**: Download models on-demand from HuggingFace
 - **Privacy-first**: No network calls, no telemetry, all processing is local
 
+## Architecture
+
+VoxTether uses a hybrid architecture:
+- **Frontend**: WinUI 3 (.NET 8.0) - Native Windows UI, system tray, hotkey detection, audio recording
+- **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
+
+See [Architecture Documentation](docs/HYBRID-ARCHITECTURE-PLAN.md) for details.
+
 ## Requirements
 
 - Windows 10/11 (64-bit)
-- Python 3.10 or later
+- .NET 8.0 Runtime (bundled in release)
 - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
 
 ## Installation
@@ -26,22 +35,26 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 2. Extract and run `VoxTether.exe`
 3. Follow the first-run setup to download a model
 
-### From Source
+### From Source (Development)
 
 ```bash
 # Clone the repository
 git clone https://github.com/KennethHeine/VoxTether.git
 cd VoxTether
 
-# Create virtual environment
+# --- Backend (Python) ---
+cd src/backend
 python -m venv venv
 venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Run the application
-python -m src.main
+# Run backend server
+python -m uvicorn main:app --port 5678
+
+# --- Frontend (WinUI 3) --- (in a new terminal)
+cd src/frontend
+dotnet build
+dotnet run --project VoxTether
 ```
 
 ### GPU Acceleration (Optional)
@@ -56,7 +69,7 @@ Or install CUDA 12 Toolkit from NVIDIA.
 
 > 📖 **For detailed installation options, GPU setup, and troubleshooting, see [Installation Guide](docs/INSTALLATION.md).**
 >
-> 📖 **For step-by-step instructions on running locally with Python, see [Running Locally](docs/RUNNING-LOCALLY.md).**
+> 📖 **For the architecture overview, see [Hybrid Architecture Plan](docs/HYBRID-ARCHITECTURE-PLAN.md).**
 
 ## Usage
 
@@ -210,67 +223,62 @@ python -m src.main --version
 ```
 VoxTether/
 ├── src/
-│   ├── main.py              # Entry point
-│   ├── tray.py              # System tray management
-│   ├── hotkey.py            # Global hotkey listener
-│   ├── recorder.py          # Audio recording
-│   ├── transcriber.py       # faster-whisper integration
-│   ├── injector.py          # Text injection
-│   ├── settings.py          # Settings management
-│   ├── model_manager.py     # Model download/management
-│   └── ui/
-│       ├── settings_window.py
-│       └── model_setup.py
-├── tests/                   # Unit tests
-├── assets/
-│   └── icon.ico
-├── docs/                    # Documentation
-├── requirements.txt
-├── requirements-dev.txt
-├── pyproject.toml
-└── build.py
+│   ├── frontend/                # WinUI 3 Frontend (.NET 8.0)
+│   │   ├── VoxTether/           # Main WinUI 3 application
+│   │   ├── VoxTether.Core/      # Interfaces and models
+│   │   └── VoxTether.Infrastructure/ # Platform implementations
+│   │
+│   ├── backend/                 # Python Backend (FastAPI)
+│   │   ├── api/                 # REST API endpoints
+│   │   ├── services/            # Business logic
+│   │   ├── main.py              # FastAPI entry point
+│   │   └── requirements.txt     # Python dependencies
+│   │
+│   └── (legacy Python UI)       # Original Python implementation
+│       ├── main.py
+│       ├── tray.py
+│       └── ...
+│
+├── build/                       # Build scripts
+├── tests/                       # Unit tests
+├── docs/                        # Documentation
+└── assets/                      # Application assets
 ```
 
 ### Running Tests
 
 ```bash
-# Install dev dependencies
-pip install -r requirements-dev.txt
-
-# Run tests
+# Python backend tests
+cd src/backend
+pip install pytest
 pytest
 
-# Run with coverage
-pytest --cov=src --cov-report=html
+# .NET frontend tests
+cd src/frontend
+dotnet test
 ```
 
-### Building Executable
+### Building for Release
 
-```bash
-# Install PyInstaller
-pip install pyinstaller
-
-# Build single .exe
-python build.py
-
-# Build with debug console
-python build.py --debug
+```powershell
+# Build both frontend and backend
+cd build
+.\build.ps1 -Release -Version "2.0.0"
 ```
+
+This creates a `VoxTether-2.0.0-win-x64.zip` with:
+- `VoxTether.exe` - WinUI 3 frontend
+- `backend/vox-backend.exe` - Python backend (PyInstaller)
 
 ### Releases
 
 To create a new release:
 
-```bash
-git tag v1.0.0
-git push --tags
-```
+1. Update version in `build/build.ps1`
+2. Build with `.\build.ps1 -Release`
+3. Create a git tag and push
 
-The GitHub Actions workflow will automatically:
-1. Run tests
-2. Build the executable with PyInstaller
-3. Create a portable ZIP
-4. Publish to GitHub Releases
+The GitHub Actions workflow will automatically build and publish to GitHub Releases.
 
 ## Privacy
 
@@ -287,5 +295,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper) - Fast Whisper transcription
 - [CTranslate2](https://github.com/OpenNMT/CTranslate2) - Efficient inference engine
-- [pystray](https://github.com/moses-palmer/pystray) - System tray support
-- [sounddevice](https://python-sounddevice.readthedocs.io/) - Audio recording
+- [WinUI 3](https://github.com/microsoft/microsoft-ui-xaml) - Modern Windows UI framework
+- [H.NotifyIcon](https://github.com/HavenDV/H.NotifyIcon) - System tray support for WinUI
+- [NAudio](https://github.com/naudio/NAudio) - Audio recording

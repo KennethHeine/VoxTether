@@ -19,14 +19,25 @@ public class BackendProcessManager : IDisposable
         _logger = logger;
         _port = settingsService.Settings.BackendPort;
         
-        // Look for backend executable
+        // Look for backend executable in deployment location
         var baseDir = AppContext.BaseDirectory;
         _backendPath = Path.Combine(baseDir, "backend", "vox-backend.exe");
         
-        // Fallback to development path
+        // Fallback: Check if backend is in a sibling directory (development layout)
         if (!File.Exists(_backendPath))
         {
-            _backendPath = Path.Combine(baseDir, "..", "..", "..", "..", "backend", "vox-backend.exe");
+            // Try to find the backend directory by walking up from the base directory
+            var currentDir = new DirectoryInfo(baseDir);
+            while (currentDir != null && currentDir.Parent != null)
+            {
+                var candidatePath = Path.Combine(currentDir.FullName, "src", "backend", "dist", "vox-backend.exe");
+                if (File.Exists(candidatePath))
+                {
+                    _backendPath = candidatePath;
+                    break;
+                }
+                currentDir = currentDir.Parent;
+            }
         }
     }
 
