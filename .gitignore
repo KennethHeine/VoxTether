@@ -14,7 +14,6 @@ ENV/
 
 # Distribution / packaging
 dist/
-build/
 *.egg-info/
 *.egg
 *.whl
@@ -51,3 +50,30 @@ CodeCoverage/
 # Temporary files
 ~$*
 *~
+
+## .NET / C#
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+
+# Visual Studio
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Build outputs
+build/output/
+build/pyinstaller-work/
+build/pyinstaller-spec/
+*.zip

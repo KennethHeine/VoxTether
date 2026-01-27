@@ -3,11 +3,11 @@
 ## Overview
 
 This document outlines the plan to restructure VoxTether into a hybrid application with:
-- **Frontend**: .NET 8.0 WPF application for Windows-native UI
+- **Frontend**: .NET 8.0 WinUI 3 application for Windows-native UI
 - **Backend**: Python FastAPI server for speech-to-text transcription using faster-whisper
 
 This architecture combines the best of both worlds:
-- **Native Windows UI**: WPF provides excellent Windows integration, smooth system tray management, native theming, and reliable global hotkey handling
+- **Native Windows UI**: WinUI 3 provides modern Fluent Design, Windows 11 integration, native dark/light themes, and excellent system tray management
 - **Python Transcription**: faster-whisper with CUDA 12 support, extensive model ecosystem, and active community
 
 ## Architecture Diagram
@@ -19,12 +19,12 @@ This architecture combines the best of both worlds:
 │                                                                             │
 │  ┌─────────────────────────────────────────┐                               │
 │  │         VoxTether.exe (Frontend)         │                               │
-│  │         .NET 8.0 WPF Application         │                               │
+│  │       .NET 8.0 WinUI 3 Application       │                               │
 │  ├─────────────────────────────────────────┤                               │
 │  │  • System Tray Icon                      │                               │
 │  │  • Global Hotkey Detection               │                               │
 │  │  • Audio Recording (NAudio)              │                               │
-│  │  • Settings UI (XAML)                    │                               │
+│  │  • Settings UI (XAML + Fluent Design)    │                               │
 │  │  • Recording Overlay                     │                               │
 │  │  • Text Injection (Clipboard/SendKeys)   │                               │
 │  └─────────────────┬───────────────────────┘                               │
@@ -124,19 +124,25 @@ WS /api/stream
 ```
 VoxTether/
 ├── src/
-│   ├── frontend/                     # .NET WPF Frontend
-│   │   ├── VoxTether/                # Main WPF project
+│   ├── frontend/                     # .NET WinUI 3 Frontend
+│   │   ├── VoxTether/                # Main WinUI 3 project
 │   │   │   ├── App.xaml
 │   │   │   ├── App.xaml.cs
+│   │   │   ├── MainWindow.xaml
+│   │   │   ├── MainWindow.xaml.cs
 │   │   │   ├── TrayIconManager.cs
-│   │   │   ├── SettingsWindow.xaml
-│   │   │   ├── RecordingOverlayWindow.xaml
-│   │   │   ├── VoxTetherController.cs
+│   │   │   ├── Views/
+│   │   │   │   ├── SettingsPage.xaml
+│   │   │   │   ├── ModelsPage.xaml
+│   │   │   │   └── AboutPage.xaml
+│   │   │   ├── ViewModels/
+│   │   │   │   ├── SettingsViewModel.cs
+│   │   │   │   └── ModelsViewModel.cs
 │   │   │   ├── Services/
 │   │   │   │   ├── BackendClient.cs
 │   │   │   │   ├── BackendProcess.cs
 │   │   │   │   └── ...
-│   │   │   └── Resources/
+│   │   │   └── Assets/
 │   │   ├── VoxTether.Core/           # Interfaces and models
 │   │   │   ├── Interfaces/
 │   │   │   └── Models/
@@ -144,7 +150,7 @@ VoxTether/
 │   │   │   ├── NAudioRecorder.cs
 │   │   │   ├── ClipboardTextInjector.cs
 │   │   │   └── LowLevelHookHotkeyService.cs
-│   │   └── VoxTether.slnx            # Solution file
+│   │   └── VoxTether.sln             # Solution file
 │   │
 │   └── backend/                      # Python Backend
 │       ├── api/
@@ -255,15 +261,18 @@ public class BackendProcess : IDisposable
 ### Development Workflow
 
 ```powershell
-# Build frontend
+# Install backend dependencies
+cd src/backend
+pip install -r requirements.txt
+
+# Run backend locally (Python)
+python -m uvicorn main:app --reload --port 5678
+
+# Build frontend (in another terminal)
 cd src/frontend
 dotnet build
 
-# Run backend locally (Python)
-cd src/backend
-python -m uvicorn main:app --reload --port 5678
-
-# Run frontend (in another terminal)
+# Run frontend
 cd src/frontend/VoxTether
 dotnet run
 ```
