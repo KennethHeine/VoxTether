@@ -50,6 +50,13 @@ cd src/backend
 # Create virtual environment
 python -m venv venv
 
+# Verify venv was created
+if (Test-Path "venv\Scripts\Activate.ps1") { 
+    Write-Host "Virtual environment created successfully" 
+} else { 
+    Write-Error "Failed to create virtual environment" 
+}
+
 # Activate virtual environment
 .\venv\Scripts\Activate.ps1
 

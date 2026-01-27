@@ -76,12 +76,12 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
-// Check if .NET 8.0 Runtime is installed (for Windows App SDK)
-function IsDotNet8Installed: Boolean;
+// Check if any .NET runtime is available
+// Note: The app is self-contained, so this is informational only
+function IsDotNetAvailable: Boolean;
 var
   ResultCode: Integer;
 begin
-  // Check if dotnet 8.0 runtime is available
   Result := Exec('dotnet', '--list-runtimes', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 end;
 
