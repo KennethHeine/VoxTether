@@ -55,6 +55,8 @@ pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
 Or install CUDA 12 Toolkit from NVIDIA.
 
 > 📖 **For detailed installation options, GPU setup, and troubleshooting, see [Installation Guide](docs/INSTALLATION.md).**
+>
+> 📖 **For step-by-step instructions on running locally with Python, see [Running Locally](docs/RUNNING-LOCALLY.md).**
 
 ## Usage
 
