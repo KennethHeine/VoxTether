@@ -27,6 +27,7 @@ public class TrayIconManager : IDisposable
     private readonly IAudioRecorder _audioRecorder;
     private readonly IBackendSelectionService? _backendService;
     private readonly IBackendDownloadService? _backendDownloadService;
+    private readonly ITranscriptionEngine? _transcriptionEngine;
     
     private NotifyIcon? _notifyIcon;
     private ContextMenuStrip? _contextMenu;
@@ -44,7 +45,8 @@ public class TrayIconManager : IDisposable
         IUpdateService updateService,
         IAudioRecorder audioRecorder,
         IBackendSelectionService? backendService = null,
-        IBackendDownloadService? backendDownloadService = null)
+        IBackendDownloadService? backendDownloadService = null,
+        ITranscriptionEngine? transcriptionEngine = null)
     {
         _logger = logger;
         _settingsService = settingsService;
@@ -53,6 +55,7 @@ public class TrayIconManager : IDisposable
         _audioRecorder = audioRecorder;
         _backendService = backendService;
         _backendDownloadService = backendDownloadService;
+        _transcriptionEngine = transcriptionEngine;
     }
 
     /// <summary>
@@ -206,7 +209,7 @@ public class TrayIconManager : IDisposable
 
     private void ShowSettings()
     {
-        var window = new SettingsWindow(_settingsService, _audioRecorder, _backendService, _backendDownloadService);
+        var window = new SettingsWindow(_settingsService, _audioRecorder, _backendService, _backendDownloadService, _transcriptionEngine);
         window.ShowDialog();
     }
 

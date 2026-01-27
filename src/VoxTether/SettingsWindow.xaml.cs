@@ -176,20 +176,24 @@ public partial class SettingsWindow : Window
     private readonly IAudioRecorder? _audioRecorder;
     private readonly IBackendSelectionService? _backendService;
     private readonly IBackendDownloadService? _backendDownloadService;
+    private readonly ITranscriptionEngine? _transcriptionEngine;
     private readonly HashSet<Key> _pressedKeys = new();
     private bool _isCapturingHotkey;
     private bool _isCapturingToggleHotkey;
     private bool _isDownloading;
     private bool _isTestingMicrophone;
+    private bool _isTranscribingFile;
+    private CancellationTokenSource? _transcriptionCts;
     private System.Windows.Threading.DispatcherTimer? _testTimer;
 
-    public SettingsWindow(SettingsService settingsService, IAudioRecorder? audioRecorder = null, IBackendSelectionService? backendService = null, IBackendDownloadService? backendDownloadService = null)
+    public SettingsWindow(SettingsService settingsService, IAudioRecorder? audioRecorder = null, IBackendSelectionService? backendService = null, IBackendDownloadService? backendDownloadService = null, ITranscriptionEngine? transcriptionEngine = null)
     {
         InitializeComponent();
         _settingsService = settingsService;
         _audioRecorder = audioRecorder;
         _backendService = backendService;
         _backendDownloadService = backendDownloadService;
+        _transcriptionEngine = transcriptionEngine;
         _downloadService = new ModelDownloadService();
         _downloadService.DownloadProgressChanged += OnDownloadProgressChanged;
         _downloadService.StatusChanged += OnDownloadStatusChanged;
@@ -208,6 +212,7 @@ public partial class SettingsWindow : Window
         Closed += (s, e) =>
         {
             StopMicrophoneTest();
+            _transcriptionCts?.Cancel();
             _downloadService.DownloadProgressChanged -= OnDownloadProgressChanged;
             _downloadService.StatusChanged -= OnDownloadStatusChanged;
             if (_audioRecorder != null)
@@ -1113,5 +1118,128 @@ public partial class SettingsWindow : Window
     private void RefreshDiagnosticsButton_Click(object sender, RoutedEventArgs e)
     {
         RefreshBackendDiagnostics();
+    }
+
+    private void BrowseAudioFileButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Select audio file to transcribe",
+            Filter = "WAV files (*.wav)|*.wav|All files (*.*)|*.*",
+            FilterIndex = 1
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            AudioFilePathTextBox.Text = dialog.FileName;
+            // Reset the result panel when a new file is selected
+            TranscriptionResultPanel.Visibility = Visibility.Collapsed;
+            CopyTranscriptButton.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async void TranscribeFileButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isTranscribingFile)
+        {
+            // Cancel current transcription
+            _transcriptionCts?.Cancel();
+            return;
+        }
+
+        var filePath = AudioFilePathTextBox.Text;
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            MessageBox.Show("Please select an audio file first.", "No File Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!File.Exists(filePath))
+        {
+            MessageBox.Show("The selected file does not exist.", "File Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (_transcriptionEngine == null)
+        {
+            MessageBox.Show("Transcription engine is not available.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        var modelPath = _settingsService.GetEffectiveModelPath();
+        if (string.IsNullOrEmpty(modelPath))
+        {
+            MessageBox.Show("No speech recognition model is available. Please download a model first.", "No Model", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _isTranscribingFile = true;
+        _transcriptionCts = new CancellationTokenSource();
+
+        // Update UI
+        TranscribeFileButton.Content = "Cancel";
+        TranscriptionProgressPanel.Visibility = Visibility.Visible;
+        TranscriptionStatusText.Text = "Transcribing...";
+        TranscriptionResultPanel.Visibility = Visibility.Collapsed;
+        CopyTranscriptButton.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            var options = new TranscriptionOptions
+            {
+                ModelPath = modelPath,
+                Language = _settingsService.Settings.Language
+            };
+
+            var result = await _transcriptionEngine!.TranscribeAsync(filePath, options, _transcriptionCts.Token);
+
+            if (result.Success)
+            {
+                TranscriptionResultText.Text = string.IsNullOrEmpty(result.Text) 
+                    ? "[No speech detected]" 
+                    : result.Text;
+                TranscriptionResultPanel.Visibility = Visibility.Visible;
+                CopyTranscriptButton.Visibility = Visibility.Visible;
+                TranscriptionStatusText.Text = $"Completed in {result.Duration.TotalSeconds:F1} seconds";
+            }
+            else
+            {
+                TranscriptionResultText.Text = $"Error: {result.Error}";
+                TranscriptionResultPanel.Visibility = Visibility.Visible;
+                TranscriptionStatusText.Text = "Transcription failed";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            TranscriptionStatusText.Text = "Transcription cancelled";
+        }
+        catch (Exception ex)
+        {
+            TranscriptionStatusText.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isTranscribingFile = false;
+            TranscribeFileButton.Content = "Transcribe";
+            TranscriptionProgressBar.IsIndeterminate = false;
+            TranscriptionProgressBar.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void CopyTranscriptButton_Click(object sender, RoutedEventArgs e)
+    {
+        var text = TranscriptionResultText.Text;
+        if (!string.IsNullOrEmpty(text) && text != "[No speech detected]")
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+                MessageBox.Show("Transcript copied to clipboard.", "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to copy to clipboard: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }
