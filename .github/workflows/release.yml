@@ -14,40 +14,7 @@ permissions:
   contents: write
 
 jobs:
-  # Build the Python backend
-  build-backend:
-    name: Build Backend
-    runs-on: windows-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-        cache: 'pip'
-        cache-dependency-path: 'src/backend/requirements.txt'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r src/backend/requirements.txt
-        pip install pyinstaller
-
-    - name: Build backend
-      run: |
-        cd src/backend
-        pyinstaller --onefile --name vox-backend main.py
-      shell: pwsh
-
-    - name: Upload backend artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: backend-build
-        path: src/backend/dist/vox-backend.exe
-
-  # Build the WinUI 3 frontend
+  # Build the Electron frontend (includes backend bundling)
   build-frontend:
     name: Build Frontend
     runs-on: windows-latest
@@ -67,86 +34,89 @@ jobs:
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
       shell: pwsh
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+    - name: Setup Python (for backend)
+      uses: actions/setup-python@v5
       with:
-        dotnet-version: '8.0.x'
+        python-version: '3.13'
+        cache: 'pip'
+        cache-dependency-path: 'src/backend/requirements.txt'
 
-    - name: Restore dependencies
-      run: dotnet restore src/frontend/VoxTether.sln
-
-    - name: Publish frontend
+    - name: Build backend executable
       run: |
-        dotnet publish src/frontend/VoxTether/VoxTether.csproj `
-          -c Release `
-          -r win-x64 `
-          --self-contained `
-          -p:PublishSingleFile=false `
-          -p:Version=${{ steps.version.outputs.VERSION }} `
-          -o build/output
+        python -m pip install --upgrade pip
+        pip install -r src/backend/requirements.txt
+        pip install pyinstaller
+        cd src/backend
+        pyinstaller --onefile --name vox-backend main.py
+        # Create backend directory in frontend-electron for bundling
+        New-Item -ItemType Directory -Path ../frontend-electron/backend -Force | Out-Null
+        Copy-Item dist/vox-backend.exe ../frontend-electron/backend/ -Force
       shell: pwsh
 
-    - name: Upload frontend artifact
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'src/frontend-electron/package-lock.json'
+
+    - name: Update package version
+      run: |
+        cd src/frontend-electron
+        npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
+      shell: pwsh
+
+    - name: Install dependencies
+      run: |
+        cd src/frontend-electron
+        npm ci
+      shell: pwsh
+
+    - name: Build Electron app
+      run: |
+        cd src/frontend-electron
+        npm run build
+      shell: pwsh
+
+    - name: Upload installer artifact
       uses: actions/upload-artifact@v4
       with:
-        name: frontend-build
-        path: build/output/
+        name: installer-build
+        path: src/frontend-electron/dist/*.exe
+
+    - name: Upload portable artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: portable-build
+        path: src/frontend-electron/dist/win-unpacked/
 
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
 
-  # Create installer and release
+  # Create release
   create-release:
     name: Create Release
     runs-on: windows-latest
-    needs: [build-backend, build-frontend]
+    needs: [build-frontend]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Download backend artifact
+    - name: Download installer artifact
       uses: actions/download-artifact@v4
       with:
-        name: backend-build
-        path: build/output/backend/
+        name: installer-build
+        path: build/installer/
 
-    - name: Download frontend artifact
+    - name: Download portable artifact
       uses: actions/download-artifact@v4
       with:
-        name: frontend-build
-        path: build/output/
-
-    - name: Cache Inno Setup
-      id: cache-innosetup
-      uses: actions/cache@v4
-      with:
-        path: C:\Program Files (x86)\Inno Setup 6
-        key: innosetup-6
-
-    - name: Install Inno Setup
-      if: steps.cache-innosetup.outputs.cache-hit != 'true'
-      run: |
-        choco install innosetup -y
-      shell: pwsh
-
-    - name: Create installer
-      run: |
-        $env:VOXTETHER_VERSION = "${{ needs.build-frontend.outputs.version }}"
-        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\VoxTether.iss
-      shell: pwsh
+        name: portable-build
+        path: build/portable/
 
     - name: Create portable ZIP
       run: |
         $version = "${{ needs.build-frontend.outputs.version }}"
-        $packageDir = "build\VoxTether-$version-win-x64"
-        
-        # Create package directory
-        New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
-        
-        # Copy files
-        Copy-Item "build\output\*" $packageDir -Recurse -Exclude "backend"
-        New-Item -ItemType Directory -Path "$packageDir\backend" -Force | Out-Null
-        Copy-Item "build\output\backend\vox-backend.exe" "$packageDir\backend\"
         
         # Create README
         @"
@@ -169,15 +139,24 @@ For more information, visit:
 https://github.com/KennethHeine/VoxTether
 
 License: MIT
-"@ | Out-File "$packageDir\README.txt" -Encoding UTF8
+"@ | Out-File "build\portable\README.txt" -Encoding UTF8
         
         # Copy license
         if (Test-Path "LICENSE") {
-          Copy-Item "LICENSE" "$packageDir\LICENSE.txt"
+          Copy-Item "LICENSE" "build\portable\LICENSE.txt"
         }
         
         # Create ZIP
-        Compress-Archive -Path "$packageDir\*" -DestinationPath "build\VoxTether-$version-win-x64.zip"
+        Compress-Archive -Path "build\portable\*" -DestinationPath "build\VoxTether-$version-win-x64.zip"
+      shell: pwsh
+
+    - name: Rename installer
+      run: |
+        $version = "${{ needs.build-frontend.outputs.version }}"
+        $installerFile = Get-ChildItem -Path "build\installer\" -Filter "*.exe" | Select-Object -First 1
+        if ($installerFile) {
+          Move-Item $installerFile.FullName "build\installer\VoxTether-$version-Setup.exe"
+        }
       shell: pwsh
 
     - name: Create GitHub Release
@@ -220,7 +199,7 @@ License: MIT
           ### Architecture
           
           This release uses a hybrid architecture:
-          - **Frontend**: WinUI 3 (.NET 8.0) - Modern Windows UI
+          - **Frontend**: Electron.js - Cross-platform desktop UI
           - **Backend**: Python FastAPI - faster-whisper transcription
           
           See [Architecture Documentation](https://github.com/KennethHeine/VoxTether/blob/main/docs/ARCHITECTURE.md) for details.
