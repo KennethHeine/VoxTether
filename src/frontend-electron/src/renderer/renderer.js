@@ -303,7 +303,19 @@ async function loadModels() {
         const result = await window.voxtether.getModels();
 
         if (!result.success) {
-            modelsGrid.innerHTML = '<div class="model-card"><div class="model-name">Backend not available</div><div class="model-description">Start the backend to manage models</div></div>';
+            // Clear and show error using DOM methods
+            modelsGrid.innerHTML = '';
+            const errorCard = document.createElement('div');
+            errorCard.className = 'model-card';
+            const errorName = document.createElement('div');
+            errorName.className = 'model-name';
+            errorName.textContent = 'Backend not available';
+            const errorDesc = document.createElement('div');
+            errorDesc.className = 'model-description';
+            errorDesc.textContent = 'Start the backend to manage models';
+            errorCard.appendChild(errorName);
+            errorCard.appendChild(errorDesc);
+            modelsGrid.appendChild(errorCard);
             return;
         }
 
@@ -393,7 +405,15 @@ async function loadModels() {
         }
     } catch (error) {
         console.error('Failed to load models:', error);
-        modelsGrid.innerHTML = '<div class="model-card"><div class="model-name">Error loading models</div></div>';
+        // Clear and show error using DOM methods
+        modelsGrid.innerHTML = '';
+        const errorCard = document.createElement('div');
+        errorCard.className = 'model-card';
+        const errorName = document.createElement('div');
+        errorName.className = 'model-name';
+        errorName.textContent = 'Error loading models';
+        errorCard.appendChild(errorName);
+        modelsGrid.appendChild(errorCard);
     }
 }
 
