@@ -64,7 +64,7 @@ pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
 
 Or install the full [CUDA Toolkit 12](https://developer.nvidia.com/cuda-downloads) from NVIDIA.
 
-**Verify GPU detection:**
+**Verify GPU detection (from voxtether-python directory):**
 ```powershell
 python -m src.main --healthcheck
 ```
@@ -210,7 +210,7 @@ Right-click the tray icon to access:
 
 ### Command Line Options
 
-**Python version:**
+**Python version (from source, in voxtether-python directory):**
 ```powershell
 # Run with debug logging
 python -m src.main --debug
