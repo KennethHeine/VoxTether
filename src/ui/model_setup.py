@@ -41,14 +41,14 @@ class ModelSetupWindow:
         """Show the model setup window."""
         self._window = tk.Tk()
         self._window.title("VoxTether - First Run Setup")
-        self._window.geometry("600x500")
+        self._window.geometry("600x700")
         self._window.resizable(True, True)
-        self._window.minsize(500, 400)
+        self._window.minsize(500, 600)
         
         # Center on screen
         self._window.update_idletasks()
         x = (self._window.winfo_screenwidth() - 600) // 2
-        y = (self._window.winfo_screenheight() - 500) // 2
+        y = (self._window.winfo_screenheight() - 700) // 2
         self._window.geometry(f"+{x}+{y}")
         
         self._create_widgets()
@@ -80,11 +80,15 @@ class ModelSetupWindow:
         if device_info.cuda_available:
             gpu_text = f"✓ NVIDIA GPU detected: {device_info.device_name or 'Unknown'}"
             gpu_color = "green"
+        elif device_info.device_name:
+            # GPU detected but CUDA not available (libraries not configured)
+            gpu_text = f"⚠ NVIDIA GPU detected ({device_info.device_name}) but CUDA not configured. CPU mode will be used."
+            gpu_color = "orange"
         else:
             gpu_text = "ℹ No NVIDIA GPU detected. CPU mode will be used."
             gpu_color = "gray"
         
-        ttk.Label(header_frame, text=gpu_text, foreground=gpu_color).pack(anchor=tk.W)
+        ttk.Label(header_frame, text=gpu_text, foreground=gpu_color, wraplength=550).pack(anchor=tk.W)
         
         # Model selection
         model_frame = ttk.LabelFrame(self._window, text="Select a Model", padding=15)
