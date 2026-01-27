@@ -324,13 +324,13 @@ public class BackendSelectionTests
     [Fact]
     public void RequiredCudaDlls_ContainsExpectedDlls()
     {
-        // Assert - Verify the CUDA DLL list contains expected files for CUDA 11.8
+        // Assert - Verify the CUDA DLL list contains expected files for CUDA 12
         var dlls = BackendSelectionService.RequiredCudaDlls;
         Assert.NotNull(dlls);
         Assert.Equal(3, dlls.Length);
-        Assert.Contains("cublas64_11.dll", dlls);
-        Assert.Contains("cublasLt64_11.dll", dlls);
-        Assert.Contains("cudart64_110.dll", dlls);
+        Assert.Contains("cublas64_12.dll", dlls);
+        Assert.Contains("cublasLt64_12.dll", dlls);
+        Assert.Contains("cudart64_12.dll", dlls);
     }
 
     [Fact]
@@ -396,7 +396,7 @@ public class BackendSelectionTests
             Directory.CreateDirectory(tempDir);
             
             // Create only one of the required DLLs
-            File.WriteAllText(Path.Combine(tempDir, "cublas64_11.dll"), "dummy");
+            File.WriteAllText(Path.Combine(tempDir, "cublas64_12.dll"), "dummy");
             
             // Act
             var result = BackendSelectionService.AreCudaDllsInDirectory(tempDir);

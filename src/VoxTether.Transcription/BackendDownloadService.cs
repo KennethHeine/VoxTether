@@ -29,36 +29,36 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
     // Embedded manifest as fallback
     // Note: Only CUDA is available as a pre-built binary from ggml-org/whisper.cpp
     // Vulkan and OpenVINO require compilation from source and are not offered for download
+    // CUDA 12.4 build is self-contained (bundles all required DLLs) - no separate CUDA Toolkit needed!
     private const string DefaultManifestJson = @"{
   ""version"": ""1.0"",
   ""backends"": [
     {
       ""id"": ""cuda"",
       ""name"": ""NVIDIA CUDA"",
-      ""description"": ""GPU acceleration for NVIDIA graphics cards. Requires CUDA Toolkit 11.8 to be installed separately."",
-      ""downloadUrl"": ""https://github.com/ggml-org/whisper.cpp/releases/download/v1.8.3/whisper-cublas-11.8.0-bin-x64.zip"",
-      ""size"": 61582231,
-      ""checksum"": ""sha256:a5ef69599305bdf3e135047b1a2151dcea79bc0fa201e3ea8681069c2abc7a8c"",
-      ""requirements"": ""NVIDIA GPU with CUDA support, up-to-date drivers, and CUDA Toolkit 11.8 (download from nvidia.com)""
+      ""description"": ""GPU acceleration for NVIDIA graphics cards. Self-contained build with all required DLLs included."",
+      ""downloadUrl"": ""https://github.com/ggml-org/whisper.cpp/releases/download/v1.8.3/whisper-cublas-12.4.0-bin-x64.zip"",
+      ""size"": 459854042,
+      ""checksum"": ""sha256:c12a563333d3c3707be70754dc0e87c1cb58aa6333a87055bbcf9b524488dfb0"",
+      ""requirements"": ""NVIDIA GPU with CUDA support and up-to-date drivers (version 525.60+ recommended)""
     }
   ]
 }";
 
-    // CUDA Runtime DLL download information from NVIDIA redistribution site
-    // These files are licensed for redistribution per NVIDIA's CUDA EULA
-    // See: https://developer.download.nvidia.com/compute/cuda/redist/
-    // Version constants for easier maintenance
-    private const string CudaRuntimeVersion = "11.8.89";
-    private const string CublasVersion = "11.11.3.6";
+    // CUDA 12.4 build is self-contained - all DLLs are bundled in the whisper.cpp release
+    // No separate downloads from NVIDIA redistribution site needed!
+    // These constants are kept for reference/fallback but normally not used
+    private const string CudaRuntimeVersion = "12.4.127";
+    private const string CublasVersion = "12.4.5.8";
     
     private static readonly string CudaRuntimeUrl = $"https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-{CudaRuntimeVersion}-archive.zip";
     private const long CudaRuntimeSize = 3_000_000; // ~3MB
     
     private static readonly string CublasUrl = $"https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/libcublas-windows-x86_64-{CublasVersion}-archive.zip";
-    private const long CublasSize = 420_000_000; // ~400MB
+    private const long CublasSize = 500_000_000; // ~500MB
     
-    // Required DLL files for CUDA 11.8 backend
-    private static readonly string[] RequiredCudaDlls = ["cublas64_11.dll", "cublasLt64_11.dll", "cudart64_110.dll"];
+    // Required DLL files for CUDA 12 backend (bundled in the whisper.cpp CUDA 12.4 release)
+    private static readonly string[] RequiredCudaDlls = ["cublas64_12.dll", "cublasLt64_12.dll", "cudart64_12.dll"];
 
     public BackendDownloadService(
         ILogger<BackendDownloadService> logger,
@@ -461,14 +461,14 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
             ReportProgress(progress, backendId, BackendDownloadStatus.Extracting,
                 totalDownloaded, totalSize, "Extracting CUDA Runtime...");
 
-            if (!ExtractCudaDllsFromArchive(cudaRuntimeZip, cudaReleaseDir, ["cudart64_110.dll"]))
+            if (!ExtractCudaDllsFromArchive(cudaRuntimeZip, cudaReleaseDir, ["cudart64_12.dll"]))
             {
                 ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
                     0, 0, "Failed to extract CUDA Runtime", "Extraction failed");
                 return false;
             }
 
-            // Download cuBLAS (contains cublas64_11.dll and cublasLt64_11.dll)
+            // Download cuBLAS (contains cublas64_12.dll and cublasLt64_12.dll)
             ReportProgress(progress, backendId, BackendDownloadStatus.Downloading,
                 totalDownloaded, totalSize, "Downloading cuBLAS library...");
 
@@ -492,7 +492,7 @@ public class BackendDownloadService : IBackendDownloadService, IDisposable
             ReportProgress(progress, backendId, BackendDownloadStatus.Extracting,
                 totalDownloaded, totalSize, "Extracting cuBLAS...");
 
-            if (!ExtractCudaDllsFromArchive(cublasZip, cudaReleaseDir, ["cublas64_11.dll", "cublasLt64_11.dll"]))
+            if (!ExtractCudaDllsFromArchive(cublasZip, cudaReleaseDir, ["cublas64_12.dll", "cublasLt64_12.dll"]))
             {
                 ReportProgress(progress, backendId, BackendDownloadStatus.Failed,
                     0, 0, "Failed to extract cuBLAS", "Extraction failed");

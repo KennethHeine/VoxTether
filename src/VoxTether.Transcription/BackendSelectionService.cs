@@ -37,9 +37,10 @@ public class BackendSelectionService : IBackendSelectionService
     };
 
     /// <summary>
-    /// Required CUDA 11.8 runtime DLLs for the CUDA backend.
+    /// Required CUDA 12 runtime DLLs for the CUDA backend.
+    /// Note: The CUDA 12.4 build from whisper.cpp bundles these DLLs.
     /// </summary>
-    public static readonly string[] RequiredCudaDlls = ["cublas64_11.dll", "cublasLt64_11.dll", "cudart64_110.dll"];
+    public static readonly string[] RequiredCudaDlls = ["cublas64_12.dll", "cublasLt64_12.dll", "cudart64_12.dll"];
 
     /// <summary>
     /// Creates a new BackendSelectionService.
@@ -742,10 +743,10 @@ public class BackendSelectionService : IBackendSelectionService
             
             if (process.ExitCode == STATUS_DLL_NOT_FOUND)
             {
-                var reason = "Missing CUDA 11.8 runtime DLLs (cublas64_11.dll, cudart64_110.dll). " +
-                    "Download them in Settings → Performance → Get CUDA DLLs, or install CUDA Toolkit 11.8 from nvidia.com.";
-                _logger.LogWarning("Executable cannot run due to missing CUDA 11.8 DLLs: {Path}. " +
-                    "Use Settings → Performance → Get CUDA DLLs or install CUDA Toolkit 11.8.", execPath);
+                var reason = "Missing CUDA 12 runtime DLLs (cublas64_12.dll, cudart64_12.dll). " +
+                    "Download them in Settings → Performance → Get CUDA DLLs, or re-download the CUDA backend.";
+                _logger.LogWarning("Executable cannot run due to missing CUDA 12 DLLs: {Path}. " +
+                    "Use Settings → Performance → Get CUDA DLLs or re-download the CUDA backend.", execPath);
                 return (false, reason);
             }
             
