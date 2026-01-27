@@ -259,7 +259,7 @@ VoxTether/
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Python | 3.11+ | Runtime |
+| Python | 3.13+ | Runtime |
 | FastAPI | 0.109+ | Web framework |
 | faster-whisper | 1.0+ | Transcription |
 | uvicorn | 0.27+ | ASGI server |

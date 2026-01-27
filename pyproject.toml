@@ -11,7 +11,7 @@ license = {text = "MIT"}
 authors = [
     {name = "VoxTether Team"}
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Win32 (MS Windows)",
@@ -20,9 +20,7 @@ classifiers = [
     "Operating System :: Microsoft :: Windows :: Windows 10",
     "Operating System :: Microsoft :: Windows :: Windows 11",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
 ]
 keywords = ["speech-to-text", "dictation", "whisper", "transcription", "voice"]

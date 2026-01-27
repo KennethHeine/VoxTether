@@ -13,7 +13,7 @@ The VoxTether backend is a Python FastAPI server that handles:
 
 | Requirement | Minimum | Recommended |
 |-------------|---------|-------------|
-| Python | 3.10+ | 3.11+ |
+| Python | 3.13+ | 3.13+ |
 | RAM | 4 GB | 8 GB+ |
 | GPU | None | NVIDIA with CUDA 12 |
 | Disk | 500 MB | 5 GB (for models) |

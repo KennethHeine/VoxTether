@@ -30,7 +30,7 @@ See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
 - Windows 10/11 (64-bit)
 
 ### Server (Python Backend)
-- Python 3.11+
+- Python 3.13+
 - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
 
 ## Installation

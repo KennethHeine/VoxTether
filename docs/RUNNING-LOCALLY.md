@@ -16,14 +16,14 @@ The backend runs as a standalone Python server (no PyInstaller or exe bundling n
 
 | Software | Version | Purpose |
 |----------|---------|---------|
-| Python | 3.11+ | Backend server |
+| Python | 3.13+ | Backend server |
 | Node.js | 20.x+ | Frontend client |
 | npm | 10.x+ | Package management |
 | Git | Latest | Source control |
 
 **Check installations:**
 ```powershell
-python --version   # Should be 3.11+
+python --version   # Should be 3.13+
 node --version     # Should be 20.x+
 npm --version      # Should be 10.x+
 git --version

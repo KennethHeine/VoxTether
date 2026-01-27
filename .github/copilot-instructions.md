@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-VoxTether is a push-to-talk dictation application for Windows 10/11. It provides fully offline speech-to-text using faster-whisper. The project is built with Python 3.10+.
+VoxTether is a push-to-talk dictation application for Windows 10/11. It provides fully offline speech-to-text using faster-whisper. The project is built with Python 3.13+.
 
 **Key characteristics:**
 - Windows-only desktop application
@@ -112,7 +112,7 @@ VoxTether/
 
 Runs on every PR to `main`:
 1. Checkout code
-2. Setup Python 3.11
+2. Setup Python 3.13
 3. Install dependencies
 4. Run linting (ruff)
 5. Run tests (pytest)

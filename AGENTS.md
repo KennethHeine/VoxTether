@@ -4,7 +4,7 @@ This file provides context and instructions to help AI coding agents work effect
 
 ## Project Overview
 
-VoxTether is a push-to-talk dictation application for Windows 10/11. It is fully offline, using faster-whisper for local speech-to-text transcription. The project is built with Python 3.10+.
+VoxTether is a push-to-talk dictation application for Windows 10/11. It is fully offline, using faster-whisper for local speech-to-text transcription. The project is built with Python 3.13+.
 
 ## Setup Commands
 
@@ -67,7 +67,7 @@ VoxTether/
 
 ## Code Style
 
-- Python 3.10+
+- Python 3.13+
 - Follow PEP 8 style guidelines
 - Use type hints where appropriate
 - Use ruff for linting
@@ -88,7 +88,7 @@ VoxTether/
 ## Platform
 
 - Windows only (requires Windows-specific libraries for keyboard hooks)
-- Targets Python 3.10+
+- Targets Python 3.13+
 - Uses faster-whisper for transcription (native CUDA 12 support)
 - Uses sounddevice for audio recording
 

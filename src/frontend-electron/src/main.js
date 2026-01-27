@@ -257,7 +257,10 @@ function updateTrayMenu() {
  */
 async function checkBackendConnection() {
     return new Promise((resolve) => {
+        let resolved = false;
+        
         const req = http.get(`${BACKEND_URL}/api/health`, (res) => {
+            resolved = true;
             if (res.statusCode === 200) {
                 console.log('Backend server is available');
                 resolve(true);
@@ -268,14 +271,20 @@ async function checkBackendConnection() {
         });
 
         req.on('error', () => {
-            console.warn('Backend server not available at', BACKEND_URL);
-            resolve(false);
+            if (!resolved) {
+                resolved = true;
+                console.warn('Backend server not available at', BACKEND_URL);
+                resolve(false);
+            }
         });
 
         req.setTimeout(5000, () => {
-            req.destroy();
-            console.warn('Backend server connection timeout');
-            resolve(false);
+            if (!resolved) {
+                resolved = true;
+                req.destroy();
+                console.warn('Backend server connection timeout');
+                resolve(false);
+            }
         });
     });
 }
