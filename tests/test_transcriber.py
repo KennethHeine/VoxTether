@@ -143,6 +143,70 @@ class TestTranscriber:
         
         assert result.success is False
         assert "Failed to load model" in result.error
+    
+    @patch('subprocess.run')
+    def test_detect_nvidia_gpu_via_smi_success(self, mock_run):
+        """Test nvidia-smi GPU detection when successful."""
+        from src.transcriber import Transcriber
+        
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout="NVIDIA GeForce RTX 4080\n"
+        )
+        
+        transcriber = Transcriber()
+        result = transcriber._detect_nvidia_gpu_via_smi()
+        
+        assert result == "NVIDIA GeForce RTX 4080"
+    
+    @patch('subprocess.run')
+    def test_detect_nvidia_gpu_via_smi_not_found(self, mock_run):
+        """Test nvidia-smi GPU detection when nvidia-smi is not installed."""
+        from src.transcriber import Transcriber
+        
+        mock_run.side_effect = FileNotFoundError("nvidia-smi not found")
+        
+        transcriber = Transcriber()
+        result = transcriber._detect_nvidia_gpu_via_smi()
+        
+        assert result is None
+    
+    @patch('subprocess.run')
+    def test_detect_nvidia_gpu_via_smi_failure(self, mock_run):
+        """Test nvidia-smi GPU detection when no GPU found."""
+        from src.transcriber import Transcriber
+        
+        mock_run.return_value = MagicMock(
+            returncode=1,
+            stdout=""
+        )
+        
+        transcriber = Transcriber()
+        result = transcriber._detect_nvidia_gpu_via_smi()
+        
+        assert result is None
+    
+    @patch('subprocess.run')
+    @patch.dict('sys.modules', {'torch': None})
+    def test_get_device_info_with_nvidia_smi_fallback(self, mock_run):
+        """Test get_device_info uses nvidia-smi fallback when torch/ctranslate2 fail."""
+        from src.transcriber import Transcriber
+        
+        # Mock nvidia-smi to return a GPU name
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout="NVIDIA GeForce RTX 4080\n"
+        )
+        
+        transcriber = Transcriber()
+        
+        # Patch _detect_nvidia_gpu_via_smi to simulate detecting a GPU
+        with patch.object(transcriber, '_detect_nvidia_gpu_via_smi', return_value="NVIDIA GeForce RTX 4080"):
+            device_info = transcriber.get_device_info()
+        
+        # Should have device_name but cuda_available should be False
+        # (since torch/ctranslate2 couldn't detect CUDA)
+        assert device_info.device_name == "NVIDIA GeForce RTX 4080"
 
 
 class TestTranscriberIntegration:

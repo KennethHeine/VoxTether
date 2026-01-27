@@ -1,6 +1,7 @@
 """Transcription engine for VoxTether using faster-whisper."""
 
 import logging
+import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -182,7 +183,16 @@ class Transcriber:
                 import ctranslate2
                 cuda_available = "cuda" in ctranslate2.get_supported_compute_types("cuda")
             except (ImportError, ValueError, RuntimeError):
-                pass  # CUDA detection failed, assume not available
+                pass  # CUDA detection via ctranslate2 failed
+        
+        # Fallback: Check for NVIDIA GPU using nvidia-smi if libraries didn't detect CUDA
+        # This can detect the GPU hardware even if CUDA libraries aren't properly installed
+        if not cuda_available and device_name is None:
+            detected_name = self._detect_nvidia_gpu_via_smi()
+            if detected_name:
+                device_name = detected_name
+                # Note: cuda_available remains False since the CUDA libraries aren't working
+                # This helps inform the user that they have an NVIDIA GPU but CUDA isn't configured
         
         return DeviceInfo(
             device_type=self._actual_device or ("cuda" if cuda_available else "cpu"),
@@ -190,6 +200,32 @@ class Transcriber:
             cuda_available=cuda_available,
             cuda_version=cuda_version,
         )
+    
+    def _detect_nvidia_gpu_via_smi(self) -> Optional[str]:
+        """Detect NVIDIA GPU using nvidia-smi command.
+        
+        This can detect GPU hardware even when CUDA libraries aren't properly configured.
+        
+        Returns:
+            GPU name if detected, None otherwise.
+        """
+        try:
+            result = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader,nounits"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                gpu_name = result.stdout.strip().split('\n')[0]  # Get first GPU
+                logger.debug(f"Detected NVIDIA GPU via nvidia-smi: {gpu_name}")
+                return gpu_name
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as e:
+            logger.debug(f"nvidia-smi detection failed: {e}")
+        except Exception as e:
+            logger.debug(f"Unexpected error during nvidia-smi detection: {e}")
+        return None
     
     def transcribe(
         self,
