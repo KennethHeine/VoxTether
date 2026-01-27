@@ -118,7 +118,7 @@ def build(
     result = run_command(cmd, cwd=script_dir)
     
     if result != 0:
-        print("\n❌ Build failed!")
+        print("\n[ERROR] Build failed!")
         return result
     
     # Clean up build artifacts
@@ -128,7 +128,7 @@ def build(
         shutil.rmtree(build_dir)
     
     print("\n" + "=" * 60)
-    print("✅ Build complete!")
+    print("[SUCCESS] Build complete!")
     print("=" * 60)
     
     if one_file:
