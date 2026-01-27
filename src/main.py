@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Optional
 
 from . import __version__
 from .hotkey import HotkeyListener
@@ -57,9 +58,9 @@ def setup_logging(debug: bool = False) -> None:
 logger = logging.getLogger(__name__)
 
 
-def get_icon_path() -> Path:
+def get_icon_path() -> Optional[Path]:
     """Get the path to the application icon.
-    
+
     Returns:
         Path to the icon file, or None if not found.
     """

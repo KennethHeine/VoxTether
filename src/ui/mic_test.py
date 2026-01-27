@@ -346,7 +346,9 @@ class MicTestWindow:
 
         # Calculate current level from recent buffer
         if self._audio_buffer:
-            level = min(1.0, sum(self._audio_buffer[-10:]) / 10 * 10)
+            # Average of last 10 samples, scaled by 10 for visibility
+            avg = sum(self._audio_buffer[-10:]) / len(self._audio_buffer[-10:])
+            level = min(1.0, avg * 10)
         else:
             level = 0.0
 

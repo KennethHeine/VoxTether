@@ -6,6 +6,7 @@ Provides a visual feedback bar at the top of the screen showing:
 """
 
 import logging
+import math
 import threading
 import time
 import tkinter as tk
@@ -216,7 +217,6 @@ class RecordingIndicator:
 
         if state == "recording":
             # Pulsing red bar
-            import math
             pulse = (math.sin(phase * 3) + 1) / 2  # 0 to 1
 
             # Draw gradient-like effect with pulsing
@@ -229,7 +229,6 @@ class RecordingIndicator:
 
         elif state == "transcribing":
             # Moving blue bar (loading animation)
-            import math
 
             # Draw base blue
             self._canvas.create_rectangle(
