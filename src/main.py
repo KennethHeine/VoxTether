@@ -97,6 +97,13 @@ class VoxTetherApp:
             compute_type=settings.compute_type,
         )
         
+        # Preload the model to avoid threading issues with pystray
+        # Loading in a background thread while pystray is running can cause GIL issues
+        logger.info("Preloading transcription model...")
+        if not self._transcriber.load_model():
+            logger.error("Failed to preload transcription model")
+            return False
+        
         return True
     
     def _setup_hotkeys(self) -> bool:
