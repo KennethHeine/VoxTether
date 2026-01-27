@@ -25,10 +25,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # .NET setup (for legacy C# version)
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore dependencies
+      - name: Restore .NET dependencies
         run: dotnet restore
+
+      # Python setup (for new Python version)
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        working-directory: voxtether-python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt

@@ -2,16 +2,24 @@
 
 Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 
-## ⚠️ Two Versions Available
+## Two Versions Available
 
-VoxTether is available in two implementations:
+VoxTether is available in two implementations. **For most users, we recommend the Python version.**
 
-| Version | Location | GPU Support | Recommended |
-|---------|----------|-------------|-------------|
-| **Python** (New) | [`voxtether-python/`](voxtether-python/) | ✅ Native CUDA 12 | **Yes** (RTX 40-series compatible) |
-| **.NET** (Legacy) | `src/` | ⚠️ Limited | No (GPU issues on RTX 40-series) |
+| Version | GPU Support | Status | Best For |
+|---------|-------------|--------|----------|
+| **[Python](voxtether-python/)** | ✅ Native CUDA 12 | **Active Development** | RTX 40-series, modern NVIDIA GPUs |
+| [.NET](src/) | ⚠️ CUDA 11.8 only | Maintenance Mode | Older GPUs, CPU-only systems |
 
-**For NVIDIA RTX 40-series GPUs**, use the [Python version](voxtether-python/) which has native CUDA 12 support via faster-whisper.
+> 📖 **See [Installation Guide](docs/INSTALLATION.md) for detailed setup instructions.**
+
+### Why Two Versions?
+
+The original .NET version uses whisper.cpp, which has compatibility issues with NVIDIA RTX 40-series GPUs. The Python version uses faster-whisper with native CUDA 12 support, solving these GPU issues and providing:
+
+- **4x faster** transcription than OpenAI Whisper
+- **Direct HuggingFace model support** - no manual conversion needed
+- **Simpler installation** - `pip install faster-whisper` handles CUDA
 
 ## Features
 
@@ -21,37 +29,34 @@ VoxTether is available in two implementations:
 - **System tray**: Runs quietly in the background
 - **Privacy-first**: No network calls, no telemetry, all processing is local
 
-## Installation
+## Quick Install
 
-### From Releases (Recommended)
+### Python Version (Recommended)
 
-1. Download the latest release from [Releases](https://github.com/KennethHeine/VoxTether/releases)
-2. Choose either:
-   - **Installer**: `VoxTether-Setup-x.x.x.exe` - Full installation with Start Menu shortcuts
-   - **Portable**: `VoxTether-x.x.x-win-x64-portable.zip` - Extract and run anywhere
+1. Download `VoxTether-Python-x.x.x-win-x64.zip` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
+2. Extract and run `VoxTether.exe`
+3. Follow the first-run setup to download a model
 
-**Note**: The installer does not require admin privileges and installs to your user profile by default. You can also choose to install for all users if you have admin rights.
-
-### Building from Source (.NET Version)
-
+**From source:**
 ```bash
-# Clone the repository
-git clone https://github.com/KennethHeine/VoxTether.git
-cd VoxTether
+cd voxtether-python
+pip install -r requirements.txt
+python -m src.main
+```
 
-# Build
+### .NET Version (Legacy)
+
+1. Download `VoxTether-Setup-x.x.x.exe` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
+2. Run the installer (no admin required)
+3. Launch from Start Menu
+
+**From source:**
+```bash
 dotnet build --configuration Release
-
-# Run tests
-dotnet test
-
-# Publish
 dotnet publish src/VoxTether/VoxTether.csproj -c Release -r win-x64 --self-contained
 ```
 
-### Building from Source (Python Version)
-
-See [voxtether-python/README.md](voxtether-python/README.md) for Python-specific instructions.
+> 📖 **For detailed installation options, GPU setup, and troubleshooting, see [Installation Guide](docs/INSTALLATION.md).**
 
 ## Usage
 
