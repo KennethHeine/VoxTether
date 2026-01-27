@@ -78,10 +78,13 @@ class Transcriber:
                 # torch not installed, try ctranslate2 directly
                 try:
                     import ctranslate2
-                    if "cuda" in ctranslate2.get_supported_compute_types("cuda"):
+                    cuda_device_count = ctranslate2.get_cuda_device_count()
+                    if cuda_device_count > 0:
                         device = "cuda"
+                        logger.info(f"CUDA available via ctranslate2: {cuda_device_count} device(s)")
                     else:
                         device = "cpu"
+                        logger.info("CUDA not available, using CPU")
                 except (ImportError, ModuleNotFoundError, RuntimeError, ValueError) as e:
                     logger.debug(f"ctranslate2 CUDA detection failed: {e}")
                     device = "cpu"
@@ -181,7 +184,10 @@ class Transcriber:
         except ImportError:
             try:
                 import ctranslate2
-                cuda_available = "cuda" in ctranslate2.get_supported_compute_types("cuda")
+                cuda_available = ctranslate2.get_cuda_device_count() > 0
+                if cuda_available:
+                    # Get GPU name via nvidia-smi since ctranslate2 doesn't provide it
+                    device_name = self._detect_nvidia_gpu_via_smi()
             except (ImportError, ValueError, RuntimeError):
                 pass  # CUDA detection via ctranslate2 failed
         
