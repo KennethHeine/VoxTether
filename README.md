@@ -2,10 +2,21 @@
 
 Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 
+## ⚠️ Two Versions Available
+
+VoxTether is available in two implementations:
+
+| Version | Location | GPU Support | Recommended |
+|---------|----------|-------------|-------------|
+| **Python** (New) | [`voxtether-python/`](voxtether-python/) | ✅ Native CUDA 12 | **Yes** (RTX 40-series compatible) |
+| **.NET** (Legacy) | `src/` | ⚠️ Limited | No (GPU issues on RTX 40-series) |
+
+**For NVIDIA RTX 40-series GPUs**, use the [Python version](voxtether-python/) which has native CUDA 12 support via faster-whisper.
+
 ## Features
 
 - **Push-to-talk recording**: Press and hold a global hotkey to record, release to transcribe
-- **Fully offline**: Uses whisper.cpp for local speech-to-text, no internet required
+- **Fully offline**: Uses whisper.cpp/.NET or faster-whisper/Python for local speech-to-text
 - **Text insertion**: Automatically types the transcribed text at your cursor position
 - **System tray**: Runs quietly in the background
 - **Privacy-first**: No network calls, no telemetry, all processing is local
@@ -21,7 +32,7 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 
 **Note**: The installer does not require admin privileges and installs to your user profile by default. You can also choose to install for all users if you have admin rights.
 
-### Building from Source
+### Building from Source (.NET Version)
 
 ```bash
 # Clone the repository
@@ -37,6 +48,10 @@ dotnet test
 # Publish
 dotnet publish src/VoxTether/VoxTether.csproj -c Release -r win-x64 --self-contained
 ```
+
+### Building from Source (Python Version)
+
+See [voxtether-python/README.md](voxtether-python/README.md) for Python-specific instructions.
 
 ## Usage
 
