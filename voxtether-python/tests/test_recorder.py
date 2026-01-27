@@ -8,7 +8,7 @@ import pytest
 
 # Skip all tests in this module if PortAudio/sounddevice is not available (Linux CI)
 try:
-    import sounddevice  # noqa: F401 - used for availability check
+    import sounddevice  # noqa: F401 - import used only for PortAudio availability detection
     PORTAUDIO_AVAILABLE = True
 except (OSError, ModuleNotFoundError):
     PORTAUDIO_AVAILABLE = False
