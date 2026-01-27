@@ -68,9 +68,9 @@ def cmd_download_model(args):
     
     model_info = AVAILABLE_MODELS[model_name]
     print(f"\nDownloading model: {model_name}")
-    print(f"  Display name: {model_info['display_name']}")
-    print(f"  Size: ~{model_info['size_mb']} MB")
-    print(f"  Repository: {model_info['repo_id']}")
+    print(f"  Display name: {model_info.get('display_name', model_name)}")
+    print(f"  Size: ~{model_info.get('size_mb', 'unknown')} MB")
+    print(f"  Repository: {model_info.get('repo_id', 'N/A')}")
     print(f"  Target: {settings.models_path}/{model_name}")
     print()
     
