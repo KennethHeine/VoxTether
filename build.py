@@ -34,8 +34,8 @@ def build(
         Exit code (0 for success).
     """
     script_dir = Path(__file__).parent
-    src_dir = script_dir / "src"
     assets_dir = script_dir / "assets"
+    launcher_script = script_dir / "launcher.py"
     
     # Ensure output directory exists
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -72,6 +72,20 @@ def build(
     
     # Hidden imports for PyInstaller to find
     hidden_imports = [
+        # Application modules
+        "src",
+        "src.main",
+        "src.settings",
+        "src.model_manager",
+        "src.recorder",
+        "src.transcriber",
+        "src.injector",
+        "src.hotkey",
+        "src.tray",
+        "src.ui",
+        "src.ui.settings_window",
+        "src.ui.model_setup",
+        # Third-party dependencies
         "faster_whisper",
         "ctranslate2",
         "sounddevice",
@@ -107,8 +121,8 @@ def build(
     cmd.extend(["--workpath", str(output_dir / "build")])
     cmd.extend(["--specpath", str(output_dir)])
     
-    # Entry point
-    cmd.append(str(src_dir / "main.py"))
+    # Entry point - use launcher script to avoid relative import issues
+    cmd.append(str(launcher_script))
     
     # Run PyInstaller
     print("\n" + "=" * 60)
