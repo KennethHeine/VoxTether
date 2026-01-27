@@ -2,20 +2,17 @@
 <Page
     x:Class="VoxTether.Views.GeneralSettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:CommunityToolkit.WinUI.Controls">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <ScrollViewer>
-        <StackPanel Spacing="4" Padding="0,0,20,20">
+        <StackPanel Spacing="16" Padding="0,0,20,20">
             <TextBlock Text="General Settings" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,16" />
 
             <!-- Hotkey Setting -->
-            <controls:SettingsCard Header="Push-to-Talk Hotkey" 
-                                   Description="Press and hold this key combination to record">
-                <controls:SettingsCard.HeaderIcon>
-                    <FontIcon Glyph="&#xE765;" />
-                </controls:SettingsCard.HeaderIcon>
-                <StackPanel Orientation="Horizontal" Spacing="8">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Push-to-Talk Hotkey" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="Press and hold this key combination to record" Opacity="0.7" />
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                     <TextBox x:Name="HotkeyTextBox" 
                              Text="{x:Bind ViewModel.Hotkey, Mode=TwoWay}"
                              IsReadOnly="True"
@@ -23,79 +20,68 @@
                              PlaceholderText="Press to capture hotkey" />
                     <Button Content="Capture" Click="CaptureHotkey_Click" />
                 </StackPanel>
-            </controls:SettingsCard>
+            </StackPanel>
 
             <!-- Language Setting -->
-            <controls:SettingsCard Header="Language" 
-                                   Description="Language for speech recognition">
-                <controls:SettingsCard.HeaderIcon>
-                    <FontIcon Glyph="&#xE8C1;" />
-                </controls:SettingsCard.HeaderIcon>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Language" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="Language for speech recognition" Opacity="0.7" />
                 <ComboBox x:Name="LanguageComboBox"
                           ItemsSource="{x:Bind ViewModel.Languages}"
                           SelectedValue="{x:Bind ViewModel.Language, Mode=TwoWay}"
-                          Width="200" />
-            </controls:SettingsCard>
+                          Width="200"
+                          Margin="0,8,0,0" />
+            </StackPanel>
 
             <!-- Output Mode Setting -->
-            <controls:SettingsCard Header="Output Mode" 
-                                   Description="How to insert transcribed text">
-                <controls:SettingsCard.HeaderIcon>
-                    <FontIcon Glyph="&#xE8C8;" />
-                </controls:SettingsCard.HeaderIcon>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Output Mode" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="How to insert transcribed text" Opacity="0.7" />
                 <ComboBox x:Name="OutputModeComboBox"
                           ItemsSource="{x:Bind ViewModel.OutputModes}"
                           SelectedValue="{x:Bind ViewModel.OutputMode, Mode=TwoWay}"
-                          Width="200" />
-            </controls:SettingsCard>
+                          Width="200"
+                          Margin="0,8,0,0" />
+            </StackPanel>
 
             <!-- Notifications Toggle -->
-            <controls:SettingsCard Header="Show Notifications" 
-                                   Description="Display notifications after transcription">
-                <controls:SettingsCard.HeaderIcon>
-                    <FontIcon Glyph="&#xE7E7;" />
-                </controls:SettingsCard.HeaderIcon>
-                <ToggleSwitch IsOn="{x:Bind ViewModel.ShowNotifications, Mode=TwoWay}" />
-            </controls:SettingsCard>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Show Notifications" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="Display notifications after transcription" Opacity="0.7" />
+                <ToggleSwitch IsOn="{x:Bind ViewModel.ShowNotifications, Mode=TwoWay}" Margin="0,4,0,0" />
+            </StackPanel>
 
             <!-- Recording Indicator Toggle -->
-            <controls:SettingsCard Header="Show Recording Indicator" 
-                                   Description="Display visual indicator while recording">
-                <controls:SettingsCard.HeaderIcon>
-                    <FontIcon Glyph="&#xE7C8;" />
-                </controls:SettingsCard.HeaderIcon>
-                <ToggleSwitch IsOn="{x:Bind ViewModel.ShowRecordingIndicator, Mode=TwoWay}" />
-            </controls:SettingsCard>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Show Recording Indicator" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="Display visual indicator while recording" Opacity="0.7" />
+                <ToggleSwitch IsOn="{x:Bind ViewModel.ShowRecordingIndicator, Mode=TwoWay}" Margin="0,4,0,0" />
+            </StackPanel>
 
             <!-- Start with Windows Toggle -->
-            <controls:SettingsCard Header="Start with Windows" 
-                                   Description="Launch VoxTether when Windows starts">
-                <controls:SettingsCard.HeaderIcon>
-                    <FontIcon Glyph="&#xE7E8;" />
-                </controls:SettingsCard.HeaderIcon>
-                <ToggleSwitch IsOn="{x:Bind ViewModel.StartWithWindows, Mode=TwoWay}" />
-            </controls:SettingsCard>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Start with Windows" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="Launch VoxTether when Windows starts" Opacity="0.7" />
+                <ToggleSwitch IsOn="{x:Bind ViewModel.StartWithWindows, Mode=TwoWay}" Margin="0,4,0,0" />
+            </StackPanel>
 
             <!-- Start Minimized Toggle -->
-            <controls:SettingsCard Header="Start Minimized" 
-                                   Description="Start in system tray instead of showing window">
-                <controls:SettingsCard.HeaderIcon>
-                    <FontIcon Glyph="&#xE921;" />
-                </controls:SettingsCard.HeaderIcon>
-                <ToggleSwitch IsOn="{x:Bind ViewModel.StartMinimized, Mode=TwoWay}" />
-            </controls:SettingsCard>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Start Minimized" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="Start in system tray instead of showing window" Opacity="0.7" />
+                <ToggleSwitch IsOn="{x:Bind ViewModel.StartMinimized, Mode=TwoWay}" Margin="0,4,0,0" />
+            </StackPanel>
 
             <!-- Theme Setting -->
-            <controls:SettingsCard Header="Theme" 
-                                   Description="Application color theme">
-                <controls:SettingsCard.HeaderIcon>
-                    <FontIcon Glyph="&#xE790;" />
-                </controls:SettingsCard.HeaderIcon>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Theme" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <TextBlock Text="Application color theme" Opacity="0.7" />
                 <ComboBox x:Name="ThemeComboBox"
                           ItemsSource="{x:Bind ViewModel.Themes}"
                           SelectedValue="{x:Bind ViewModel.Theme, Mode=TwoWay}"
-                          Width="150" />
-            </controls:SettingsCard>
+                          Width="150"
+                          Margin="0,8,0,0" />
+            </StackPanel>
 
             <!-- Save Button -->
             <Button Content="Save Settings" 
