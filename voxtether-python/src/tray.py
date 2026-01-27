@@ -1,14 +1,12 @@
 """System tray management for VoxTether."""
 
 import logging
-import sys
 import threading
 from pathlib import Path
 from typing import Callable, Optional
 
 try:
     from PIL import Image, ImageDraw
-    import pystray
     from pystray import Icon, Menu, MenuItem
 except ImportError as e:
     raise ImportError(
@@ -187,7 +185,7 @@ class TrayManager:
             Menu.SEPARATOR,
             MenuItem(
                 "Exit",
-                action=lambda: self._exit(),
+                action=self._exit,
             ),
         ]
         

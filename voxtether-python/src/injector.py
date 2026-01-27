@@ -97,12 +97,6 @@ class TextInjector:
         try:
             import keyboard
             
-            # Save current clipboard content
-            try:
-                original_clipboard = pyperclip.paste()
-            except Exception:
-                original_clipboard = None
-            
             # Copy new text to clipboard
             pyperclip.copy(text)
             
@@ -115,11 +109,8 @@ class TextInjector:
             # Wait a bit more for paste to complete
             time.sleep(self._clipboard_delay_ms / 1000.0)
             
-            # Restore original clipboard content (optional)
-            # Commented out as it might interfere with user workflow
-            # if original_clipboard is not None:
-            #     time.sleep(0.1)
-            #     pyperclip.copy(original_clipboard)
+            # Note: We intentionally do not restore the original clipboard content,
+            # as doing so could interfere with the user's expected clipboard state.
             
             logger.info(f"Pasted to focused app: '{text[:50]}...'")
             return True

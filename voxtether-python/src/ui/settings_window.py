@@ -232,7 +232,7 @@ class SettingsWindow:
         
         ttk.Label(lang_frame, text="Transcription language:").pack(anchor=tk.W)
         
-        languages = [
+        self._languages = [
             ("auto", "Auto-detect"),
             ("en", "English"),
             ("es", "Spanish"),
@@ -250,7 +250,7 @@ class SettingsWindow:
         lang_combo = ttk.Combobox(
             lang_frame,
             textvariable=self._language_var,
-            values=[f"{code} - {name}" for code, name in languages],
+            values=[f"{code} - {name}" for code, name in self._languages],
             state="readonly",
         )
         lang_combo.pack(fill=tk.X, pady=5)
@@ -389,7 +389,15 @@ class SettingsWindow:
         
         self._hotkey_var.set(settings.hotkey)
         self._model_var.set(settings.model_name)
-        self._language_var.set(f"{settings.language} - " if settings.language != "auto" else "auto - Auto-detect")
+        
+        # Find the matching language entry
+        lang_value = "auto - Auto-detect"  # Default
+        for code, name in self._languages:
+            if code == settings.language:
+                lang_value = f"{code} - {name}"
+                break
+        self._language_var.set(lang_value)
+        
         self._device_var.set(settings.device)
         self._compute_type_var.set(settings.compute_type)
         self._output_mode_var.set(settings.output_mode)

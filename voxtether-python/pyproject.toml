@@ -54,7 +54,7 @@ cuda = [
 ]
 
 [project.scripts]
-voxtether = "main:main"
+voxtether = "voxtether.main:main"
 
 [project.urls]
 Homepage = "https://github.com/KennethHeine/VoxTether"
@@ -62,7 +62,11 @@ Repository = "https://github.com/KennethHeine/VoxTether"
 Issues = "https://github.com/KennethHeine/VoxTether/issues"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["src", "src.*"]
+
+[tool.setuptools.package-dir]
+voxtether = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

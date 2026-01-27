@@ -17,7 +17,6 @@ from . import __version__
 from .settings import (
     Settings,
     SettingsService,
-    get_app_data_path,
     get_logs_path,
     get_models_path,
 )
@@ -311,8 +310,8 @@ class VoxTetherApp:
             # Clean up
             try:
                 result.file_path.unlink()
-            except Exception:
-                pass
+            except (FileNotFoundError, OSError):
+                pass  # File already deleted or inaccessible
             
             self._tray_manager.set_status("Ready")
         

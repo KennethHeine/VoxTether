@@ -123,7 +123,6 @@ def build(
     
     # Clean up build artifacts
     build_dir = output_dir / "build"
-    spec_file = output_dir / "VoxTether.spec"
     
     if build_dir.exists():
         shutil.rmtree(build_dir)

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
-from huggingface_hub import snapshot_download, hf_hub_download
+from huggingface_hub import snapshot_download
 from huggingface_hub.utils import HfHubHTTPError
 
 from .settings import get_models_path

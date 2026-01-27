@@ -1,7 +1,6 @@
 """Audio recording for VoxTether using sounddevice."""
 
 import logging
-import tempfile
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -235,7 +234,7 @@ class AudioRecorder:
             for file in temp_dir.glob("recording_*.wav"):
                 try:
                     file.unlink()
-                except Exception:
-                    pass
+                except (FileNotFoundError, OSError):
+                    pass  # File already deleted or in use
         except Exception as e:
             logger.warning(f"Failed to cleanup temp files: {e}")

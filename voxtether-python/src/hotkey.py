@@ -2,7 +2,7 @@
 
 import logging
 import threading
-from typing import Callable, Optional
+from typing import Callable
 
 import keyboard
 
@@ -21,6 +21,7 @@ class HotkeyListener:
         self._registered_hotkeys: dict[str, object] = {}
         self._on_press_handlers: dict[str, HotkeyCallback] = {}
         self._on_release_handlers: dict[str, HotkeyCallback] = {}
+        self._push_to_talk_hooks: dict[str, object] = {}  # Store hook handles
         self._is_running = False
         self._lock = threading.Lock()
     
@@ -85,12 +86,12 @@ class HotkeyListener:
             normalized = self._normalize_hotkey(hotkey)
             
             with self._lock:
-                # Unregister existing handlers
-                if normalized in self._on_press_handlers:
+                # Unregister existing hook if any
+                if normalized in self._push_to_talk_hooks:
                     try:
-                        keyboard.unhook_key(normalized.split("+")[-1])
-                    except Exception:
-                        pass
+                        keyboard.unhook(self._push_to_talk_hooks[normalized])
+                    except (KeyError, ValueError):
+                        pass  # Hook already removed or invalid
                 
                 self._on_press_handlers[normalized] = on_press
                 self._on_release_handlers[normalized] = on_release
@@ -132,7 +133,9 @@ class HotkeyListener:
                             except Exception as e:
                                 logger.error(f"Error in on_release callback: {e}")
                 
-                keyboard.hook(on_key_event)
+                # Store the hook handle for later cleanup
+                hook_handle = keyboard.hook(on_key_event)
+                self._push_to_talk_hooks[normalized] = hook_handle
             
             logger.info(f"Registered push-to-talk hotkey: {normalized}")
             return True
@@ -161,6 +164,13 @@ class HotkeyListener:
             if normalized in self._registered_hotkeys:
                 keyboard.remove_hotkey(self._registered_hotkeys[normalized])
                 del self._registered_hotkeys[normalized]
+            
+            if normalized in self._push_to_talk_hooks:
+                try:
+                    keyboard.unhook(self._push_to_talk_hooks[normalized])
+                except (KeyError, ValueError):
+                    pass  # Hook already removed or invalid
+                del self._push_to_talk_hooks[normalized]
             
             if normalized in self._hotkey_handlers:
                 del self._hotkey_handlers[normalized]

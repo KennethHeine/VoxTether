@@ -77,11 +77,11 @@ class Transcriber:
                 # torch not installed, try ctranslate2 directly
                 try:
                     import ctranslate2
-                    if "cuda" in ctranslate2.get_supported_compute_types("auto"):
+                    if "cuda" in ctranslate2.get_supported_compute_types("cuda"):
                         device = "cuda"
                     else:
                         device = "cpu"
-                except (ImportError, ModuleNotFoundError, RuntimeError) as e:
+                except (ImportError, ModuleNotFoundError, RuntimeError, ValueError) as e:
                     logger.debug(f"ctranslate2 CUDA detection failed: {e}")
                     device = "cpu"
         
@@ -180,9 +180,9 @@ class Transcriber:
         except ImportError:
             try:
                 import ctranslate2
-                cuda_available = "cuda" in ctranslate2.get_supported_compute_types("auto")
-            except Exception:
-                pass
+                cuda_available = "cuda" in ctranslate2.get_supported_compute_types("cuda")
+            except (ImportError, ValueError, RuntimeError):
+                pass  # CUDA detection failed, assume not available
         
         return DeviceInfo(
             device_type=self._actual_device or ("cuda" if cuda_available else "cpu"),

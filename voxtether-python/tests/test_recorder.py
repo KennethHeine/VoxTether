@@ -1,18 +1,16 @@
 """Tests for the recorder module."""
 
-import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import sys
+from unittest.mock import patch
 
 import pytest
 
 
-# Skip all tests in this module if PortAudio is not available (Linux CI)
+# Skip all tests in this module if PortAudio/sounddevice is not available (Linux CI)
 try:
-    import sounddevice
+    import sounddevice  # noqa: F401 - used for availability check
     PORTAUDIO_AVAILABLE = True
-except OSError:
+except (OSError, ModuleNotFoundError):
     PORTAUDIO_AVAILABLE = False
 
 pytestmark = pytest.mark.skipif(

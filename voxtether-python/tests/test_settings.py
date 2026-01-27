@@ -4,9 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
-from src.settings import Settings, SettingsService, get_app_data_path
+from src.settings import Settings, SettingsService
 
 
 class TestSettings:

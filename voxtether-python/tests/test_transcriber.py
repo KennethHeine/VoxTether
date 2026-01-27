@@ -1,8 +1,6 @@
 """Tests for the transcriber module."""
 
-import tempfile
-from pathlib import Path
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 
 import pytest
 
