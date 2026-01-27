@@ -36,6 +36,9 @@ jobs:
     - name: Run tests
       run: pytest tests/ -v --tb=short
 
+    - name: Build executable with PyInstaller
+      run: python build.py --output dist
+
     - name: Upload test results
       uses: actions/upload-artifact@v6
       if: always()
