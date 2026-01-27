@@ -81,7 +81,8 @@ class Transcriber:
                         device = "cuda"
                     else:
                         device = "cpu"
-                except Exception:
+                except (ImportError, ModuleNotFoundError, RuntimeError) as e:
+                    logger.debug(f"ctranslate2 CUDA detection failed: {e}")
                     device = "cpu"
         
         if compute_type == "auto":

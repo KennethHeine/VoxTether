@@ -186,8 +186,10 @@ class VoxTetherApp:
                 # Clean up temp file
                 try:
                     result.file_path.unlink()
-                except Exception:
-                    pass
+                except FileNotFoundError:
+                    pass  # File already deleted
+                except OSError as e:
+                    logger.warning(f"Failed to delete temp file: {e}")
         
         thread = threading.Thread(target=transcribe, daemon=True)
         thread.start()

@@ -33,7 +33,7 @@ dependencies = [
     "pystray>=0.19.5",
     "keyboard>=0.13.5",
     "pyperclip>=1.8.2",
-    "Pillow>=10.0.0",
+    "Pillow>=10.2.0",
     "numpy>=1.24.0",
     "huggingface-hub>=0.20.0",
     "tqdm>=4.66.0",
@@ -54,7 +54,7 @@ cuda = [
 ]
 
 [project.scripts]
-voxtether = "voxtether.main:main"
+voxtether = "main:main"
 
 [project.urls]
 Homepage = "https://github.com/KennethHeine/VoxTether"
