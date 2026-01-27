@@ -21,12 +21,7 @@
     <Company>VoxTether</Company>
     <Product>VoxTether</Product>
     <Copyright>Copyright © 2024</Copyright>
-    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="Assets\icon.ico" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />

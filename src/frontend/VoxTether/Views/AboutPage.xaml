@@ -9,7 +9,9 @@
         <StackPanel Spacing="16" Padding="0,0,20,20" MaxWidth="600">
             <!-- App Icon and Name -->
             <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,0,0,16">
-                <Image Source="/Assets/icon.png" Width="64" Height="64" />
+                <Border Width="64" Height="64" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                    <FontIcon Glyph="&#xE720;" FontSize="32" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="VoxTether" Style="{StaticResource TitleTextBlockStyle}" />
                     <TextBlock x:Name="VersionText" Text="Version 2.0.0" Opacity="0.7" />
