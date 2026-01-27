@@ -19,8 +19,6 @@ const MODEL_INFO = {
 // Application state
 let settings = {};
 let isCapturingHotkey = false;
-// eslint-disable-next-line no-unused-vars
-let currentDownload = null;  // Tracks ongoing download for potential cancellation
 
 // ============================================================================
 // Initialization
@@ -159,11 +157,6 @@ function initializeEventListeners() {
 }
 
 function setupIPCListeners() {
-    // Download progress updates
-    window.voxtether.onDownloadProgress((data) => {
-        updateDownloadProgress(data);
-    });
-
     // Recording state changes
     window.voxtether.onRecordingStateChanged((isRecording) => {
         updateStatus(isRecording ? 'Recording...' : 'Ready', isRecording ? 'recording' : 'ready');
@@ -312,9 +305,14 @@ async function loadModels() {
             errorName.textContent = 'Backend not available';
             const errorDesc = document.createElement('div');
             errorDesc.className = 'model-description';
-            errorDesc.textContent = 'Start the backend to manage models';
+            errorDesc.textContent = 'Start the backend server to view models';
+            const errorHint = document.createElement('div');
+            errorHint.className = 'model-description';
+            errorHint.style.marginTop = '10px';
+            errorHint.textContent = 'Run: python cli.py serve';
             errorCard.appendChild(errorName);
             errorCard.appendChild(errorDesc);
+            errorCard.appendChild(errorHint);
             modelsGrid.appendChild(errorCard);
             return;
         }
@@ -328,7 +326,7 @@ async function loadModels() {
         if (downloadedModels.length === 0) {
             const option = document.createElement('option');
             option.value = '';
-            option.textContent = 'No models downloaded';
+            option.textContent = 'No models available - use CLI to download';
             modelSelect.appendChild(option);
         } else {
             for (const m of downloadedModels) {
@@ -342,16 +340,41 @@ async function loadModels() {
             }
         }
 
-        // Update models grid
+        // Update models grid - only show downloaded models
         modelsGrid.innerHTML = '';
 
-        // Sort models by size
-        const sortedModels = Object.values(MODEL_INFO);
+        // Filter to only downloaded models
+        const availableModels = models.filter(m => m.downloaded);
 
-        for (const modelInfo of sortedModels) {
-            const apiModel = models.find(m => m.name === modelInfo.name) || {};
-            const isDownloaded = apiModel.downloaded || false;
-            const isActive = apiModel.name === currentModel;
+        if (availableModels.length === 0) {
+            // Show message about using CLI
+            const noModelsCard = document.createElement('div');
+            noModelsCard.className = 'model-card';
+
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'model-name';
+            titleDiv.textContent = 'No Models Downloaded';
+            noModelsCard.appendChild(titleDiv);
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'model-description';
+            msgDiv.textContent = 'Use the backend CLI to download models:';
+            noModelsCard.appendChild(msgDiv);
+
+            const cmdDiv = document.createElement('div');
+            cmdDiv.className = 'model-size';
+            cmdDiv.style.fontFamily = 'monospace';
+            cmdDiv.style.marginTop = '10px';
+            cmdDiv.textContent = 'python cli.py download small';
+            noModelsCard.appendChild(cmdDiv);
+
+            modelsGrid.appendChild(noModelsCard);
+            return;
+        }
+
+        for (const model of availableModels) {
+            const modelInfo = MODEL_INFO[model.name] || { displayName: model.display_name, sizeMb: model.size_mb, description: model.description };
+            const isActive = model.name === currentModel;
 
             // Create card using DOM methods to prevent XSS
             const card = document.createElement('div');
@@ -359,45 +382,39 @@ async function loadModels() {
 
             const nameDiv = document.createElement('div');
             nameDiv.className = 'model-name';
-            nameDiv.textContent = modelInfo.displayName;
+            nameDiv.textContent = modelInfo.displayName || model.display_name;
             card.appendChild(nameDiv);
 
             const descDiv = document.createElement('div');
             descDiv.className = 'model-description';
-            descDiv.textContent = modelInfo.description;
+            descDiv.textContent = modelInfo.description || model.description;
             card.appendChild(descDiv);
 
             const sizeDiv = document.createElement('div');
             sizeDiv.className = 'model-size';
-            sizeDiv.textContent = `~${formatSize(modelInfo.sizeMb * 1024 * 1024)}`;
+            sizeDiv.textContent = `~${formatSize((modelInfo.sizeMb || model.size_mb) * 1024 * 1024)}`;
             card.appendChild(sizeDiv);
 
             const statusDiv = document.createElement('div');
-            statusDiv.className = `model-status ${isDownloaded ? 'downloaded' : 'not-downloaded'}`;
-            statusDiv.textContent = isDownloaded ? '✓ Downloaded' : '○ Not downloaded';
+            statusDiv.className = 'model-status downloaded';
+            statusDiv.textContent = isActive ? '✓ Active' : '✓ Downloaded';
             card.appendChild(statusDiv);
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'model-actions';
 
-            if (isDownloaded) {
+            if (!isActive) {
                 const loadBtn = document.createElement('button');
-                loadBtn.className = 'btn btn-secondary btn-small';
-                loadBtn.textContent = isActive ? '✓ Active' : 'Load';
-                loadBtn.addEventListener('click', () => loadModel(modelInfo.name));
+                loadBtn.className = 'btn btn-primary btn-small';
+                loadBtn.textContent = 'Load Model';
+                loadBtn.addEventListener('click', () => loadModel(model.name));
                 actionsDiv.appendChild(loadBtn);
-
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn btn-danger btn-small';
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.addEventListener('click', () => deleteModel(modelInfo.name));
-                actionsDiv.appendChild(deleteBtn);
             } else {
-                const downloadBtn = document.createElement('button');
-                downloadBtn.className = 'btn btn-primary btn-small';
-                downloadBtn.textContent = 'Download';
-                downloadBtn.addEventListener('click', () => downloadModel(modelInfo.name));
-                actionsDiv.appendChild(downloadBtn);
+                const activeSpan = document.createElement('span');
+                activeSpan.className = 'btn btn-secondary btn-small';
+                activeSpan.style.opacity = '0.7';
+                activeSpan.textContent = '✓ Currently Active';
+                actionsDiv.appendChild(activeSpan);
             }
 
             card.appendChild(actionsDiv);
@@ -417,63 +434,12 @@ async function loadModels() {
     }
 }
 
-async function downloadModel(modelName) {
-    const progressDiv = document.getElementById('download-progress');
-    const progressModelName = progressDiv.querySelector('.progress-model-name');
-    const progressPercent = progressDiv.querySelector('.progress-percent');
-    const progressFill = progressDiv.querySelector('.progress-fill');
-    const progressDownloaded = progressDiv.querySelector('.progress-downloaded');
-    const progressSpeed = progressDiv.querySelector('.progress-speed');
-
-    progressModelName.textContent = `Downloading ${modelName}...`;
-    progressPercent.textContent = '0%';
-    progressFill.style.width = '0%';
-    progressDownloaded.textContent = '0 MB';
-    progressSpeed.textContent = '0 MB/s';
-    progressDiv.classList.remove('hidden');
-
-    currentDownload = modelName;
-
-    try {
-        const result = await window.voxtether.downloadModel(modelName);
-
-        if (result.success) {
-            showNotification(`Model ${modelName} downloaded successfully`, 'success');
-            await loadModels();
-        } else {
-            showNotification(`Failed to download model: ${result.error}`, 'error');
-        }
-    } catch (error) {
-        console.error('Download failed:', error);
-        showNotification(`Download failed: ${error.message}`, 'error');
-    } finally {
-        progressDiv.classList.add('hidden');
-        currentDownload = null;
-    }
-}
-
-function updateDownloadProgress(data) {
-    const progressDiv = document.getElementById('download-progress');
-
-    if (progressDiv.classList.contains('hidden')) return;
-
-    const progressPercent = progressDiv.querySelector('.progress-percent');
-    const progressFill = progressDiv.querySelector('.progress-fill');
-    const progressDownloaded = progressDiv.querySelector('.progress-downloaded');
-    const progressSpeed = progressDiv.querySelector('.progress-speed');
-
-    const percent = Math.round(data.progress * 100);
-    progressPercent.textContent = `${percent}%`;
-    progressFill.style.width = `${percent}%`;
-    progressDownloaded.textContent = `${data.downloaded_mb.toFixed(1)} MB / ${data.total_mb.toFixed(1)} MB`;
-    progressSpeed.textContent = `${data.speed_mbps.toFixed(1)} MB/s`;
-}
-
 async function loadModel(modelName) {
     try {
+        showNotification(`Loading model ${modelName}...`, 'info');
         const result = await window.voxtether.loadModel(modelName);
         if (result.success) {
-            showNotification(`Model ${modelName} loaded`, 'success');
+            showNotification(`Model ${modelName} loaded successfully`, 'success');
             await loadModels();
         } else {
             showNotification(`Failed to load model: ${result.error}`, 'error');
@@ -481,25 +447,6 @@ async function loadModel(modelName) {
     } catch (error) {
         console.error('Failed to load model:', error);
         showNotification(`Failed to load model: ${error.message}`, 'error');
-    }
-}
-
-async function deleteModel(modelName) {
-    if (!confirm(`Are you sure you want to delete the ${modelName} model?`)) {
-        return;
-    }
-
-    try {
-        const result = await window.voxtether.deleteModel(modelName);
-        if (result.success) {
-            showNotification(`Model ${modelName} deleted`, 'success');
-            await loadModels();
-        } else {
-            showNotification(`Failed to delete model: ${result.error}`, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to delete model:', error);
-        showNotification(`Failed to delete model: ${error.message}`, 'error');
     }
 }
 
