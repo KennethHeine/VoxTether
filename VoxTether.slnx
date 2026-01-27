@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/VoxTether.Core/VoxTether.Core.csproj" />
+    <Project Path="src/VoxTether.Diagnostics/VoxTether.Diagnostics.csproj" />
     <Project Path="src/VoxTether.Infrastructure/VoxTether.Infrastructure.csproj" />
     <Project Path="src/VoxTether.Transcription/VoxTether.Transcription.csproj" />
     <Project Path="src/VoxTether/VoxTether.csproj" />

@@ -2,7 +2,7 @@
 
 **Created:** January 27, 2026  
 **Last Updated:** January 27, 2026  
-**Status:** Active Research  
+**Status:** 🔴 **BLOCKED** - Pre-built CUDA binaries crash on RTX 40-series  
 **Goal:** Find better transcription solutions that work reliably with NVIDIA GPUs
 
 ---
@@ -11,24 +11,40 @@
 
 | Component | Details |
 |-----------|---------|
-| **GPU** | NVIDIA GeForce RTX 4070 Laptop GPU (Compute 8.9) |
+| **GPU** | NVIDIA GeForce RTX 4070 Laptop GPU (Compute 8.9 / Ada Lovelace) |
 | **Driver** | 573.09 (supports CUDA 12.8) |
 | **Current Model** | `ggml-small.en.bin` (~466 MB) |
-| **Current Backend** | ✅ **CUDA 12.4 (FIXED!)** |
-| **CUDA Status** | ✅ **Self-contained build - no toolkit needed!** |
+| **Current Backend** | ❌ **CPU only** (CUDA crashes) |
+| **CUDA Status** | ❌ **Both CUDA 11.8 and 12.4 pre-built binaries crash** |
 
 ---
 
-## Problem Summary (RESOLVED)
+## Problem Summary (NOT RESOLVED)
 
-~~The CUDA backend crashes with `STATUS_STACK_BUFFER_OVERRUN` because:~~
-~~- Pre-built whisper.cpp CUDA 11.8 binaries require matching ABI~~
-~~- The `ggml-cuda.dll` expects different cuBLAS ABI than installed~~
+**Both CUDA 11.8 AND CUDA 12.4 pre-built binaries crash with the same error:**
 
-**Solution:** Switch to CUDA 12.4 build which is **self-contained** (bundles all DLLs).
+```
+Exit code: -1073740791 (0xC0000409)
+STATUS_STACK_BUFFER_OVERRUN
+```
 
-Your driver (573.09) supports CUDA 12.8, which is backwards compatible with 12.4.
-No separate CUDA Toolkit installation needed!
+### Root Cause Analysis
+
+| Test | Result |
+|------|--------|
+| CPU backend (`main.exe`) | ✅ Works |
+| CUDA 11.8 build | ❌ Crashes with 0xC0000409 |
+| CUDA 12.4 build | ❌ Crashes with 0xC0000409 |
+| CUDA 12.4 with `--no-gpu` flag | ❌ Still crashes! |
+
+**Key Discovery:** The pre-built whisper.cpp CUDA binaries are compiled with `ARCHS = 520` (Maxwell/Pascal), but the RTX 4070 requires `sm_89` (Ada Lovelace). The binaries crash even before GPU code runs.
+
+### Why Pre-built Binaries Fail
+
+1. whisper.cpp releases are built for older GPU architectures (sm_52)
+2. Your RTX 4070 Laptop GPU is Ada Lovelace (sm_89 / Compute 8.9)
+3. While CUDA is generally backwards compatible, there may be runtime issues
+4. The crash happens in the CUDA runtime initialization, even with `--no-gpu`
 
 See [cuda-investigation-report.md](cuda-investigation-report.md) for the original investigation.
 
@@ -228,26 +244,39 @@ Different whisper.cpp versions have different CUDA compatibility:
 
 ## Changelog
 
-### January 27, 2026 (Update 2) - SOLUTION IMPLEMENTED! 🎉
-**VoxTether now uses CUDA 12.4 backend instead of CUDA 11.8!**
+### January 27, 2026 (Update 3) - CUDA 12.4 Also Crashes 😞
+
+**Both CUDA 11.8 and CUDA 12.4 pre-built binaries crash with the same error.**
+
+| Backend | Status | Notes |
+|---------|--------|-------|
+| CPU (`main.exe`) | ✅ Works | Exit code 2 (expected for test audio) |
+| CUDA 11.8 | ❌ Crashes | `0xC0000409 STATUS_STACK_BUFFER_OVERRUN` |
+| CUDA 12.4 | ❌ Crashes | `0xC0000409 STATUS_STACK_BUFFER_OVERRUN` |
+
+**Key Finding:** The whisper-bench tool shows `CUDA : ARCHS = 520`, meaning pre-built binaries target Maxwell/Pascal GPUs, not Ada Lovelace (RTX 40-series).
+
+**Next Steps:**
+1. ⏳ **Build from source** - CMake being installed, will compile with `-DCMAKE_CUDA_ARCHITECTURES=89`
+2. Consider faster-whisper (Python-based, has better GPU compatibility)
+
+### January 27, 2026 (Update 2) - Tested CUDA 12.4 Build
+
+Downloaded and tested the CUDA 12.4 self-contained build:
+- All CUDA 12 DLLs present: `cublas64_12.dll`, `cublasLt64_12.dll`, `cudart64_12.dll`
+- **Still crashes** with same `STATUS_STACK_BUFFER_OVERRUN` error
+- Crashes even with `--no-gpu` flag (rules out GPU-specific issue)
 
 The key discovery: whisper.cpp v1.8.3 provides TWO CUDA builds:
 - `whisper-cublas-11.8.0-bin-x64.zip` (62 MB) - requires separate CUDA Toolkit
 - `whisper-cublas-12.4.0-bin-x64.zip` (460 MB) - **SELF-CONTAINED with all DLLs**
 
-Your driver 573.09 supports CUDA 12.8, which is backwards compatible with 12.4.
-
-**Changes made:**
+**Changes made to VoxTether (PR #62):**
 - Updated `BackendDownloadService.cs` to download CUDA 12.4 build
 - Updated `BackendSelectionService.cs` to check for CUDA 12 DLLs
 - Updated tests for CUDA 12 DLL names
-- No separate CUDA Toolkit installation needed!
 
-**To test:**
-1. Open VoxTether Settings → Performance
-2. Click "Download CUDA Backend" (will download ~460 MB)
-3. Set Backend to "CUDA" 
-4. Test transcription - should now work on GPU!
+**Note:** These changes are still useful (CUDA 12.4 is self-contained), but don't fix the crash on RTX 40-series.
 
 ### January 27, 2026
 - Initial research document created
