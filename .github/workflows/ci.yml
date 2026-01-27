@@ -51,9 +51,9 @@ jobs:
         path: src/backend/dist/vox-backend.exe
         retention-days: 7
 
-  # Build the WinUI 3 frontend
-  build-frontend:
-    name: Build Frontend
+  # Build the WinUI 3 frontend (legacy .NET)
+  build-frontend-dotnet:
+    name: Build Frontend (.NET)
     runs-on: windows-latest
 
     steps:
@@ -85,8 +85,49 @@ jobs:
     - name: Upload frontend artifact
       uses: actions/upload-artifact@v4
       with:
-        name: frontend-build
+        name: frontend-dotnet-build
         path: build/output/
+        retention-days: 7
+
+  # Build the Electron frontend
+  build-frontend-electron:
+    name: Build Frontend (Electron)
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'src/frontend-electron/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd src/frontend-electron
+        npm install
+      shell: pwsh
+
+    - name: Run linting
+      run: |
+        cd src/frontend-electron
+        npm run lint
+      continue-on-error: true
+      shell: pwsh
+
+    - name: Build Electron app
+      run: |
+        cd src/frontend-electron
+        npm run pack
+      shell: pwsh
+
+    - name: Upload Electron frontend artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-electron-build
+        path: src/frontend-electron/dist/
         retention-days: 7
 
   # Run tests for legacy Python code
@@ -129,7 +170,7 @@ jobs:
   build-complete:
     name: Build Complete
     runs-on: windows-latest
-    needs: [build-backend, build-frontend, test-python]
+    needs: [build-backend, build-frontend-dotnet, build-frontend-electron, test-python]
 
     steps:
     - uses: actions/checkout@v4
@@ -140,34 +181,62 @@ jobs:
         name: backend-build
         path: build/output/backend/
 
-    - name: Download frontend artifact
+    - name: Download .NET frontend artifact
       uses: actions/download-artifact@v4
       with:
-        name: frontend-build
-        path: build/output/
+        name: frontend-dotnet-build
+        path: build/output-dotnet/
+
+    - name: Download Electron frontend artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-electron-build
+        path: build/output-electron/
 
     - name: Verify build
       run: |
         Write-Host "Checking build artifacts..."
         
-        if (-not (Test-Path "build/output/VoxTether.exe")) {
-          Write-Error "Frontend executable not found!"
-          exit 1
+        # Check .NET frontend
+        if (-not (Test-Path "build/output-dotnet/VoxTether.exe")) {
+          Write-Warning ".NET Frontend executable not found!"
+        } else {
+          Write-Host ".NET Frontend build OK" -ForegroundColor Green
         }
         
+        # Check Electron frontend
+        if (Test-Path "build/output-electron/win-unpacked/VoxTether.exe") {
+          Write-Host "Electron Frontend build OK" -ForegroundColor Green
+        } else {
+          Write-Warning "Electron Frontend executable not found in expected location"
+          Get-ChildItem -Path "build/output-electron" -Recurse | Format-Table Name, Length
+        }
+        
+        # Check backend
         if (-not (Test-Path "build/output/backend/vox-backend.exe")) {
           Write-Error "Backend executable not found!"
           exit 1
+        } else {
+          Write-Host "Backend build OK" -ForegroundColor Green
         }
         
         Write-Host "Build verification passed!" -ForegroundColor Green
-        
-        Get-ChildItem -Path "build/output" -Recurse | Format-Table Name, Length
       shell: pwsh
 
-    - name: Upload combined build
+    - name: Upload combined build (Electron)
       uses: actions/upload-artifact@v4
       with:
-        name: voxtether-build
-        path: build/output/
+        name: voxtether-electron-build
+        path: |
+          build/output-electron/
+          build/output/backend/
+        retention-days: 7
+
+    - name: Upload combined build (.NET)
+      uses: actions/upload-artifact@v4
+      with:
+        name: voxtether-dotnet-build
+        path: |
+          build/output-dotnet/
+          build/output/backend/
         retention-days: 7

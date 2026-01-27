@@ -7,7 +7,7 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 - **Push-to-talk recording**: Press and hold a global hotkey to record, release to transcribe
 - **GPU acceleration**: Native CUDA 12 support with automatic fallback to CPU
 - **Fully offline**: Uses faster-whisper for local speech-to-text, no internet required after model download
-- **Modern Windows UI**: Built with WinUI 3 for native Windows 11 Fluent Design
+- **Modern Windows UI**: Available in WinUI 3 (.NET) or Electron versions
 - **Text insertion**: Automatically types transcribed text at your cursor position
 - **System tray**: Runs quietly in the background
 - **Model management**: Download models on-demand from HuggingFace
@@ -16,7 +16,9 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 ## Architecture
 
 VoxTether uses a hybrid architecture:
-- **Frontend**: WinUI 3 (.NET 8.0) - Native Windows UI, system tray, hotkey detection, audio recording
+- **Frontend**: Choose from:
+  - **Electron** (Recommended) - Cross-platform, modern JavaScript/HTML/CSS UI
+  - **WinUI 3** (.NET 8.0) - Native Windows UI with Fluent Design
 - **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
 
 See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
@@ -42,6 +44,30 @@ See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
 3. Follow the first-run setup to download a model
 
 ### From Source (Development)
+
+#### Option A: Electron Frontend (Recommended)
+
+```powershell
+# Clone the repository
+git clone https://github.com/KennethHeine/VoxTether.git
+cd VoxTether
+
+# --- Backend (Python) ---
+cd src/backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+# Run backend server
+python -m uvicorn main:app --port 5678
+
+# --- Frontend (Electron) --- (in a new terminal)
+cd src/frontend-electron
+npm install
+npm start
+```
+
+#### Option B: WinUI 3 Frontend (.NET)
 
 ```powershell
 # Clone the repository
@@ -227,6 +253,13 @@ python -m src.main --version
 ```
 VoxTether/
 ├── src/
+│   ├── frontend-electron/       # Electron Frontend (Recommended)
+│   │   ├── src/
+│   │   │   ├── main.js          # Electron main process
+│   │   │   ├── preload.js       # Secure IPC bridge
+│   │   │   └── renderer/        # UI (HTML/CSS/JS)
+│   │   └── package.json
+│   │
 │   ├── frontend/                # WinUI 3 Frontend (.NET 8.0)
 │   │   ├── VoxTether/           # Main WinUI 3 application
 │   │   ├── VoxTether.Core/      # Interfaces and models
@@ -256,6 +289,10 @@ VoxTether/
 cd src/backend
 pip install pytest
 pytest
+
+# Electron frontend (lint only)
+cd src/frontend-electron
+npm run lint
 
 # .NET frontend tests
 cd src/frontend
