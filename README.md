@@ -2,55 +2,30 @@
 
 Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 
-## Two Versions Available
-
-VoxTether is available in two implementations. **For most users, we recommend the Python version.**
-
-| Version | GPU Support | Status | Best For |
-|---------|-------------|--------|----------|
-| **[Python](voxtether-python/)** | ✅ Native CUDA 12 | **Active Development** | RTX 40-series, modern NVIDIA GPUs |
-| [.NET](src/) | ⚠️ CUDA 11.8 only | Maintenance Mode | Older GPUs, CPU-only systems |
-
-> 📖 **See [Installation Guide](docs/INSTALLATION.md) for detailed setup instructions.**
-
-### Why Two Versions?
-
-The original .NET version uses whisper.cpp, which has compatibility issues with NVIDIA RTX 40-series GPUs. The Python version uses faster-whisper with native CUDA 12 support, solving these GPU issues and providing:
-
-- **4x faster** transcription than OpenAI Whisper
-- **Direct HuggingFace model support** - no manual conversion needed
-- **Simpler installation** - `pip install faster-whisper` handles CUDA
-
 ## Features
 
 - **Push-to-talk recording**: Press and hold a global hotkey to record, release to transcribe
-- **Fully offline**: Uses whisper.cpp/.NET or faster-whisper/Python for local speech-to-text
+- **Fully offline**: Uses whisper.cpp for local speech-to-text
 - **Text insertion**: Automatically types the transcribed text at your cursor position
 - **System tray**: Runs quietly in the background
 - **Privacy-first**: No network calls, no telemetry, all processing is local
 
 ## Quick Install
 
-### Python Version (Recommended)
-
-1. Download `VoxTether-Python-x.x.x-win-x64.zip` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
-2. Extract and run `VoxTether.exe`
-3. Follow the first-run setup to download a model
-
-**From source:**
-```bash
-cd voxtether-python
-pip install -r requirements.txt
-python -m src.main
-```
-
-### .NET Version (Legacy)
+### Windows Installer (Recommended)
 
 1. Download `VoxTether-Setup-x.x.x.exe` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
 2. Run the installer (no admin required)
 3. Launch from Start Menu
 
-**From source:**
+### Portable Version
+
+1. Download `VoxTether-x.x.x-win-x64-portable.zip` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
+2. Extract to a folder of your choice
+3. Run `VoxTether.exe`
+
+### From Source
+
 ```bash
 dotnet build --configuration Release
 dotnet publish src/VoxTether/VoxTether.csproj -c Release -r win-x64 --self-contained
@@ -277,9 +252,7 @@ The VoxTether installer automatically handles upgrades:
 
 ## Development
 
-> 📖 **See [Architecture Guide](docs/ARCHITECTURE.md) for detailed documentation on how both versions work.**
-
-### .NET Architecture
+### Architecture
 
 ```
 src/
@@ -292,27 +265,29 @@ tests/
 └── VoxTether.Core.Tests/      # Unit tests
 ```
 
-### Python Architecture
-
-```
-voxtether-python/
-├── src/
-│   ├── main.py                # Entry point, VoxTetherApp
-│   ├── recorder.py            # Audio recording
-│   ├── transcriber.py         # faster-whisper integration
-│   ├── hotkey.py              # Global hotkey listener
-│   ├── injector.py            # Text injection
-│   └── ui/                    # Settings and setup windows
-└── tests/                     # Unit tests
-```
-
-### Key Interfaces (.NET)
+### Key Interfaces
 
 - `IAudioRecorder` - Audio recording to WAV
 - `ITranscriptionEngine` - Speech-to-text transcription
 - `ITextInjector` - Text insertion into focused applications
 - `IHotkeyService` - Global hotkey detection
 - `ITextPostProcessor` - Post-processing hook (V2 extension point)
+
+### Build Commands
+
+```bash
+# Restore dependencies
+dotnet restore
+
+# Build
+dotnet build --configuration Release
+
+# Run tests
+dotnet test
+
+# Publish
+dotnet publish src/VoxTether/VoxTether.csproj -c Release -r win-x64 --self-contained
+```
 
 ## Releases
 
@@ -335,12 +310,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Credits
 
-### .NET Version
 - [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - Fast C++ implementation of OpenAI's Whisper
 - [NAudio](https://github.com/naudio/NAudio) - .NET audio library
-
-### Python Version
-- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) - Fast Whisper transcription with CTranslate2
-- [CTranslate2](https://github.com/OpenNMT/CTranslate2) - Efficient inference engine
-- [pystray](https://github.com/moses-palmer/pystray) - System tray support
-- [sounddevice](https://python-sounddevice.readthedocs.io/) - Audio recording

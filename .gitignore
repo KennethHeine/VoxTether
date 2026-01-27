@@ -53,39 +53,8 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-## Python
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Virtual environments
-venv/
-.venv/
-env/
-ENV/
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-*.egg
-*.whl
-
-# PyInstaller
-*.spec
-
-# Pytest
-.pytest_cache/
-.coverage
-htmlcov/
-
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# Type checking
-.mypy_cache/
-.ruff_cache/

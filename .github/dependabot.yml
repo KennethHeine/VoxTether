@@ -9,8 +9,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-
-  - package-ecosystem: "pip"
-    directory: "/voxtether-python"
-    schedule:
-      interval: "weekly"
