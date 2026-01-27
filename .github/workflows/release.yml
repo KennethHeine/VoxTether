@@ -119,27 +119,28 @@ jobs:
         $version = "${{ needs.build-frontend.outputs.version }}"
         
         # Create README
-        @"
-VoxTether $version
-==================
-
-Push-to-talk dictation for Windows. Fully offline speech-to-text.
-
-Getting Started:
-1. Run VoxTether.exe
-2. On first run, you'll be prompted to download a speech recognition model
-3. Press Ctrl+Shift+Space (default hotkey) to record
-4. Release to transcribe and paste the text
-
-Requirements:
-- Windows 10/11 (64-bit)
-- For GPU acceleration: NVIDIA GPU with CUDA support
-
-For more information, visit:
-https://github.com/KennethHeine/VoxTether
-
-License: MIT
-"@ | Out-File "build\portable\README.txt" -Encoding UTF8
+        $readme = @"
+        VoxTether $version
+        ==================
+        
+        Push-to-talk dictation for Windows. Fully offline speech-to-text.
+        
+        Getting Started:
+        1. Run VoxTether.exe
+        2. On first run, you'll be prompted to download a speech recognition model
+        3. Press Ctrl+Shift+Space (default hotkey) to record
+        4. Release to transcribe and paste the text
+        
+        Requirements:
+        - Windows 10/11 (64-bit)
+        - For GPU acceleration: NVIDIA GPU with CUDA support
+        
+        For more information, visit:
+        https://github.com/KennethHeine/VoxTether
+        
+        License: MIT
+        "@
+        $readme | Out-File "build\portable\README.txt" -Encoding UTF8
         
         # Copy license
         if (Test-Path "LICENSE") {
