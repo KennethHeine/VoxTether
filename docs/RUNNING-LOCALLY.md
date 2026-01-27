@@ -2,14 +2,22 @@
 
 This guide explains how to run VoxTether from source for development purposes.
 
+## Architecture Overview
+
+VoxTether uses a client-server architecture:
+- **Server (Backend)**: Python FastAPI service that handles transcription
+- **Client (Frontend)**: Electron desktop application
+
+The backend runs as a standalone Python server (no PyInstaller or exe bundling needed).
+
 ## Prerequisites
 
 ### Required Software
 
 | Software | Version | Purpose |
 |----------|---------|---------|
-| Python | 3.11+ | Backend runtime |
-| Node.js | 20.x+ | Frontend runtime |
+| Python | 3.11+ | Backend server |
+| Node.js | 20.x+ | Frontend client |
 | npm | 10.x+ | Package management |
 | Git | Latest | Source control |
 
@@ -23,12 +31,19 @@ git --version
 
 ### Hardware Requirements
 
+**Server (Backend):**
 | Requirement | Minimum | Recommended |
 |------------|---------|-------------|
-| OS | Windows 10 (64-bit) | Windows 11 |
+| OS | Any (Windows, Linux, macOS) | Linux/Windows |
 | RAM | 4 GB | 8 GB |
 | Disk Space | 2 GB | 4 GB |
 | GPU | None (CPU works) | NVIDIA with CUDA 12 |
+
+**Client (Frontend):**
+| Requirement | Minimum |
+|------------|---------|
+| OS | Windows 10 (64-bit) |
+| RAM | 2 GB |
 
 ---
 
@@ -41,9 +56,9 @@ cd VoxTether
 
 ---
 
-## Step 2: Set Up the Backend
+## Step 2: Set Up the Backend Server
 
-The backend is a Python FastAPI server that handles transcription.
+The backend is a Python FastAPI server that handles transcription. It runs independently from the client.
 
 ```powershell
 # Navigate to backend

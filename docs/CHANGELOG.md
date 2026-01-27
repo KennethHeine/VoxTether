@@ -6,6 +6,18 @@ All notable changes to VoxTether will be documented in this file.
 
 ### 🚀 Major Changes
 
+#### Complete Client-Server Architecture
+The application is now fully split into separate client and server components:
+
+- **Client (Electron)**: Desktop application for Windows with UI and system tray
+- **Server (Python FastAPI)**: Backend transcription service that runs on localhost or a network server
+
+**Benefits:**
+- **Flexible Deployment**: Run the server on a powerful machine with GPU, clients on any Windows PC
+- **No Bundled Executables**: Backend runs as pure Python - no PyInstaller needed
+- **Easier Updates**: Update client and server independently
+- **Network Support**: Multiple clients can share one backend server
+
 #### Frontend Rewrite: Electron.js
 The entire frontend has been rewritten from WinUI 3 (.NET) to Electron.js for a more modern, maintainable, and potentially cross-platform experience.
 
@@ -22,6 +34,7 @@ The entire frontend has been rewritten from WinUI 3 (.NET) to Electron.js for a 
 - Dark and light theme support (follows system preference)
 - Responsive layout with sidebar navigation
 - Four settings pages: General, Audio, Models, About
+- Backend server connection status indicator
 
 #### General Settings
 - **Push-to-Talk Hotkey**: Customizable key combination capture
@@ -32,6 +45,7 @@ The entire frontend has been rewritten from WinUI 3 (.NET) to Electron.js for a 
 - **Start with Windows**: Auto-launch option
 - **Start Minimized**: Launch directly to system tray
 - **Theme**: System, Light, or Dark mode
+- **Backend Host/Port**: Configure server connection
 
 #### Audio Settings
 - **Input Device Selection**: Choose your microphone

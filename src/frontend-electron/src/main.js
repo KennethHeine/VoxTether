@@ -2,19 +2,18 @@
  * VoxTether Electron - Main Process
  *
  * Entry point for the Electron application. Manages the main window,
- * system tray, backend process lifecycle, and global hotkeys.
+ * system tray, and global hotkeys. Connects to a separate Python backend
+ * server running on localhost.
  */
 
 const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, shell, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
 const http = require('http');
 
 // Application state
 let mainWindow = null;
 let tray = null;
-let backendProcess = null;
 let isRecording = false;
 let settings = null;
 
@@ -24,7 +23,7 @@ const settingsPath = path.join(userDataPath, 'settings.json');
 const modelsPath = path.join(userDataPath, 'models');
 const logsPath = path.join(userDataPath, 'logs');
 
-// Backend configuration
+// Backend configuration - connects to separate Python server on localhost
 const BACKEND_PORT = 5678;
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
 
@@ -45,6 +44,7 @@ const defaultSettings = {
     clipboardDelayMs: 50,
     firstRunCompleted: false,
     backendPort: BACKEND_PORT,
+    backendHost: '127.0.0.1',
     startMinimized: true,
     startWithWindows: false,
     theme: 'system'
@@ -252,129 +252,32 @@ function updateTrayMenu() {
 }
 
 /**
- * Start the Python backend process
+ * Check if the Python backend server is running on localhost
+ * The backend should be started separately with: python -m uvicorn main:app --port 5678
  */
-async function startBackend() {
-    return new Promise((resolve, _reject) => {
-        // Find backend executable
-        const backendPaths = [
-            // Development path
-            path.join(__dirname, '..', '..', 'backend', 'vox-backend.exe'),
-            // Packaged app path
-            path.join(process.resourcesPath, 'backend', 'vox-backend.exe'),
-            // Alternative dev path
-            path.join(__dirname, '..', '..', 'backend', 'dist', 'vox-backend.exe')
-        ];
-
-        let backendPath = null;
-        for (const p of backendPaths) {
-            if (fs.existsSync(p)) {
-                backendPath = p;
-                break;
-            }
-        }
-
-        // If no exe found, try running Python directly (development mode)
-        if (!backendPath) {
-            const mainPyPath = path.join(__dirname, '..', '..', 'backend', 'main.py');
-            if (fs.existsSync(mainPyPath)) {
-                console.log('Starting backend in development mode with Python');
-                backendProcess = spawn('python', ['-m', 'uvicorn', 'main:app', '--port', String(BACKEND_PORT), '--host', '127.0.0.1'], {
-                    cwd: path.dirname(mainPyPath),
-                    stdio: isDebug ? 'inherit' : 'ignore',
-                    detached: false
-                });
+async function checkBackendConnection() {
+    return new Promise((resolve) => {
+        const req = http.get(`${BACKEND_URL}/api/health`, (res) => {
+            if (res.statusCode === 200) {
+                console.log('Backend server is available');
+                resolve(true);
             } else {
-                console.warn('Backend not found. Some features may not work.');
+                console.warn('Backend server returned non-200 status');
                 resolve(false);
-                return;
             }
-        } else {
-            console.log('Starting backend:', backendPath);
-            backendProcess = spawn(backendPath, [], {
-                stdio: isDebug ? 'inherit' : 'ignore',
-                detached: false
-            });
-        }
+        });
 
-        if (backendProcess) {
-            backendProcess.on('error', (err) => {
-                console.error('Backend process error:', err);
-            });
-
-            backendProcess.on('exit', (code) => {
-                console.log('Backend exited with code:', code);
-                backendProcess = null;
-            });
-
-            // Wait for backend to be ready
-            waitForBackend(30000)
-                .then(() => resolve(true))
-                .catch(() => {
-                    console.warn('Backend did not become ready in time');
-                    resolve(false);
-                });
-        } else {
+        req.on('error', () => {
+            console.warn('Backend server not available at', BACKEND_URL);
             resolve(false);
-        }
+        });
+
+        req.setTimeout(5000, () => {
+            req.destroy();
+            console.warn('Backend server connection timeout');
+            resolve(false);
+        });
     });
-}
-
-/**
- * Wait for backend to respond to health check
- */
-function waitForBackend(timeoutMs) {
-    return new Promise((resolve, reject) => {
-        const startTime = Date.now();
-
-        const check = () => {
-            if (Date.now() - startTime > timeoutMs) {
-                reject(new Error('Backend startup timeout'));
-                return;
-            }
-
-            const req = http.get(`${BACKEND_URL}/api/health`, (res) => {
-                if (res.statusCode === 200) {
-                    console.log('Backend is ready');
-                    resolve();
-                } else {
-                    setTimeout(check, 500);
-                }
-            });
-
-            req.on('error', () => {
-                setTimeout(check, 500);
-            });
-
-            req.setTimeout(2000, () => {
-                req.destroy();
-                setTimeout(check, 500);
-            });
-        };
-
-        // Start checking after a brief delay
-        setTimeout(check, 1000);
-    });
-}
-
-/**
- * Stop the backend process
- */
-function stopBackend() {
-    if (backendProcess) {
-        console.log('Stopping backend process');
-
-        // On Windows, we need to kill the process tree
-        if (process.platform === 'win32') {
-            const pid = backendProcess.pid;
-            // Use taskkill with the specific PID
-            spawn('taskkill', ['/pid', String(pid), '/f', '/t'], { stdio: 'ignore' });
-        } else {
-            backendProcess.kill('SIGTERM');
-        }
-
-        backendProcess = null;
-    }
 }
 
 /**
@@ -635,14 +538,15 @@ app.whenReady().then(async () => {
     // Create main window
     createMainWindow();
 
-    // Start backend
+    // Check backend connection (backend should be running separately)
     try {
-        const backendStarted = await startBackend();
-        if (!backendStarted) {
-            console.warn('Backend failed to start. Some features may be unavailable.');
+        const backendAvailable = await checkBackendConnection();
+        if (!backendAvailable) {
+            console.warn('Backend server not available. Please ensure the Python backend is running.');
+            console.warn('Start it with: cd src/backend && python -m uvicorn main:app --port 5678');
         }
     } catch (error) {
-        console.error('Failed to start backend:', error);
+        console.error('Failed to check backend connection:', error);
     }
 
     console.log('VoxTether Electron ready');
@@ -668,9 +572,7 @@ app.on('before-quit', () => {
     app.isQuitting = true;
 });
 
-app.on('will-quit', () => {
-    stopBackend();
-});
+// Note: Backend is managed separately, no cleanup needed here
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {

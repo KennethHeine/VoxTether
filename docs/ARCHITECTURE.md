@@ -1,68 +1,84 @@
 # VoxTether Architecture
 
-This document describes the hybrid architecture of VoxTether, a push-to-talk dictation application for Windows.
+This document describes the client-server architecture of VoxTether, a push-to-talk dictation application.
 
 ## Overview
 
-VoxTether uses a hybrid architecture combining:
+VoxTether uses a **client-server architecture** with complete separation of frontend and backend:
 
-- **Frontend**: Electron 40.x - Modern JavaScript/HTML/CSS UI with system tray integration
-- **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
+- **Client (Frontend)**: Electron 40.x - Desktop application with UI and system tray
+- **Server (Backend)**: Python FastAPI - Speech-to-text transcription service
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Frontend** | Electron 40.x | Windows UI, system tray, hotkeys, settings |
-| **Backend** | Python / FastAPI | Transcription engine, model management |
-| **Transcription** | faster-whisper (CTranslate2) | GPU/CPU speech-to-text |
-| **GPU Support** | CUDA 12 (native) | Hardware acceleration |
+The backend runs as a standalone Python server. It does NOT require PyInstaller or any executable bundling - just Python with the required packages.
+
+| Component | Technology | Deployment |
+|-----------|------------|------------|
+| **Client** | Electron 40.x | Windows desktop application |
+| **Server** | Python / FastAPI | Python script on any machine |
+| **Transcription** | faster-whisper (CTranslate2) | Runs on server |
+| **GPU Support** | CUDA 12 (native) | Server-side only |
 
 ---
 
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        User's Windows PC                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────┐                               │
-│  │         VoxTether.exe (Frontend)         │                               │
-│  │         Electron Application             │                               │
-│  ├─────────────────────────────────────────┤                               │
-│  │  • System Tray Icon                      │                               │
-│  │  • Global Hotkey Detection               │                               │
-│  │  • Settings UI (HTML/CSS/JS)             │                               │
-│  │  • Text Injection (Clipboard)            │                               │
-│  │  • Backend Process Management            │                               │
-│  └─────────────────┬───────────────────────┘                               │
-│                    │                                                        │
-│                    │ HTTP REST API                                          │
-│                    │ (localhost:5678)                                       │
-│                    ▼                                                        │
-│  ┌─────────────────────────────────────────┐                               │
-│  │      vox-backend.exe (Backend)          │                               │
-│  │      Python + FastAPI + PyInstaller     │                               │
-│  ├─────────────────────────────────────────┤                               │
-│  │  • REST API for transcription           │                               │
-│  │  • faster-whisper integration           │                               │
-│  │  • Model management (HuggingFace)       │                               │
-│  │  • CUDA/CPU device management           │                               │
-│  └─────────────────┬───────────────────────┘                               │
-│                    │                                                        │
-│                    ▼                                                        │
-│  ┌─────────────────────────────────────────┐                               │
-│  │           GPU (CUDA) / CPU               │                               │
-│  │     (faster-whisper processing)          │                               │
-│  └─────────────────────────────────────────┘                               │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          CLIENT (User's Windows PC)                          │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌─────────────────────────────────────────┐                               │
+│   │         VoxTether.exe (Electron)         │                               │
+│   ├─────────────────────────────────────────┤                               │
+│   │  • System Tray Icon                      │                               │
+│   │  • Global Hotkey Detection               │                               │
+│   │  • Settings UI (HTML/CSS/JS)             │                               │
+│   │  • Text Injection (Clipboard)            │                               │
+│   │  • Audio Recording (Web Audio API)       │                               │
+│   └─────────────────┬───────────────────────┘                               │
+│                     │                                                        │
+└─────────────────────┼────────────────────────────────────────────────────────┘
+                      │
+                      │ HTTP REST API
+                      │ (localhost:5678 or network)
+                      ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         SERVER (Same machine or remote)                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌─────────────────────────────────────────┐                               │
+│   │      Python Backend (FastAPI + Uvicorn)  │                               │
+│   ├─────────────────────────────────────────┤                               │
+│   │  • REST API for transcription            │                               │
+│   │  • faster-whisper integration            │                               │
+│   │  • Model management (HuggingFace)        │                               │
+│   │  • CUDA/CPU device management            │                               │
+│   └─────────────────┬───────────────────────┘                               │
+│                     │                                                        │
+│                     ▼                                                        │
+│   ┌─────────────────────────────────────────┐                               │
+│   │           GPU (CUDA) / CPU               │                               │
+│   │     (faster-whisper processing)          │                               │
+│   └─────────────────────────────────────────┘                               │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Deployment Options
+
+### Option 1: Same Machine (localhost)
+Both client and server run on the same Windows PC. The server binds to `127.0.0.1:5678`.
+
+### Option 2: Network Deployment
+The server runs on a dedicated machine (with GPU), and multiple clients connect over the network. The server binds to `0.0.0.0:5678`.
 
 ---
 
 ## Component Responsibilities
 
-### Frontend (Electron)
+### Client (Electron)
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
@@ -73,7 +89,7 @@ VoxTether uses a hybrid architecture combining:
 | Backend Client | `main.js` | HTTP client for backend API |
 | Settings Service | `main.js` | Load/save user preferences |
 
-### Backend (Python / FastAPI)
+### Server (Python / FastAPI)
 
 | Component | Location | Purpose |
 |-----------|----------|---------|

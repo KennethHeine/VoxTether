@@ -12,60 +12,71 @@ Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 - **System tray**: Runs quietly in the background
 - **Model management**: Download models on-demand from HuggingFace
 - **Privacy-first**: No network calls, no telemetry, all processing is local
+- **Client-Server Architecture**: Flexible deployment with separate frontend and backend
 
 ## Architecture
 
-VoxTether uses a hybrid architecture:
-- **Frontend**: Electron 40.x - Modern JavaScript/HTML/CSS UI with system tray integration
-- **Backend**: Python FastAPI - Speech-to-text transcription using faster-whisper
+VoxTether uses a client-server architecture:
+- **Client (Frontend)**: Electron 40.x - Desktop application with UI and system tray
+- **Server (Backend)**: Python FastAPI - Speech-to-text transcription service running on localhost
+
+The backend runs as a separate Python server, which can be on the same machine (localhost) or on a different server on your network.
 
 See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
 
 ## Requirements
 
+### Client (Electron App)
 - Windows 10/11 (64-bit)
+
+### Server (Python Backend)
+- Python 3.11+
 - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
 
 ## Installation
 
-### Windows Installer (Recommended)
+### Quick Start (Development)
 
-1. Download `VoxTether-x.x.x-Setup.exe` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
-2. Run the installer and follow the wizard
-3. Launch VoxTether from the Start Menu
-4. On first launch, download a speech recognition model
-
-### Portable ZIP
-
-1. Download `VoxTether-x.x.x-win-x64.zip` from [Releases](https://github.com/KennethHeine/VoxTether/releases)
-2. Extract and run `VoxTether.exe`
-3. Follow the first-run setup to download a model
-
-### From Source (Development)
-
+**Terminal 1 - Start Backend Server:**
 ```powershell
-# Clone the repository
-git clone https://github.com/KennethHeine/VoxTether.git
-cd VoxTether
-
-# --- Backend (Python) ---
 cd src/backend
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python -m uvicorn main:app --host 127.0.0.1 --port 5678
+```
 
-# Run backend server
-python -m uvicorn main:app --port 5678
-
-# --- Frontend (Electron) --- (in a new terminal)
+**Terminal 2 - Start Frontend Client:**
+```powershell
 cd src/frontend-electron
 npm install
 npm start
 ```
 
+### Production Deployment
+
+**Server Setup (one machine with GPU):**
+```bash
+# Clone repo and setup backend
+git clone https://github.com/KennethHeine/VoxTether.git
+cd VoxTether/src/backend
+pip install -r requirements.txt
+
+# Optional: GPU acceleration
+pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
+
+# Run server (accessible on local network)
+python -m uvicorn main:app --host 0.0.0.0 --port 5678
+```
+
+**Client Setup (any Windows machine):**
+1. Download the Electron client from [Releases](https://github.com/KennethHeine/VoxTether/releases)
+2. Configure the backend server address in Settings
+3. Start using push-to-talk!
+
 ### GPU Acceleration (Optional)
 
-For GPU acceleration with NVIDIA GPUs:
+For GPU acceleration with NVIDIA GPUs (on the server):
 
 ```powershell
 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
