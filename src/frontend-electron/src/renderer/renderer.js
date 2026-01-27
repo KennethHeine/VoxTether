@@ -310,11 +310,25 @@ async function loadModels() {
         const models = result.data.models || [];
         const currentModel = result.data.current_model;
 
-        // Update model select dropdown
-        modelSelect.innerHTML = models
-            .filter(m => m.downloaded)
-            .map(m => `<option value="${m.name}" ${m.name === currentModel ? 'selected' : ''}>${m.display_name}</option>`)
-            .join('') || '<option value="">No models downloaded</option>';
+        // Update model select dropdown using DOM methods to prevent XSS
+        modelSelect.innerHTML = '';
+        const downloadedModels = models.filter(m => m.downloaded);
+        if (downloadedModels.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No models downloaded';
+            modelSelect.appendChild(option);
+        } else {
+            for (const m of downloadedModels) {
+                const option = document.createElement('option');
+                option.value = m.name;
+                option.textContent = m.display_name;
+                if (m.name === currentModel) {
+                    option.selected = true;
+                }
+                modelSelect.appendChild(option);
+            }
+        }
 
         // Update models grid
         modelsGrid.innerHTML = '';
@@ -327,26 +341,54 @@ async function loadModels() {
             const isDownloaded = apiModel.downloaded || false;
             const isActive = apiModel.name === currentModel;
 
+            // Create card using DOM methods to prevent XSS
             const card = document.createElement('div');
             card.className = `model-card ${isActive ? 'active' : ''}`;
-            card.innerHTML = `
-                <div class="model-name">${modelInfo.displayName}</div>
-                <div class="model-description">${modelInfo.description}</div>
-                <div class="model-size">~${formatSize(modelInfo.sizeMb * 1024 * 1024)}</div>
-                <div class="model-status ${isDownloaded ? 'downloaded' : 'not-downloaded'}">
-                    ${isDownloaded ? '✓ Downloaded' : '○ Not downloaded'}
-                </div>
-                <div class="model-actions">
-                    ${isDownloaded ? `
-                        <button class="btn btn-secondary btn-small" onclick="loadModel('${modelInfo.name}')">
-                            ${isActive ? '✓ Active' : 'Load'}
-                        </button>
-                        <button class="btn btn-danger btn-small" onclick="deleteModel('${modelInfo.name}')">Delete</button>
-                    ` : `
-                        <button class="btn btn-primary btn-small" onclick="downloadModel('${modelInfo.name}')">Download</button>
-                    `}
-                </div>
-            `;
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'model-name';
+            nameDiv.textContent = modelInfo.displayName;
+            card.appendChild(nameDiv);
+
+            const descDiv = document.createElement('div');
+            descDiv.className = 'model-description';
+            descDiv.textContent = modelInfo.description;
+            card.appendChild(descDiv);
+
+            const sizeDiv = document.createElement('div');
+            sizeDiv.className = 'model-size';
+            sizeDiv.textContent = `~${formatSize(modelInfo.sizeMb * 1024 * 1024)}`;
+            card.appendChild(sizeDiv);
+
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `model-status ${isDownloaded ? 'downloaded' : 'not-downloaded'}`;
+            statusDiv.textContent = isDownloaded ? '✓ Downloaded' : '○ Not downloaded';
+            card.appendChild(statusDiv);
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'model-actions';
+
+            if (isDownloaded) {
+                const loadBtn = document.createElement('button');
+                loadBtn.className = 'btn btn-secondary btn-small';
+                loadBtn.textContent = isActive ? '✓ Active' : 'Load';
+                loadBtn.addEventListener('click', () => loadModel(modelInfo.name));
+                actionsDiv.appendChild(loadBtn);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-danger btn-small';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => deleteModel(modelInfo.name));
+                actionsDiv.appendChild(deleteBtn);
+            } else {
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'btn btn-primary btn-small';
+                downloadBtn.textContent = 'Download';
+                downloadBtn.addEventListener('click', () => downloadModel(modelInfo.name));
+                actionsDiv.appendChild(downloadBtn);
+            }
+
+            card.appendChild(actionsDiv);
             modelsGrid.appendChild(card);
         }
     } catch (error) {
@@ -549,7 +591,4 @@ function showNotification(message, type = 'info') {
     }
 }
 
-// Make functions available globally for onclick handlers
-window.downloadModel = downloadModel;
-window.loadModel = loadModel;
-window.deleteModel = deleteModel;
+// Note: Model actions are now handled via addEventListener, not global functions
