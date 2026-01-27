@@ -8,25 +8,14 @@ on:
         description: 'Version to release (e.g., 1.0.0)'
         required: true
         type: string
-      build_target:
-        description: 'What to build and release'
-        required: true
-        type: choice
-        options:
-          - both
-          - python-only
-          - dotnet-only
-        default: 'both'
 
 permissions:
   contents: write
 
 jobs:
-  # Build and release the Python version
-  build-python:
-    name: Build Python Version
+  build:
+    name: Build and Test
     runs-on: windows-latest
-    if: ${{ inputs.build_target == 'both' || inputs.build_target == 'python-only' }}
 
     steps:
     - uses: actions/checkout@v6
@@ -50,21 +39,18 @@ jobs:
       with:
         python-version: '3.11'
         cache: 'pip'
-        cache-dependency-path: 'voxtether-python/requirements*.txt'
+        cache-dependency-path: 'requirements*.txt'
 
     - name: Install dependencies
-      working-directory: voxtether-python
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
 
     - name: Run tests
-      working-directory: voxtether-python
       run: pytest tests/ -v --tb=short
 
     - name: Update version in pyproject.toml
-      working-directory: voxtether-python
       run: |
         $content = Get-Content -Path pyproject.toml -Raw
         $content = $content -replace 'version = ".*"', 'version = "${{ steps.version.outputs.VERSION }}"'
@@ -72,155 +58,12 @@ jobs:
       shell: pwsh
 
     - name: Build executable with PyInstaller
-      working-directory: voxtether-python
       run: python build.py --output dist
-
-    - name: Create Python portable ZIP
-      run: |
-        Compress-Archive -Path ./voxtether-python/dist/VoxTether.exe -DestinationPath ./VoxTether-Python-${{ steps.version.outputs.VERSION }}-win-x64.zip
-      shell: pwsh
-
-    - name: Upload Python artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: python-release
-        path: ./VoxTether-Python-${{ steps.version.outputs.VERSION }}-win-x64.zip
-        retention-days: 1
-
-  # Build and release the .NET version (legacy)
-  build-dotnet:
-    name: Build .NET Version (Legacy)
-    runs-on: windows-latest
-    if: ${{ inputs.build_target == 'both' || inputs.build_target == 'dotnet-only' }}
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: 8.0.x
-
-    - name: Validate and set version
-      id: version
-      run: |
-        $version = "${{ github.event.inputs.version }}"
-        # Remove 'v' prefix if provided
-        $version = $version -replace '^v', ''
-        # Validate semver format (basic validation for X.Y.Z with optional prerelease/metadata)
-        if (-not ($version -match '^\d+\.\d+\.\d+(-[\w-]+(\.[\w-]+)*)?(\+[\w-]+(\.[\w-]+)*)?$')) {
-          Write-Error "Invalid version format: $version. Expected format: X.Y.Z (e.g., 1.0.0)"
-          exit 1
-        }
-        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-      shell: pwsh
-
-    - name: Restore dependencies
-      run: dotnet restore
-
-    - name: Run tests
-      run: dotnet test --configuration Release --verbosity normal
-
-    - name: Publish win-x64
-      run: |
-        dotnet publish src/VoxTether/VoxTether.csproj `
-          --configuration Release `
-          --runtime win-x64 `
-          --self-contained true `
-          -p:PublishSingleFile=false `
-          -p:Version=${{ steps.version.outputs.VERSION }} `
-          --output ./publish
-      shell: pwsh
-
-    - name: Download whisper.cpp
-      run: |
-        # Create whisper directory
-        New-Item -ItemType Directory -Force -Path ./publish/whisper
-        
-        # Download whisper.cpp release (using a known working release)
-        $whisperUrl = "https://github.com/ggerganov/whisper.cpp/releases/download/v1.5.4/whisper-bin-x64.zip"
-        Invoke-WebRequest -Uri $whisperUrl -OutFile whisper-bin.zip
-        
-        # Extract whisper binary
-        Expand-Archive -Path whisper-bin.zip -DestinationPath ./whisper-temp -Force
-        Copy-Item ./whisper-temp/main.exe ./publish/whisper/main.exe -Force
-        
-        # Copy whisper DLL (required by main.exe)
-        Copy-Item ./whisper-temp/*.dll ./publish/whisper/ -Force
-        
-        # Cleanup
-        Remove-Item -Recurse -Force ./whisper-temp
-        Remove-Item whisper-bin.zip
-      shell: pwsh
-
-    # Note: Models are NOT bundled with the installer/portable package
-    # Users will be prompted to download a model on first launch
-    # This keeps the installer small and allows users to choose their preferred model
 
     - name: Create portable ZIP
       run: |
-        Compress-Archive -Path ./publish/* -DestinationPath ./VoxTether-DotNet-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
+        Compress-Archive -Path ./dist/VoxTether.exe -DestinationPath ./VoxTether-${{ steps.version.outputs.VERSION }}-win-x64.zip
       shell: pwsh
-
-    - name: Install Inno Setup
-      run: |
-        choco install innosetup -y
-      shell: pwsh
-
-    - name: Build installer
-      run: |
-        # Update version in ISS file
-        $issContent = Get-Content -Path ./installer/VoxTether.iss -Raw
-        $issContent = $issContent -replace '#define MyAppVersion ".*"', '#define MyAppVersion "${{ steps.version.outputs.VERSION }}"'
-        Set-Content -Path ./installer/VoxTether.iss -Value $issContent
-        
-        # Build installer
-        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ./installer/VoxTether.iss
-      shell: pwsh
-
-    - name: Upload .NET artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dotnet-release
-        path: |
-          ./VoxTether-DotNet-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
-          ./installer/Output/VoxTether-Setup-${{ steps.version.outputs.VERSION }}.exe
-        retention-days: 1
-
-  # Create the GitHub Release with all artifacts
-  create-release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [build-python, build-dotnet]
-    if: always() && (needs.build-python.result == 'success' || needs.build-dotnet.result == 'success')
-
-    steps:
-    - name: Validate and set version
-      id: version
-      run: |
-        version="${{ github.event.inputs.version }}"
-        # Remove 'v' prefix if provided
-        version="${version#v}"
-        echo "VERSION=$version" >> $GITHUB_OUTPUT
-
-    - name: Download Python artifacts
-      uses: actions/download-artifact@v7.0.0
-      with:
-        name: python-release
-        path: ./artifacts
-      if: needs.build-python.result == 'success'
-      continue-on-error: true
-
-    - name: Download .NET artifacts
-      uses: actions/download-artifact@v7.0.0
-      with:
-        name: dotnet-release
-        path: ./artifacts
-      if: needs.build-dotnet.result == 'success'
-      continue-on-error: true
-
-    - name: List artifacts
-      run: ls -la ./artifacts || echo "No artifacts found"
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
@@ -230,17 +73,25 @@ jobs:
         body: |
           ## VoxTether v${{ steps.version.outputs.VERSION }}
           
-          ### Downloads
+          Push-to-talk dictation for Windows. Fully offline using faster-whisper.
           
-          **Python Version (Recommended)** - Native CUDA 12 support, works with RTX 40-series GPUs
-          - `VoxTether-Python-${{ steps.version.outputs.VERSION }}-win-x64.zip` - Portable executable
+          ### Download
           
-          **.NET Version (Legacy)** - Uses whisper.cpp, limited GPU support
-          - `VoxTether-DotNet-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip` - Portable version
-          - `VoxTether-Setup-${{ steps.version.outputs.VERSION }}.exe` - Windows installer
+          - `VoxTether-${{ steps.version.outputs.VERSION }}-win-x64.zip` - Portable executable
+          
+          ### Installation
+          
+          1. Download and extract the ZIP file
+          2. Run `VoxTether.exe`
+          3. On first launch, you'll be prompted to download a speech recognition model
+          
+          ### Requirements
+          
+          - Windows 10/11 (64-bit)
+          - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
           
           See [Installation Guide](https://github.com/KennethHeine/VoxTether/blob/main/docs/INSTALLATION.md) for detailed instructions.
-        files: ./artifacts/*
+        files: ./VoxTether-${{ steps.version.outputs.VERSION }}-win-x64.zip
         generate_release_notes: true
         draft: false
         prerelease: false

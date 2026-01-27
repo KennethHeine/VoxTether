@@ -4,69 +4,100 @@ This file provides context and instructions to help AI coding agents work effect
 
 ## Project Overview
 
-VoxTether is a push-to-talk dictation application for Windows 10/11. It is fully offline, using whisper.cpp for local speech-to-text transcription. The project is built with C# and .NET 8.0.
+VoxTether is a push-to-talk dictation application for Windows 10/11. It is fully offline, using faster-whisper for local speech-to-text transcription. The project is built with Python 3.10+.
 
 ## Setup Commands
 
 ```bash
-# Restore dependencies
-dotnet restore
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate
 
-# Build the project
-dotnet build --configuration Release
+# Install dependencies
+pip install -r requirements.txt
 
-# Run tests
-dotnet test
+# Install dev dependencies
+pip install -r requirements-dev.txt
 
-# Publish for Windows x64
-dotnet publish src/VoxTether/VoxTether.csproj -c Release -r win-x64 --self-contained
+# Run the application
+python -m src.main
+
+# Run with debug logging
+python -m src.main --debug
+
+# Run healthcheck
+python -m src.main --healthcheck
 ```
 
 ## Architecture
 
 ```
-src/
-├── VoxTether/                 # WPF application (main entry point)
-├── VoxTether.Core/            # Interfaces and core services
-├── VoxTether.Infrastructure/  # NAudio recorder, hotkey hook, text injector
-└── VoxTether.Transcription/   # whisper.cpp engine wrapper
-
-tests/
-└── VoxTether.Core.Tests/      # Unit tests
+VoxTether/
+├── src/
+│   ├── main.py              # Entry point, VoxTetherApp
+│   ├── tray.py              # System tray management
+│   ├── hotkey.py            # Global hotkey listener
+│   ├── recorder.py          # Audio recording
+│   ├── transcriber.py       # faster-whisper integration
+│   ├── injector.py          # Text injection
+│   ├── settings.py          # Settings management
+│   ├── model_manager.py     # Model download/management
+│   └── ui/
+│       ├── settings_window.py
+│       └── model_setup.py
+├── tests/                   # Unit tests
+├── assets/                  # Application assets (icons)
+├── docs/                    # Documentation
+├── requirements.txt         # Runtime dependencies
+├── requirements-dev.txt     # Development dependencies
+├── pyproject.toml          # Project configuration
+└── build.py                # PyInstaller build script
 ```
 
-## Key Interfaces
+## Key Components
 
-- `IAudioRecorder` - Audio recording to WAV
-- `ITranscriptionEngine` - Speech-to-text transcription
-- `ITextInjector` - Text insertion into focused applications
-- `IHotkeyService` - Global hotkey detection
-- `ITextPostProcessor` - Post-processing hook (currently no-op, V2 extension point for LLM support)
+- `VoxTetherApp` - Main application controller that orchestrates all components
+- `TrayManager` - System tray icon with context menu (pystray)
+- `HotkeyListener` - Global push-to-talk hotkey detection (keyboard library)
+- `AudioRecorder` - Records microphone to 16kHz mono WAV (sounddevice, soundfile)
+- `Transcriber` - GPU/CPU speech-to-text (faster-whisper)
+- `TextInjector` - Clipboard paste or keyboard simulation (pyperclip, keyboard)
+- `SettingsService` - Load/save user preferences (JSON)
+- `ModelManager` - Download/manage Whisper models (huggingface_hub)
 
 ## Code Style
 
-- C# with .NET 8.0
-- Use interfaces for abstractions (located in VoxTether.Core)
-- Implementations go in VoxTether.Infrastructure or VoxTether.Transcription
-- Follow standard C# naming conventions (PascalCase for public members, `_camelCase` for private fields)
+- Python 3.10+
+- Follow PEP 8 style guidelines
+- Use type hints where appropriate
+- Use ruff for linting
 
 ## Testing
 
-- Unit tests are located in `tests/VoxTether.Core.Tests/`
-- Run tests with: `dotnet test`
-- Tests use xUnit framework
-- Add tests for any new functionality
+- Unit tests are located in `tests/`
+- Run tests with: `pytest`
+- Run with coverage: `pytest --cov=src --cov-report=html`
+- Tests use pytest framework
 
 ## CI/CD
 
 - CI workflow is defined in `.github/workflows/ci.yml`
 - Runs on pull requests to main branch
-- Builds with Release configuration
-- Runs all tests
+- Runs linting (ruff) and tests (pytest)
 
 ## Platform
 
-- Windows only (WPF application)
-- Targets .NET 8.0 Windows
-- Uses NAudio for audio recording
-- Uses whisper.cpp for transcription
+- Windows only (requires Windows-specific libraries for keyboard hooks)
+- Targets Python 3.10+
+- Uses faster-whisper for transcription (native CUDA 12 support)
+- Uses sounddevice for audio recording
+
+## Building Executable
+
+```bash
+# Build single .exe with PyInstaller
+python build.py
+
+# Build with debug console
+python build.py --debug
+```
