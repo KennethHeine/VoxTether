@@ -277,7 +277,9 @@ The VoxTether installer automatically handles upgrades:
 
 ## Development
 
-### Architecture
+> 📖 **See [Architecture Guide](docs/ARCHITECTURE.md) for detailed documentation on how both versions work.**
+
+### .NET Architecture
 
 ```
 src/
@@ -290,7 +292,21 @@ tests/
 └── VoxTether.Core.Tests/      # Unit tests
 ```
 
-### Key Interfaces
+### Python Architecture
+
+```
+voxtether-python/
+├── src/
+│   ├── main.py                # Entry point, VoxTetherApp
+│   ├── recorder.py            # Audio recording
+│   ├── transcriber.py         # faster-whisper integration
+│   ├── hotkey.py              # Global hotkey listener
+│   ├── injector.py            # Text injection
+│   └── ui/                    # Settings and setup windows
+└── tests/                     # Unit tests
+```
+
+### Key Interfaces (.NET)
 
 - `IAudioRecorder` - Audio recording to WAV
 - `ITranscriptionEngine` - Speech-to-text transcription
@@ -319,5 +335,12 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Credits
 
+### .NET Version
 - [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - Fast C++ implementation of OpenAI's Whisper
 - [NAudio](https://github.com/naudio/NAudio) - .NET audio library
+
+### Python Version
+- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) - Fast Whisper transcription with CTranslate2
+- [CTranslate2](https://github.com/OpenNMT/CTranslate2) - Efficient inference engine
+- [pystray](https://github.com/moses-palmer/pystray) - System tray support
+- [sounddevice](https://python-sounddevice.readthedocs.io/) - Audio recording
