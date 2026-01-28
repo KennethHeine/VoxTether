@@ -564,6 +564,7 @@ If Electron fails to launch:
 
 ## Related Documentation
 
+- [Frontend Features](FRONTEND-FEATURES.md) - Complete feature documentation
 - [Architecture](ARCHITECTURE.md) - System architecture overview
 - [Frontend Installation](FRONTEND-INSTALLATION.md) - Frontend setup guide
 - [Running Locally](RUNNING-LOCALLY.md) - Local development guide

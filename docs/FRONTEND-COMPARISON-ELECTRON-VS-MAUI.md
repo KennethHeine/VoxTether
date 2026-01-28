@@ -1,5 +1,7 @@
 # Frontend Comparison: Electron vs .NET MAUI
 
+> **Note:** This document is a historical reference. VoxTether has chosen Electron as its frontend framework. This comparison was created during the initial technology evaluation phase and is retained for reference.
+
 This document provides a comprehensive comparison between Electron and .NET MAUI as potential frontend frameworks for VoxTether, including testing capabilities, debugging tools, and migration effort estimation.
 
 ## Overview

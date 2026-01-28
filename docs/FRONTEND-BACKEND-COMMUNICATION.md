@@ -688,6 +688,7 @@ All error responses follow this format:
 
 ## See Also
 
+- [Frontend Features](FRONTEND-FEATURES.md) - Complete frontend feature documentation
 - [Architecture Documentation](ARCHITECTURE.md) - System architecture overview
 - [Backend API Documentation](BACKEND-API.md) - Detailed API reference
 - [Installation Guide](INSTALLATION.md) - Setup instructions
