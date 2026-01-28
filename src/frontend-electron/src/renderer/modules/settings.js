@@ -102,23 +102,45 @@ export async function saveSettings(newSettings) {
 }
 
 /**
+ * Helper to get element value safely
+ * @param {string} id - Element ID
+ * @param {string} defaultValue - Default value if element not found
+ * @returns {string}
+ */
+function getElementValue(id, defaultValue = '') {
+    const el = document.getElementById(id);
+    return el ? el.value : defaultValue;
+}
+
+/**
+ * Helper to get element checked state safely
+ * @param {string} id - Element ID
+ * @param {boolean} defaultValue - Default value if element not found
+ * @returns {boolean}
+ */
+function getElementChecked(id, defaultValue = false) {
+    const el = document.getElementById(id);
+    return el ? el.checked : defaultValue;
+}
+
+/**
  * Save general settings from the UI
  */
 export async function saveGeneralSettings() {
     const newSettings = {
-        hotkey: document.getElementById('hotkey-input').value,
-        windowToggleHotkey: document.getElementById('window-toggle-hotkey-input').value,
-        language: document.getElementById('language-select').value,
-        outputMode: document.getElementById('output-mode-select').value,
-        showNotifications: document.getElementById('notifications-toggle').checked,
-        showRecordingIndicator: document.getElementById('recording-indicator-toggle').checked,
-        showTranscriptionPreview: document.getElementById('transcription-preview-toggle').checked,
-        startWithWindows: document.getElementById('start-with-windows-toggle').checked,
-        startMinimized: document.getElementById('start-minimized-toggle').checked,
-        theme: document.getElementById('theme-select').value,
-        recordingOutputFolder: document.getElementById('recording-output-folder').value,
-        saveRecordingAudio: document.getElementById('save-recording-audio-toggle').checked,
-        saveRecordingTranscript: document.getElementById('save-recording-transcript-toggle').checked
+        hotkey: getElementValue('hotkey-input', 'Ctrl+Shift+Space'),
+        windowToggleHotkey: getElementValue('window-toggle-hotkey-input', 'Ctrl+Shift+V'),
+        language: getElementValue('language-select', 'auto'),
+        outputMode: getElementValue('output-mode-select', 'ClipboardAndPaste'),
+        showNotifications: getElementChecked('notifications-toggle', true),
+        showRecordingIndicator: getElementChecked('recording-indicator-toggle', true),
+        showTranscriptionPreview: getElementChecked('transcription-preview-toggle', false),
+        startWithWindows: getElementChecked('start-with-windows-toggle', false),
+        startMinimized: getElementChecked('start-minimized-toggle', true),
+        theme: getElementValue('theme-select', 'system'),
+        recordingOutputFolder: getElementValue('recording-output-folder', ''),
+        saveRecordingAudio: getElementChecked('save-recording-audio-toggle', false),
+        saveRecordingTranscript: getElementChecked('save-recording-transcript-toggle', false)
     };
 
     await saveSettings(newSettings);
@@ -129,8 +151,8 @@ export async function saveGeneralSettings() {
  */
 export async function saveAudioSettings() {
     const newSettings = {
-        clipboardDelayMs: parseInt(document.getElementById('clipboard-delay-input').value) || 50,
-        audioDeviceId: parseInt(document.getElementById('audio-device-select').value)
+        clipboardDelayMs: parseInt(getElementValue('clipboard-delay-input', '50')) || 50,
+        audioDeviceId: parseInt(getElementValue('audio-device-select', '-1'))
     };
 
     await saveSettings(newSettings);
@@ -155,5 +177,6 @@ export async function selectRecordingFolder() {
  * Clear recording output folder
  */
 export function clearRecordingFolder() {
-    document.getElementById('recording-output-folder').value = '';
+    const el = document.getElementById('recording-output-folder');
+    if (el) el.value = '';
 }

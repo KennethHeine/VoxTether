@@ -61,7 +61,8 @@ export async function selectOutputFolder() {
  */
 export function clearOutputFolder() {
     transcribeState.outputFolderPath = '';
-    document.getElementById('output-folder-path').value = '';
+    const el = document.getElementById('output-folder-path');
+    if (el) el.value = '';
 }
 
 /**
