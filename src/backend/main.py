@@ -14,10 +14,12 @@ from config import settings
 from services.transcriber import TranscriberService
 
 # Configure logging
+log_file = os.path.join(settings.logs_path, "backend.log")
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
+        logging.FileHandler(log_file, encoding="utf-8"),
         logging.StreamHandler(sys.stdout),
     ],
 )

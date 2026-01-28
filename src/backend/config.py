@@ -17,6 +17,15 @@ def get_default_models_path() -> str:
     return os.path.join(Path.home(), ".voxtether", "models")
 
 
+def get_default_logs_path() -> str:
+    """Get the default logs path."""
+    appdata = os.environ.get("APPDATA", "")
+    if appdata:
+        return os.path.join(appdata, "VoxTether", "logs")
+    # Fallback for non-Windows
+    return os.path.join(Path.home(), ".voxtether", "logs")
+
+
 class Settings(BaseSettings):
     """Backend configuration settings."""
     
@@ -24,6 +33,9 @@ class Settings(BaseSettings):
     host: str = Field(default="127.0.0.1", description="Host to bind to")
     port: int = Field(default=5678, description="Port to bind to")
     debug: bool = Field(default=False, description="Enable debug mode")
+    
+    # Logging settings
+    logs_path: str = Field(default_factory=get_default_logs_path, description="Path to logs directory")
     
     # Model settings
     models_path: str = Field(default_factory=get_default_models_path, description="Path to models directory")
@@ -44,5 +56,6 @@ class Settings(BaseSettings):
 # Global settings instance
 settings = Settings()
 
-# Ensure models directory exists
+# Ensure directories exist
 os.makedirs(settings.models_path, exist_ok=True)
+os.makedirs(settings.logs_path, exist_ok=True)
