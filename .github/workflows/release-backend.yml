@@ -1,0 +1,149 @@
+name: Release Backend
+
+run-name: Release Backend ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 2.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # Build the Python backend executable
+  build-backend:
+    name: Build Backend
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Validate and set version
+      id: version
+      run: |
+        $version = "${{ github.event.inputs.version }}"
+        $version = $version -replace '^v', ''
+        if (-not ($version -match '^\d+\.\d+\.\d+(-[\w-]+(\.[\w-]+)*)?(\+[\w-]+(\.[\w-]+)*)?$')) {
+          Write-Error "Invalid version format: $version. Expected format: X.Y.Z (e.g., 2.0.0)"
+          exit 1
+        }
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+        cache-dependency-path: 'src/backend/requirements.txt'
+
+    - name: Build backend executable
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r src/backend/requirements.txt
+        pip install pyinstaller
+        cd src/backend
+        pyinstaller --onefile --name vox-backend main.py
+      shell: pwsh
+
+    - name: Upload backend artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-build
+        path: src/backend/dist/vox-backend.exe
+
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+  # Create release
+  create-release:
+    name: Create Release
+    runs-on: windows-latest
+    needs: [build-backend]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download backend artifact
+      uses: actions/download-artifact@v7
+      with:
+        name: backend-build
+        path: build/backend/
+
+    - name: Create backend ZIP
+      run: |
+        $version = "${{ needs.build-backend.outputs.version }}"
+        
+        # Create README
+        $readme = @"
+        VoxTether Backend $version
+        ==========================
+        
+        Python FastAPI backend for VoxTether speech-to-text.
+        
+        Usage:
+        Run vox-backend.exe to start the transcription server on port 5678.
+        
+        Requirements:
+        - Windows 10/11 (64-bit)
+        - For GPU acceleration: NVIDIA GPU with CUDA 12 support
+        
+        For more information, visit:
+        https://github.com/KennethHeine/VoxTether
+        
+        License: MIT
+        "@
+        $readme | Out-File "build\backend\README.txt" -Encoding UTF8
+        
+        # Copy license
+        if (Test-Path "LICENSE") {
+          Copy-Item "LICENSE" "build\backend\LICENSE.txt"
+        }
+        
+        # Create ZIP
+        Compress-Archive -Path "build\backend\*" -DestinationPath "build\VoxTether-Backend-$version-win-x64.zip"
+      shell: pwsh
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: backend-v${{ needs.build-backend.outputs.version }}
+        name: VoxTether Backend v${{ needs.build-backend.outputs.version }}
+        body: |
+          ## VoxTether Backend v${{ needs.build-backend.outputs.version }}
+          
+          Python FastAPI backend for VoxTether - speech-to-text using faster-whisper.
+          
+          ### Downloads
+          
+          - **`VoxTether-Backend-${{ needs.build-backend.outputs.version }}-win-x64.zip`** - Backend executable ZIP
+          
+          ### Usage
+          
+          1. Download and extract the ZIP file
+          2. Run `vox-backend.exe` to start the transcription server
+          3. The server will run on `http://127.0.0.1:5678`
+          
+          ### Requirements
+          
+          - Windows 10/11 (64-bit)
+          - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
+          
+          ### API Endpoints
+          
+          - `GET /api/health` - Health check
+          - `POST /api/transcribe` - Transcribe audio
+          - `GET /api/models` - List available models
+          
+          See [Architecture Documentation](https://github.com/KennethHeine/VoxTether/blob/main/docs/ARCHITECTURE.md) for details.
+        files: |
+          build/VoxTether-Backend-${{ needs.build-backend.outputs.version }}-win-x64.zip
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
