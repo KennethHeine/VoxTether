@@ -295,6 +295,8 @@ npm run build
 
 ## See Also
 
+- [FRONTEND-FEATURES.md](FRONTEND-FEATURES.md) - Complete feature documentation
+- [FRONTEND-TESTING.md](FRONTEND-TESTING.md) - Testing guide
 - [BACKEND-SETUP.md](BACKEND-SETUP.md) - Backend server setup
 - [BACKEND-API.md](BACKEND-API.md) - API documentation
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
