@@ -1,15 +1,22 @@
-### one line command to start backend localy
+# VoxTether Quick Commands
+
+This document provides quick one-liner commands for developers.
+
+## Start Backend Locally
 
 ```powershell
-cd c:\Users\KennethSølberg\code\VoxTether\src\backend; if (Test-Path "venv\Scripts\Activate.ps1") { .\venv\Scripts\Activate.ps1 } else { python -m venv venv; .\venv\Scripts\Activate.ps1; pip install -r requirements.txt }; python -m uvicorn main:app --host 127.0.0.1 --port 5678 --reload
+cd src/backend; if (Test-Path "venv\Scripts\Activate.ps1") { .\venv\Scripts\Activate.ps1 } else { python -m venv venv; .\venv\Scripts\Activate.ps1; pip install -r requirements.txt }; python -m uvicorn main:app --host 127.0.0.1 --port 5678 --reload
 ```
 
-### one line command to start frontend localy
+## Start Frontend Locally
+
 ```powershell
-cd c:\Users\KennethSølberg\code\VoxTether\src\frontend-electron; npm install; npm start
+cd src/frontend-electron; npm install; npm start
 ```
 
-## test
+## Tests
+
+```bash
 python -m tests.download_all_models
-
 python -m tests.test_backend_api
+```

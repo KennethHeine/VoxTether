@@ -43,10 +43,10 @@ pip install -r requirements.txt
 # Run backend server
 python -m uvicorn main:app --port 5678
 
-# --- Frontend (WinUI 3) --- (in a new terminal)
-cd src/frontend
-dotnet restore VoxTether.sln
-dotnet run --project VoxTether
+# --- Frontend (Electron) --- (in a new terminal)
+cd src/frontend-electron
+npm install
+npm start
 ```
 
 ---
@@ -261,7 +261,7 @@ Remove-Item -Recurse "$env:APPDATA\VoxTether"
 
 - Windows 10/11 (64-bit)
 - Python 3.13+
-- .NET 8.0 SDK
+- Node.js 20.x+
 - (Optional) Inno Setup 6 for creating installers
 
 ### Build Commands

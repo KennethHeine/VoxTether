@@ -151,7 +151,7 @@ User holds hotkey              User releases hotkey
 ┌─────────────┐               ┌──────────────┐
 │ Start Audio │               │ Stop Audio   │
 │  Recording  │──────────────▶│  Recording   │
-│  (NAudio)   │               │  (NAudio)    │
+│(Web Audio)  │               │ (Web Audio)  │
 └─────────────┘               └──────┬───────┘
                                      │
                                      ▼
@@ -341,15 +341,15 @@ cd build
 
 ```
 ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ build-backend│    │build-frontend│    │  test-python │
-│   (Python)   │    │  (Electron)  │    │   (pytest)   │
+│ Test Backend │    │Build Frontend│    │ Test E2E     │
+│   (Python)   │    │  (Electron)  │    │ (Playwright) │
 └──────┬───────┘    └──────┬───────┘    └──────┬───────┘
        │                   │                   │
        └───────────────────┴───────────────────┘
                            │
                            ▼
                   ┌──────────────────┐
-                  │  build-complete  │
+                  │  Build Complete  │
                   │ (verify + upload)│
                   └──────────────────┘
 ```
@@ -384,4 +384,3 @@ cd build
 
 - [Installation Guide](INSTALLATION.md) - Setup instructions
 - [README](../README.md) - Project overview
-- [Hybrid Architecture Plan](HYBRID-ARCHITECTURE-PLAN.md) - Original design document
