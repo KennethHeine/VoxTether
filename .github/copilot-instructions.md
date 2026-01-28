@@ -89,24 +89,17 @@ VoxTether/
 │   │   ├── main.py              # FastAPI entry point
 │   │   └── requirements.txt     # Python dependencies
 │   │
-│   ├── frontend-electron/       # Electron Frontend
-│   │   ├── src/
-│   │   │   ├── main.js          # Electron main process
-│   │   │   ├── preload.js       # Secure IPC bridge
-│   │   │   └── renderer/        # UI (HTML/CSS/JS)
-│   │   └── package.json
-│   │
-│   └── (legacy Python UI)       # Original Python implementation
-│       ├── main.py
-│       ├── tray.py
-│       └── ...
+│   └── frontend-electron/       # Electron Frontend
+│       ├── src/
+│       │   ├── main.js          # Electron main process
+│       │   ├── preload.js       # Secure IPC bridge
+│       │   └── renderer/        # UI (HTML/CSS/JS)
+│       └── package.json
 │
-├── tests/                       # Legacy unit tests
+├── build/                       # Build scripts
 ├── assets/                      # Application assets (icons)
 ├── docs/                        # Documentation
-├── requirements-dev.txt         # Development dependencies
-├── pyproject.toml               # Project configuration
-└── build.py                     # PyInstaller build script
+└── requirements-dev.txt         # Development dependencies
 ```
 
 ## Key Components
@@ -151,7 +144,6 @@ Manually triggered with version input. Builds frontend + backend, creates Window
 
 | File | Purpose |
 |------|---------|
-| `pyproject.toml` | Project configuration |
 | `src/backend/requirements.txt` | Backend Python dependencies |
 | `requirements-dev.txt` | Development dependencies |
 | `src/frontend-electron/package.json` | Frontend dependencies |
