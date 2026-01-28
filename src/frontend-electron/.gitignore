@@ -34,3 +34,9 @@ Thumbs.db
 
 # Test coverage
 coverage/
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+screenshots/
