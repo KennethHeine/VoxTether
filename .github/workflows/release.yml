@@ -137,13 +137,13 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Download installer artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: installer-build
         path: build/installer/
 
     - name: Download portable artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: portable-build
         path: build/portable/
