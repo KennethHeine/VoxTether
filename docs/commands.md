@@ -6,5 +6,10 @@ cd c:\Users\KennethSølberg\code\VoxTether\src\backend; if (Test-Path "venv\Scri
 
 ### one line command to start frontend localy
 ```powershell
-cd c:\Users\KennethSølberg\code\VoxTether\src\frontend-electron; npm start
+cd c:\Users\KennethSølberg\code\VoxTether\src\frontend-electron; npm install; npm start
 ```
+
+## test
+python -m tests.download_all_models
+
+python -m tests.test_backend_api
