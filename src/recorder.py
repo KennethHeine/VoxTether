@@ -55,6 +55,7 @@ class AudioRecorder:
         
         self._is_recording = False
         self._audio_data: list[np.ndarray] = []
+        self._audio_data_lock = threading.Lock()  # Protects _audio_data access
         self._recording_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
         self._recording_callback: Optional[RecordingCallback] = None
@@ -118,14 +119,16 @@ class AudioRecorder:
             return False
         
         try:
-            self._audio_data = []
+            with self._audio_data_lock:
+                self._audio_data = []
             self._stop_event.clear()
             self._is_recording = True
             
             def audio_callback(indata: np.ndarray, frames: int, time_info, status) -> None:
                 if status:
                     logger.warning(f"Audio stream status: {status}")
-                self._audio_data.append(indata.copy())
+                with self._audio_data_lock:
+                    self._audio_data.append(indata.copy())
             
             self._stream = sd.InputStream(
                 samplerate=self._sample_rate,
@@ -159,7 +162,7 @@ class AudioRecorder:
             return None
         
         try:
-            # Stop the stream
+            # Stop the stream first
             if self._stream:
                 self._stream.stop()
                 self._stream.close()
@@ -170,17 +173,19 @@ class AudioRecorder:
             if self._recording_callback:
                 self._recording_callback(False)
             
-            # Combine all recorded chunks
-            if not self._audio_data:
-                return RecordingResult(
-                    file_path=Path(),
-                    duration_seconds=0,
-                    sample_rate=self._sample_rate,
-                    success=False,
-                    error="No audio data recorded",
-                )
-            
-            audio = np.concatenate(self._audio_data)
+            # Combine all recorded chunks (thread-safe access)
+            with self._audio_data_lock:
+                if not self._audio_data:
+                    return RecordingResult(
+                        file_path=Path(),
+                        duration_seconds=0,
+                        sample_rate=self._sample_rate,
+                        success=False,
+                        error="No audio data recorded",
+                    )
+                
+                audio = np.concatenate(self._audio_data)
+                self._audio_data = []  # Clear to prevent memory leaks
             duration = len(audio) / self._sample_rate
             
             logger.info(f"Recording stopped. Duration: {duration:.2f}s")

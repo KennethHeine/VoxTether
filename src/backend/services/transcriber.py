@@ -19,7 +19,7 @@ _executor = ThreadPoolExecutor(max_workers=2)
 
 # Register cleanup at shutdown
 def _cleanup_executor():
-    _executor.shutdown(wait=False)
+    _executor.shutdown(wait=True, cancel_futures=True)
 
 atexit.register(_cleanup_executor)
 

@@ -61,9 +61,10 @@ app = FastAPI(
 )
 
 # Add CORS middleware (localhost only)
+# Note: Electron apps make direct HTTP requests, but we restrict CORS for browser access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Only accessible from localhost anyway
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

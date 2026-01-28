@@ -183,6 +183,18 @@ class VoxTetherApp:
             return
 
         logger.info("Hotkey pressed - starting recording")
+
+        # Start recording first to check if it succeeds
+        if not self._recorder.start_recording():
+            logger.error("Failed to start recording")
+            if self.settings.show_notifications:
+                self._tray_manager.show_notification(
+                    "Recording Failed",
+                    "Could not start recording. Check microphone.",
+                )
+            return
+
+        # Only set recording state after confirming recording started successfully
         self._is_recording = True
 
         # Update tray icon
@@ -192,20 +204,6 @@ class VoxTetherApp:
         indicator = self._get_recording_indicator()
         if indicator:
             indicator.show_recording()
-
-        # Start recording
-        if not self._recorder.start_recording():
-            logger.error("Failed to start recording")
-            self._is_recording = False
-            self._tray_manager.set_recording(False)
-            if indicator:
-                indicator.hide()
-
-            if self.settings.show_notifications:
-                self._tray_manager.show_notification(
-                    "Recording Failed",
-                    "Could not start recording. Check microphone.",
-                )
 
     def _on_hotkey_release(self) -> None:
         """Handle push-to-talk hotkey release."""
