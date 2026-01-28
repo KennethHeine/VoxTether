@@ -1,12 +1,14 @@
 # VoxTether Backend Testing Guide
 
-This document describes how the VoxTether backend application is tested in depth, covering the testing framework, test categories, test organization, and CI/CD integration.
+> **Note**: This document describes tests for the legacy Python application in the root `/tests/` directory. These tests are no longer run in CI as the project has transitioned to the Electron + FastAPI architecture. The current CI tests the FastAPI backend server startup and runs Playwright E2E tests for the Electron frontend.
+
+This document describes how the VoxTether legacy Python application was tested, covering the testing framework, test categories, test organization, and CI/CD integration.
 
 ---
 
 ## Overview
 
-VoxTether uses **pytest** as the primary testing framework for the Python backend. The test suite covers:
+VoxTether uses **pytest** as the primary testing framework for the legacy Python code. The test suite covers:
 
 - **Unit tests** for individual modules and classes
 - **Integration tests** for CLI tools and component interactions
@@ -23,17 +25,17 @@ VoxTether uses **pytest** as the primary testing framework for the Python backen
 | **pytest-mock** | ≥3.12.0 | Mocking utilities |
 | **ruff** | ≥0.1.0 | Linting and code quality |
 
-### Installation
+### Installation (Legacy Tests)
+
+To run the legacy tests locally (not run in CI):
 
 ```bash
-# From src/backend directory
-cd src/backend
+# From repository root
+pip install -r requirements-dev.txt
 
-# Install runtime dependencies
-pip install -r requirements.txt
-
-# Install development dependencies (includes test tools)
-pip install -r ../../requirements-dev.txt
+# Legacy tests require the legacy dependencies
+# Note: These are no longer maintained in requirements.txt
+pytest tests/ -v
 ```
 
 ---
@@ -560,12 +562,14 @@ class TestExampleClass:
 Ensure you're in a virtual environment with all dependencies:
 
 ```bash
-cd src/backend
+# From repository root
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
-pip install -r requirements.txt
-pip install -r ../../requirements-dev.txt
+pip install -r requirements-dev.txt
+
+# Note: Legacy tests require dependencies that were in the old requirements.txt
+# which has been removed. Run backend tests via CI instead.
 ```
 
 ### PortAudio Not Found

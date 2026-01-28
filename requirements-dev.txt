@@ -1,5 +1,5 @@
 # Development dependencies
-# Install alongside src/backend/requirements.txt for full development setup
+# Used for linting, formatting, and building
 
 pytest>=7.4.0
 pytest-cov>=4.1.0
