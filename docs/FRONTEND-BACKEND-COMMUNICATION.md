@@ -467,9 +467,9 @@ Content-Type: application/json
 The frontend sends audio to the backend using multipart form data:
 
 ```javascript
-// From main.js - Transcription IPC handler
+// From src/frontend-electron/src/main.js - Transcription IPC handler
 ipcMain.handle('transcribe', async (event, audioPath, language) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
         // Create multipart form data boundary
         const boundary = `----WebKitFormBoundary${Date.now().toString(16)}`;
         const audioData = fs.readFileSync(audioPath);
@@ -523,7 +523,7 @@ ipcMain.handle('transcribe', async (event, audioPath, language) => {
 The backend receives and processes audio:
 
 ```python
-# From api/transcribe.py
+# From src/backend/api/transcribe.py
 @router.post("/transcribe", response_model=TranscriptionResponse)
 async def transcribe_audio(
     request: Request,
