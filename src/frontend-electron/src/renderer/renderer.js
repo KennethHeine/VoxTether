@@ -28,7 +28,15 @@ let micTestState = {
     analyser: null,
     animationId: null,
     peakLevel: 0,
-    audioData: null
+    audioData: null,
+    // Cached DOM elements for animation loop performance
+    elements: {
+        volumeBar: null,
+        volumePeak: null,
+        peakLabel: null,
+        canvas: null,
+        canvasCtx: null
+    }
 };
 
 // ============================================================================
@@ -122,6 +130,11 @@ function initializeNavigation() {
 }
 
 function navigateTo(pageName) {
+    // Stop mic test if leaving audio page and it's running
+    if (micTestState.isRunning) {
+        stopMicTest();
+    }
+
     // Update nav items
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.toggle('active', item.dataset.page === pageName);
@@ -285,14 +298,13 @@ async function loadMicDevices() {
     try {
         // Request permission to access audio devices
         // This is needed to get device labels
-        await navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                // Stop the stream immediately, we just needed permission
-                stream.getTracks().forEach(track => track.stop());
-            })
-            .catch(() => {
-                // Permission denied or no devices available
-            });
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Stop the stream immediately, we just needed permission
+            stream.getTracks().forEach(track => track.stop());
+        } catch (_e) {
+            // Permission denied or no devices available - continue anyway
+        }
 
         const devices = await navigator.mediaDevices.enumerateDevices();
         const audioInputs = devices.filter(device => device.kind === 'audioinput');
@@ -357,7 +369,7 @@ async function startMicTest() {
         // Request microphone access
         const constraints = {
             audio: {
-                deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+                deviceId: { exact: selectedDeviceId },
                 echoCancellation: false,
                 noiseSuppression: false,
                 autoGainControl: false
@@ -379,6 +391,15 @@ async function startMicTest() {
         micTestState.audioData = new Uint8Array(micTestState.analyser.frequencyBinCount);
         micTestState.peakLevel = 0;
         micTestState.isRunning = true;
+
+        // Cache DOM elements for animation loop performance
+        micTestState.elements.volumeBar = document.getElementById('volume-bar');
+        micTestState.elements.volumePeak = document.getElementById('volume-peak');
+        micTestState.elements.peakLabel = document.getElementById('peak-label');
+        micTestState.elements.canvas = document.getElementById('waveform-canvas');
+        if (micTestState.elements.canvas) {
+            micTestState.elements.canvasCtx = micTestState.elements.canvas.getContext('2d');
+        }
 
         // Update UI
         startBtn.classList.add('hidden');
@@ -405,7 +426,7 @@ async function startMicTest() {
         }
 
         updateMicTestStatus('error', '❌', errorMessage);
-        stopMicTest();
+        await stopMicTest();
     }
 }
 
@@ -483,14 +504,13 @@ function animateMicTest() {
         micTestState.peakLevel = Math.max(level, micTestState.peakLevel * 0.98);
     }
 
-    // Update volume bar
-    const volumeBar = document.getElementById('volume-bar');
-    const volumePeak = document.getElementById('volume-peak');
-    const peakLabel = document.getElementById('peak-label');
-
-    volumeBar.style.width = `${level * 100}%`;
-    volumePeak.style.left = `${micTestState.peakLevel * 100}%`;
-    peakLabel.textContent = `Peak: ${Math.round(micTestState.peakLevel * 100)}%`;
+    // Update volume bar using cached elements
+    const { volumeBar, volumePeak, peakLabel } = micTestState.elements;
+    if (volumeBar && volumePeak && peakLabel) {
+        volumeBar.style.width = `${level * 100}%`;
+        volumePeak.style.left = `${micTestState.peakLevel * 100}%`;
+        peakLabel.textContent = `Peak: ${Math.round(micTestState.peakLevel * 100)}%`;
+    }
 
     // Draw waveform
     drawWaveform();
@@ -503,10 +523,9 @@ function animateMicTest() {
  * Draw the audio waveform on canvas
  */
 function drawWaveform() {
-    const canvas = document.getElementById('waveform-canvas');
-    if (!canvas || !micTestState.audioData) return;
+    const { canvas, canvasCtx } = micTestState.elements;
+    if (!canvas || !canvasCtx || !micTestState.audioData) return;
 
-    const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
 
@@ -517,21 +536,21 @@ function drawWaveform() {
     const centerLineColor = isDark ? '#404040' : '#e0e0e0';
 
     // Clear canvas
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, width, height);
+    canvasCtx.fillStyle = bgColor;
+    canvasCtx.fillRect(0, 0, width, height);
 
     // Draw center line
-    ctx.beginPath();
-    ctx.strokeStyle = centerLineColor;
-    ctx.lineWidth = 1;
-    ctx.moveTo(0, height / 2);
-    ctx.lineTo(width, height / 2);
-    ctx.stroke();
+    canvasCtx.beginPath();
+    canvasCtx.strokeStyle = centerLineColor;
+    canvasCtx.lineWidth = 1;
+    canvasCtx.moveTo(0, height / 2);
+    canvasCtx.lineTo(width, height / 2);
+    canvasCtx.stroke();
 
     // Draw waveform
-    ctx.beginPath();
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 2;
+    canvasCtx.beginPath();
+    canvasCtx.strokeStyle = lineColor;
+    canvasCtx.lineWidth = 2;
 
     const sliceWidth = width / micTestState.audioData.length;
     let x = 0;
@@ -541,15 +560,15 @@ function drawWaveform() {
         const y = (v * height) / 2;
 
         if (i === 0) {
-            ctx.moveTo(x, y);
+            canvasCtx.moveTo(x, y);
         } else {
-            ctx.lineTo(x, y);
+            canvasCtx.lineTo(x, y);
         }
 
         x += sliceWidth;
     }
 
-    ctx.stroke();
+    canvasCtx.stroke();
 }
 
 /**
@@ -557,6 +576,8 @@ function drawWaveform() {
  */
 function updateMicTestStatus(state, icon, message) {
     const statusDiv = document.getElementById('mic-test-status');
+    if (!statusDiv) return;
+
     const iconSpan = statusDiv.querySelector('.status-icon');
     const messageSpan = statusDiv.querySelector('.status-message');
 
@@ -565,8 +586,8 @@ function updateMicTestStatus(state, icon, message) {
         statusDiv.classList.add(state);
     }
 
-    iconSpan.textContent = icon;
-    messageSpan.textContent = message;
+    if (iconSpan) iconSpan.textContent = icon;
+    if (messageSpan) messageSpan.textContent = message;
 }
 
 // ============================================================================

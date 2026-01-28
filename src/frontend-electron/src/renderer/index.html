@@ -199,20 +199,20 @@
                         <h3>Test Microphone</h3>
                         <p class="setting-description">Test your microphone with real-time visual feedback (client-side only, no backend required)</p>
                     </div>
-                    
+
                     <div class="mic-test-container">
                         <div class="mic-test-controls">
-                            <select id="mic-device-select" class="select-input">
+                            <select id="mic-device-select" class="select-input" aria-label="Select microphone device">
                                 <option value="">Loading devices...</option>
                             </select>
-                            <button class="btn btn-secondary" id="start-mic-test-btn">🎤 Start Test</button>
-                            <button class="btn btn-danger hidden" id="stop-mic-test-btn">⏹ Stop Test</button>
+                            <button class="btn btn-secondary" id="start-mic-test-btn" aria-label="Start microphone test">🎤 Start Test</button>
+                            <button class="btn btn-danger hidden" id="stop-mic-test-btn" aria-label="Stop microphone test">⏹ Stop Test</button>
                         </div>
-                        
-                        <div class="mic-test-visualizer hidden" id="mic-test-visualizer">
+
+                        <div class="mic-test-visualizer hidden" id="mic-test-visualizer" aria-live="polite">
                             <div class="volume-meter-container">
-                                <label>Volume Level</label>
-                                <div class="volume-meter">
+                                <label id="volume-level-label">Volume Level</label>
+                                <div class="volume-meter" role="progressbar" aria-labelledby="volume-level-label" aria-valuemin="0" aria-valuemax="100">
                                     <div class="volume-bar" id="volume-bar"></div>
                                     <div class="volume-peak" id="volume-peak"></div>
                                 </div>
@@ -222,15 +222,15 @@
                                     <span>100%</span>
                                 </div>
                             </div>
-                            
+
                             <div class="waveform-container">
-                                <label>Audio Waveform</label>
-                                <canvas id="waveform-canvas" width="460" height="120"></canvas>
+                                <label id="waveform-label">Audio Waveform</label>
+                                <canvas id="waveform-canvas" width="460" height="120" role="img" aria-labelledby="waveform-label" aria-label="Real-time audio waveform visualization"></canvas>
                             </div>
                         </div>
-                        
-                        <div class="mic-test-status" id="mic-test-status">
-                            <span class="status-icon">ℹ️</span>
+
+                        <div class="mic-test-status" id="mic-test-status" role="status" aria-live="polite">
+                            <span class="status-icon" aria-hidden="true">ℹ️</span>
                             <span class="status-message">Click "Start Test" to begin microphone testing</span>
                         </div>
                     </div>
