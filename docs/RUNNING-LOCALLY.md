@@ -203,19 +203,11 @@ npm start
 ### Running Tests
 
 ```powershell
-# Backend tests
-cd src/backend
-.\venv\Scripts\Activate.ps1
-pip install pytest
-pytest
-
-# Legacy Python tests
-cd ../..
-pip install -r requirements-dev.txt
-pytest tests/
+# Frontend E2E tests
+cd src/frontend-electron
+npm test
 
 # Frontend linting
-cd src/frontend-electron
 npm run lint
 ```
 
@@ -230,10 +222,6 @@ ruff check .
 # Frontend linting
 cd src/frontend-electron
 npm run lint
-
-# Legacy code linting
-cd ../..
-ruff check src/ tests/
 ```
 
 ---
@@ -267,15 +255,13 @@ VoxTether/
 │   │   │   ├── preload.js # IPC bridge
 │   │   │   └── renderer/  # UI files
 │   │   └── package.json
-│   ├── backend/           # Python FastAPI
-│   │   ├── api/           # REST endpoints
-│   │   ├── services/      # Business logic
-│   │   └── main.py        # Entry point
-│   └── (legacy)           # Original Python UI
+│   └── backend/           # Python FastAPI
+│       ├── api/           # REST endpoints
+│       ├── services/      # Business logic
+│       └── main.py        # Entry point
 ├── build/                 # Build scripts
 ├── installer/             # Inno Setup script
-├── docs/                  # Documentation
-└── tests/                 # Unit tests
+└── docs/                  # Documentation
 ```
 
 ---
