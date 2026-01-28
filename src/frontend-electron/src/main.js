@@ -27,6 +27,7 @@ let isRecording = false;
 let settings = null;
 let registeredHotkey = null;
 let registeredWindowToggleHotkey = null;
+let recordingOverlayWindow = null;  // Recording indicator overlay (Feature 3)
 
 // Paths
 const userDataPath = app.getPath('userData');
@@ -142,6 +143,111 @@ function createMainWindow() {
     });
 
     return mainWindow;
+}
+
+// ============================================================================
+// Recording Indicator Overlay (Feature 3)
+// ============================================================================
+
+/**
+ * Create the recording indicator overlay window
+ */
+function createRecordingOverlay() {
+    if (recordingOverlayWindow) {
+        return recordingOverlayWindow;
+    }
+
+    // Get screen dimensions
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth } = primaryDisplay.workAreaSize;
+
+    // Create a small, always-on-top window
+    recordingOverlayWindow = new BrowserWindow({
+        width: 60,
+        height: 60,
+        x: screenWidth - 80,  // Position in top-right corner
+        y: 20,
+        frame: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        resizable: false,
+        movable: true,
+        focusable: false,
+        show: false,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+        }
+    });
+
+    // Load inline HTML for the overlay
+    const overlayHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {
+                    margin: 0;
+                    padding: 0;
+                    background: transparent;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                    -webkit-app-region: drag;
+                }
+                .recording-dot {
+                    width: 40px;
+                    height: 40px;
+                    background-color: #dc3232;
+                    border-radius: 50%;
+                    box-shadow: 0 0 15px rgba(220, 50, 50, 0.8);
+                    animation: pulse 1.5s ease-in-out infinite;
+                }
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.7; transform: scale(0.9); }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="recording-dot"></div>
+        </body>
+        </html>
+    `;
+
+    recordingOverlayWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(overlayHtml));
+
+    recordingOverlayWindow.on('closed', () => {
+        recordingOverlayWindow = null;
+    });
+
+    return recordingOverlayWindow;
+}
+
+/**
+ * Show the recording overlay
+ */
+function showRecordingOverlay() {
+    if (!settings.showRecordingIndicator) {
+        return;
+    }
+
+    const overlay = createRecordingOverlay();
+    if (overlay && !overlay.isDestroyed()) {
+        overlay.showInactive();
+    }
+}
+
+/**
+ * Hide the recording overlay
+ */
+function hideRecordingOverlay() {
+    if (recordingOverlayWindow && !recordingOverlayWindow.isDestroyed()) {
+        recordingOverlayWindow.hide();
+    }
 }
 
 /**
@@ -485,6 +591,9 @@ function startRecording() {
     isRecording = true;
     console.log('Recording started');
 
+    // Show recording overlay indicator (Feature 3)
+    showRecordingOverlay();
+
     // Update tray menu
     updateTrayMenu();
 
@@ -503,6 +612,9 @@ function stopRecording() {
 
     isRecording = false;
     console.log('Recording stopped');
+
+    // Hide recording overlay indicator (Feature 3)
+    hideRecordingOverlay();
 
     // Update tray menu
     updateTrayMenu();
