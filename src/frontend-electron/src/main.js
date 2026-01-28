@@ -499,6 +499,57 @@ ipcMain.handle('open-external', (event, url) => {
     shell.openExternal(url);
 });
 
+// File dialogs
+ipcMain.handle('select-audio-file', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Select Audio File',
+        filters: [
+            { name: 'Audio Files', extensions: ['wav', 'mp3', 'm4a', 'flac', 'ogg', 'wma', 'aac', 'webm'] },
+            { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['openFile']
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+    }
+
+    return { success: true, filePath: result.filePaths[0] };
+});
+
+ipcMain.handle('select-output-folder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Select Output Folder',
+        properties: ['openDirectory', 'createDirectory']
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+    }
+
+    return { success: true, folderPath: result.filePaths[0] };
+});
+
+ipcMain.handle('save-transcript', async (event, filePath, content) => {
+    try {
+        fs.writeFileSync(filePath, content, 'utf8');
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('copy-file', async (event, sourcePath, destFolder) => {
+    try {
+        const fileName = path.basename(sourcePath);
+        const destPath = path.join(destFolder, fileName);
+        fs.copyFileSync(sourcePath, destPath);
+        return { success: true, destPath: destPath };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 // App info
 ipcMain.handle('get-app-info', () => ({
     version: app.getVersion(),

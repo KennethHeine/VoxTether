@@ -28,6 +28,10 @@
                     <span class="nav-icon">🧠</span>
                     <span class="nav-text">Models</span>
                 </li>
+                <li class="nav-item" data-page="transcribe">
+                    <span class="nav-icon">📝</span>
+                    <span class="nav-text">Transcribe</span>
+                </li>
                 <li class="nav-item" data-page="about">
                     <span class="nav-icon">ℹ️</span>
                     <span class="nav-text">About</span>
@@ -270,6 +274,97 @@
                     <div class="model-card skeleton">
                         <div class="model-name">Loading...</div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Transcribe Page -->
+            <div class="page" id="page-transcribe">
+                <h1>Transcribe Audio File</h1>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Select Audio File</h3>
+                        <p class="setting-description">Choose a local audio file (WAV, MP3, M4A, FLAC, OGG) to transcribe</p>
+                    </div>
+                    <div class="setting-control">
+                        <input type="text" id="audio-file-path" class="text-input" readonly placeholder="No file selected">
+                        <button class="btn btn-secondary" id="select-audio-file-btn">Browse...</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Output Folder</h3>
+                        <p class="setting-description">Select a folder to save transcriptions (optional)</p>
+                    </div>
+                    <div class="setting-control">
+                        <input type="text" id="output-folder-path" class="text-input" readonly placeholder="Default: Same as audio file">
+                        <button class="btn btn-secondary" id="select-output-folder-btn">Browse...</button>
+                        <button class="btn btn-secondary" id="clear-output-folder-btn">Clear</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Save Options</h3>
+                        <p class="setting-description">Choose what to save after transcription</p>
+                    </div>
+                    <div class="setting-control save-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="save-transcript-toggle" checked>
+                            <span>Save transcript (.txt)</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="save-audio-copy-toggle">
+                            <span>Copy audio file to output folder</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Transcription Language</h3>
+                        <p class="setting-description">Language for speech recognition</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="transcribe-language-select" class="select-input">
+                            <option value="auto">Auto Detect</option>
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="it">Italian</option>
+                            <option value="pt">Portuguese</option>
+                            <option value="nl">Dutch</option>
+                            <option value="ru">Russian</option>
+                            <option value="zh">Chinese</option>
+                            <option value="ja">Japanese</option>
+                            <option value="ko">Korean</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="transcribe-file-btn" disabled>Transcribe</button>
+                </div>
+
+                <div class="transcription-result hidden" id="transcription-result">
+                    <div class="setting-header">
+                        <h3>Transcription Result</h3>
+                    </div>
+                    <div class="result-content">
+                        <div class="result-meta" id="result-meta"></div>
+                        <textarea id="transcription-text" class="transcription-textarea" readonly placeholder="Transcription will appear here..."></textarea>
+                        <div class="result-actions">
+                            <button class="btn btn-secondary" id="copy-transcription-btn">📋 Copy to Clipboard</button>
+                            <button class="btn btn-secondary" id="save-transcription-btn">💾 Save to File</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transcription-progress hidden" id="transcription-progress">
+                    <div class="progress-spinner"></div>
+                    <span class="progress-text">Transcribing...</span>
                 </div>
             </div>
 
