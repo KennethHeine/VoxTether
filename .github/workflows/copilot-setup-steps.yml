@@ -27,7 +27,7 @@ jobs:
 
       # Python setup for backend
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
@@ -39,7 +39,7 @@ jobs:
 
       # Node.js setup for Electron frontend
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 

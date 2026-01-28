@@ -30,6 +30,12 @@ contextBridge.exposeInMainWorld('voxtether', {
     openPath: (path) => ipcRenderer.invoke('open-path', path),
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
+    // File dialogs
+    selectAudioFile: () => ipcRenderer.invoke('select-audio-file'),
+    selectOutputFolder: () => ipcRenderer.invoke('select-output-folder'),
+    saveTranscript: (filePath, content) => ipcRenderer.invoke('save-transcript', filePath, content),
+    copyFile: (sourcePath, destFolder) => ipcRenderer.invoke('copy-file', sourcePath, destFolder),
+
     // App info
     getAppInfo: () => ipcRenderer.invoke('get-app-info'),
 
