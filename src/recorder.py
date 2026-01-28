@@ -119,7 +119,8 @@ class AudioRecorder:
             return False
         
         try:
-            self._audio_data = []
+            with self._audio_data_lock:
+                self._audio_data = []
             self._stop_event.clear()
             self._is_recording = True
             
@@ -184,6 +185,7 @@ class AudioRecorder:
                     )
                 
                 audio = np.concatenate(self._audio_data)
+                self._audio_data = []  # Clear to prevent memory leaks
             duration = len(audio) / self._sample_rate
             
             logger.info(f"Recording stopped. Duration: {duration:.2f}s")
