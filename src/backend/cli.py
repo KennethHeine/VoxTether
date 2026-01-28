@@ -179,13 +179,10 @@ def cmd_info(args):
         print("PyTorch: Not installed")
     
     # Check for faster-whisper
-    try:
-        import importlib.util
-        if importlib.util.find_spec("faster_whisper"):
-            print("\nfaster-whisper: Available")
-        else:
-            print("\nfaster-whisper: Not installed")
-    except ImportError:
+    import importlib.util
+    if importlib.util.find_spec("faster_whisper"):
+        print("\nfaster-whisper: Available")
+    else:
         print("\nfaster-whisper: Not installed")
     
     print("-" * 50)
