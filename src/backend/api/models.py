@@ -1,8 +1,7 @@
 """Model management API endpoints."""
 
-import asyncio
+import json
 import logging
-import os
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -78,7 +77,8 @@ async def download_model(model_name: str):
                 yield f"data: {progress.model_dump_json()}\n\n"
         except Exception as e:
             logger.error(f"Download failed: {e}")
-            yield f'data: {{"status": "error", "error": "{str(e)}"}}\n\n'
+            error_response = json.dumps({"status": "error", "error": str(e)})
+            yield f"data: {error_response}\n\n"
     
     return StreamingResponse(
         generate_progress(),

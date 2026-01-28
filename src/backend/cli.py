@@ -3,7 +3,6 @@
 
 import argparse
 import asyncio
-import os
 import sys
 from pathlib import Path
 
@@ -145,7 +144,7 @@ def cmd_start_server(args):
     host = args.host or settings.host
     port = args.port or settings.port
     
-    print(f"\nStarting VoxTether backend server...")
+    print("\nStarting VoxTether backend server...")
     print(f"  URL: http://{host}:{port}")
     print(f"  API docs: http://{host}:{port}/docs")
     print(f"  Models path: {settings.models_path}")
@@ -180,10 +179,10 @@ def cmd_info(args):
         print("PyTorch: Not installed")
     
     # Check for faster-whisper
-    try:
-        import faster_whisper
-        print(f"\nfaster-whisper: Available")
-    except ImportError:
+    import importlib.util
+    if importlib.util.find_spec("faster_whisper"):
+        print("\nfaster-whisper: Available")
+    else:
         print("\nfaster-whisper: Not installed")
     
     print("-" * 50)
