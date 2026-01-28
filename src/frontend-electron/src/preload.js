@@ -42,6 +42,8 @@ contextBridge.exposeInMainWorld('voxtether', {
     saveAudioFile: (audioData) => ipcRenderer.invoke('save-audio-file', audioData),
     deleteTempFile: (filePath) => ipcRenderer.invoke('delete-temp-file', filePath),
     copyFile: (sourcePath, destFolder) => ipcRenderer.invoke('copy-file', sourcePath, destFolder),
+    selectRecordingFolder: () => ipcRenderer.invoke('select-recording-folder'),
+    saveRecordingOutput: (options) => ipcRenderer.invoke('save-recording-output', options),
 
     // App info
     getAppInfo: () => ipcRenderer.invoke('get-app-info'),

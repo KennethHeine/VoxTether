@@ -99,6 +99,11 @@ function applySettingsToUI() {
     document.getElementById('start-minimized-toggle').checked = settings.startMinimized !== false;
     document.getElementById('theme-select').value = settings.theme || 'system';
 
+    // Recording output settings
+    document.getElementById('recording-output-folder').value = settings.recordingOutputFolder || '';
+    document.getElementById('save-recording-audio-toggle').checked = settings.saveRecordingAudio === true;
+    document.getElementById('save-recording-transcript-toggle').checked = settings.saveRecordingTranscript === true;
+
     // Audio settings
     document.getElementById('clipboard-delay-input').value = settings.clipboardDelayMs || 50;
     document.getElementById('audio-device-select').value = String(settings.audioDeviceId || -1);
@@ -163,6 +168,10 @@ function initializeEventListeners() {
     document.getElementById('capture-hotkey-btn').addEventListener('click', startHotkeyCapture);
     document.getElementById('hotkey-input').addEventListener('click', startHotkeyCapture);
     document.getElementById('save-general-btn').addEventListener('click', saveGeneralSettings);
+
+    // Recording output folder
+    document.getElementById('select-recording-folder-btn').addEventListener('click', selectRecordingFolder);
+    document.getElementById('clear-recording-folder-btn').addEventListener('click', clearRecordingFolder);
 
     // Test recording buttons
     document.getElementById('start-test-recording-btn').addEventListener('click', startTestRecording);
@@ -426,6 +435,7 @@ async function processRecording() {
 
     updateRecordingStatus('transcribing');
     let tempPath = null;
+    let audioBase64 = null;
 
     try {
         // Create audio blob from chunks
@@ -438,6 +448,16 @@ async function processRecording() {
         // Save to temp file and transcribe
         const arrayBuffer = await wavBlob.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
+
+        // Keep base64 for potential saving
+        if (settings.saveRecordingAudio && settings.recordingOutputFolder) {
+            let binary = '';
+            const len = uint8Array.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(uint8Array[i]);
+            }
+            audioBase64 = btoa(binary);
+        }
 
         // Create a temporary file path
         tempPath = await saveTempAudio(uint8Array);
@@ -452,6 +472,10 @@ async function processRecording() {
                 if (text) {
                     // Copy to clipboard based on output mode
                     await handleTranscriptionOutput(text);
+
+                    // Save audio and/or transcript to output folder if enabled
+                    await saveRecordingToFolder(audioBase64, text);
+
                     showNotification('Transcription complete', 'success');
                 } else {
                     showNotification('No speech detected', 'info');
@@ -477,6 +501,35 @@ async function processRecording() {
 
     recordingState.audioChunks = [];
     updateRecordingStatus('ready');
+}
+
+/**
+ * Save recording and transcript to a timestamped folder
+ */
+async function saveRecordingToFolder(audioBase64, transcriptText) {
+    const shouldSaveAudio = settings.saveRecordingAudio;
+    const shouldSaveTranscript = settings.saveRecordingTranscript;
+    const outputFolder = settings.recordingOutputFolder;
+
+    if (!outputFolder || (!shouldSaveAudio && !shouldSaveTranscript)) {
+        return;
+    }
+
+    try {
+        const result = await window.voxtether.saveRecordingOutput({
+            audioData: audioBase64,
+            transcript: transcriptText,
+            baseFolder: outputFolder,
+            saveAudio: shouldSaveAudio,
+            saveTranscript: shouldSaveTranscript
+        });
+
+        if (!result.success) {
+            console.warn('Failed to save recording output:', result.error);
+        }
+    } catch (error) {
+        console.error('Failed to save recording output:', error);
+    }
 }
 
 /**
@@ -688,10 +741,35 @@ async function saveGeneralSettings() {
         showRecordingIndicator: document.getElementById('recording-indicator-toggle').checked,
         startWithWindows: document.getElementById('start-with-windows-toggle').checked,
         startMinimized: document.getElementById('start-minimized-toggle').checked,
-        theme: document.getElementById('theme-select').value
+        theme: document.getElementById('theme-select').value,
+        recordingOutputFolder: document.getElementById('recording-output-folder').value,
+        saveRecordingAudio: document.getElementById('save-recording-audio-toggle').checked,
+        saveRecordingTranscript: document.getElementById('save-recording-transcript-toggle').checked
     };
 
     await saveSettings(newSettings);
+}
+
+/**
+ * Select recording output folder
+ */
+async function selectRecordingFolder() {
+    try {
+        const result = await window.voxtether.selectRecordingFolder();
+        if (result.success && result.folderPath) {
+            document.getElementById('recording-output-folder').value = result.folderPath;
+        }
+    } catch (error) {
+        console.error('Failed to select recording folder:', error);
+        showNotification('Failed to select folder', 'error');
+    }
+}
+
+/**
+ * Clear recording output folder
+ */
+function clearRecordingFolder() {
+    document.getElementById('recording-output-folder').value = '';
 }
 
 async function saveAudioSettings() {

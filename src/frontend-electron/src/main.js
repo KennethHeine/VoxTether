@@ -48,7 +48,10 @@ const defaultSettings = {
     backendHost: '127.0.0.1',
     startMinimized: true,
     startWithWindows: false,
-    theme: 'system'
+    theme: 'system',
+    recordingOutputFolder: '',
+    saveRecordingAudio: false,
+    saveRecordingTranscript: false
 };
 
 /**
@@ -714,6 +717,73 @@ ipcMain.handle('copy-file', async (event, sourcePath, destFolder) => {
         const destPath = path.join(destFolder, fileName);
         fs.copyFileSync(sourcePath, destPath);
         return { success: true, destPath: destPath };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('select-recording-folder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Select Recording Output Folder',
+        properties: ['openDirectory', 'createDirectory']
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+    }
+
+    return { success: true, folderPath: result.filePaths[0] };
+});
+
+ipcMain.handle('save-recording-output', async (event, options) => {
+    // options: { audioData: base64, transcript: string, baseFolder: string, saveAudio: boolean, saveTranscript: boolean }
+    try {
+        const { audioData, transcript, baseFolder, saveAudio, saveTranscript } = options;
+
+        if (!baseFolder) {
+            return { success: false, error: 'No output folder configured' };
+        }
+
+        if (!saveAudio && !saveTranscript) {
+            return { success: true, message: 'Nothing to save' };
+        }
+
+        // Create timestamped folder name (e.g., "2024-01-15_14-30-45")
+        const now = new Date();
+        const folderName = now.toISOString()
+            .replace(/T/, '_')
+            .replace(/:/g, '-')
+            .replace(/\..+/, '');
+
+        const outputFolder = path.join(baseFolder, folderName);
+
+        // Create the folder
+        if (!fs.existsSync(outputFolder)) {
+            fs.mkdirSync(outputFolder, { recursive: true });
+        }
+
+        let audioPath = null;
+        let transcriptPath = null;
+
+        // Save audio file if requested
+        if (saveAudio && audioData) {
+            const buffer = Buffer.from(audioData, 'base64');
+            audioPath = path.join(outputFolder, 'recording.wav');
+            fs.writeFileSync(audioPath, buffer);
+        }
+
+        // Save transcript if requested
+        if (saveTranscript && transcript) {
+            transcriptPath = path.join(outputFolder, 'transcript.txt');
+            fs.writeFileSync(transcriptPath, transcript, 'utf8');
+        }
+
+        return {
+            success: true,
+            folderPath: outputFolder,
+            audioPath: audioPath,
+            transcriptPath: transcriptPath
+        };
     } catch (error) {
         return { success: false, error: error.message };
     }

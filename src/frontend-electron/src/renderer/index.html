@@ -177,6 +177,44 @@
                     </div>
                 </div>
 
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Recording Output Folder</h3>
+                        <p class="setting-description">Folder where recordings and transcripts will be saved. A new subfolder is created for each recording.</p>
+                    </div>
+                    <div class="setting-control">
+                        <input type="text" id="recording-output-folder" class="text-input" readonly placeholder="Not set - recordings won't be saved">
+                        <button class="btn btn-secondary" id="select-recording-folder-btn">Browse...</button>
+                        <button class="btn btn-secondary" id="clear-recording-folder-btn">Clear</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Save Audio File</h3>
+                        <p class="setting-description">Save the audio recording (WAV) when using push-to-talk</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="save-recording-audio-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Save Transcript File</h3>
+                        <p class="setting-description">Save the transcript (TXT) when using push-to-talk</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="save-recording-transcript-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="action-buttons">
                     <button class="btn btn-primary" id="save-general-btn">Save Settings</button>
                 </div>
