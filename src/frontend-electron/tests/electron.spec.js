@@ -67,16 +67,18 @@ test.describe('VoxTether Electron App', () => {
     // Wait for the sidebar to be visible
     const sidebar = window.locator('.sidebar');
     await expect(sidebar).toBeVisible();
-    
+
     // Check navigation items exist
     const generalNav = window.locator('[data-page="general"]');
     const audioNav = window.locator('[data-page="audio"]');
     const modelsNav = window.locator('[data-page="models"]');
+    const transcribeNav = window.locator('[data-page="transcribe"]');
     const aboutNav = window.locator('[data-page="about"]');
-    
+
     await expect(generalNav).toBeVisible();
     await expect(audioNav).toBeVisible();
     await expect(modelsNav).toBeVisible();
+    await expect(transcribeNav).toBeVisible();
     await expect(aboutNav).toBeVisible();
   });
 
@@ -265,10 +267,92 @@ test.describe('VoxTether Electron App', () => {
     // Navigate to Models page
     const modelsNav = window.locator('[data-page="models"]');
     await modelsNav.click();
-    
+
     // Check for device info section
     const deviceInfo = window.locator('#device-info');
     await expect(deviceInfo).toBeVisible();
+  });
+
+  test('should navigate to Transcribe page when clicked', async () => {
+    // Click on Transcribe navigation item
+    const transcribeNav = window.locator('[data-page="transcribe"]');
+    await transcribeNav.click();
+
+    // Verify Transcribe page is now visible
+    const transcribePage = window.locator('#page-transcribe');
+    await expect(transcribePage).toHaveClass(/active/);
+
+    // Check for Transcribe header
+    const header = window.locator('#page-transcribe h1');
+    await expect(header).toHaveText('Transcribe Audio File');
+  });
+
+  test('should have audio file selection on Transcribe page', async () => {
+    // Navigate to Transcribe page
+    const transcribeNav = window.locator('[data-page="transcribe"]');
+    await transcribeNav.click();
+
+    // Check for audio file input and browse button
+    const audioFileInput = window.locator('#audio-file-path');
+    await expect(audioFileInput).toBeVisible();
+
+    const browseBtn = window.locator('#select-audio-file-btn');
+    await expect(browseBtn).toBeVisible();
+    await expect(browseBtn).toHaveText('Browse...');
+  });
+
+  test('should have output folder selection on Transcribe page', async () => {
+    // Navigate to Transcribe page
+    const transcribeNav = window.locator('[data-page="transcribe"]');
+    await transcribeNav.click();
+
+    // Check for output folder input and buttons
+    const outputFolderInput = window.locator('#output-folder-path');
+    await expect(outputFolderInput).toBeVisible();
+
+    const selectFolderBtn = window.locator('#select-output-folder-btn');
+    await expect(selectFolderBtn).toBeVisible();
+
+    const clearBtn = window.locator('#clear-output-folder-btn');
+    await expect(clearBtn).toBeVisible();
+  });
+
+  test('should have save options on Transcribe page', async () => {
+    // Navigate to Transcribe page
+    const transcribeNav = window.locator('[data-page="transcribe"]');
+    await transcribeNav.click();
+
+    // Check for save options checkboxes
+    const saveTranscriptToggle = window.locator('#save-transcript-toggle');
+    await expect(saveTranscriptToggle).toBeVisible();
+
+    const saveAudioToggle = window.locator('#save-audio-copy-toggle');
+    await expect(saveAudioToggle).toBeVisible();
+  });
+
+  test('should have transcribe button initially disabled', async () => {
+    // Navigate to Transcribe page
+    const transcribeNav = window.locator('[data-page="transcribe"]');
+    await transcribeNav.click();
+
+    // Check that transcribe button exists and is disabled
+    const transcribeBtn = window.locator('#transcribe-file-btn');
+    await expect(transcribeBtn).toBeVisible();
+    await expect(transcribeBtn).toBeDisabled();
+  });
+
+  test('should have language selection on Transcribe page', async () => {
+    // Navigate to Transcribe page
+    const transcribeNav = window.locator('[data-page="transcribe"]');
+    await transcribeNav.click();
+
+    // Check for language select dropdown
+    const languageSelect = window.locator('#transcribe-language-select');
+    await expect(languageSelect).toBeVisible();
+
+    // Check for auto detect option
+    const autoOption = window.locator('#transcribe-language-select option[value="auto"]');
+    await expect(autoOption).toHaveText('Auto Detect');
   });
 });
 
@@ -311,21 +395,24 @@ test.describe('Navigation State', () => {
     const generalPage = window.locator('#page-general');
     const audioPage = window.locator('#page-audio');
     const modelsPage = window.locator('#page-models');
+    const transcribePage = window.locator('#page-transcribe');
     const aboutPage = window.locator('#page-about');
-    
+
     await expect(generalPage).toHaveClass(/active/);
     await expect(audioPage).not.toHaveClass(/active/);
     await expect(modelsPage).not.toHaveClass(/active/);
+    await expect(transcribePage).not.toHaveClass(/active/);
     await expect(aboutPage).not.toHaveClass(/active/);
-    
-    // Navigate to About
-    const aboutNav = window.locator('[data-page="about"]');
-    await aboutNav.click();
-    
-    // Now only About should be active
+
+    // Navigate to Transcribe
+    const transcribeNav = window.locator('[data-page="transcribe"]');
+    await transcribeNav.click();
+
+    // Now only Transcribe should be active
     await expect(generalPage).not.toHaveClass(/active/);
     await expect(audioPage).not.toHaveClass(/active/);
     await expect(modelsPage).not.toHaveClass(/active/);
-    await expect(aboutPage).toHaveClass(/active/);
+    await expect(transcribePage).toHaveClass(/active/);
+    await expect(aboutPage).not.toHaveClass(/active/);
   });
 });
