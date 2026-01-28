@@ -19,13 +19,20 @@ const MODEL_INFO = {
 // Application state
 let settings = {};
 let isCapturingHotkey = false;
+let capturingHotkeyType = null; // 'ptt' or 'windowToggle'
 
 // Recording state for push-to-talk
 let recordingState = {
     isRecording: false,
     mediaRecorder: null,
     audioChunks: [],
-    stream: null
+    stream: null,
+    startTime: null,  // Track when recording started
+    // Audio level monitoring (Feature 8)
+    audioContext: null,
+    analyser: null,
+    audioData: null,
+    levelAnimationId: null
 };
 
 // Mic test state
@@ -47,6 +54,20 @@ let micTestState = {
     }
 };
 
+// History state
+const HISTORY_STORAGE_KEY = 'voxtether_history';
+const MAX_HISTORY_ITEMS = 50;
+let historyItems = [];
+
+// Statistics state
+const STATS_STORAGE_KEY = 'voxtether_stats';
+let statistics = {
+    totalRecordings: 0,
+    totalDurationMs: 0,
+    totalCharacters: 0,
+    lastRecordingDate: null
+};
+
 // ============================================================================
 // Initialization
 // ============================================================================
@@ -56,6 +77,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load settings
     await loadSettings();
+
+    // Load history and statistics from localStorage
+    loadHistory();
+    loadStatistics();
 
     // Initialize UI
     initializeNavigation();
@@ -70,6 +95,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Set up IPC event listeners
     setupIPCListeners();
+
+    // Set up audio device change detection
+    setupAudioDeviceDetection();
 
     console.log('VoxTether renderer ready');
 });
@@ -91,10 +119,12 @@ async function loadSettings() {
 function applySettingsToUI() {
     // General settings
     document.getElementById('hotkey-input').value = settings.hotkey || 'Ctrl+Shift+Space';
+    document.getElementById('window-toggle-hotkey-input').value = settings.windowToggleHotkey || 'Ctrl+Shift+V';
     document.getElementById('language-select').value = settings.language || 'auto';
     document.getElementById('output-mode-select').value = settings.outputMode || 'ClipboardAndPaste';
     document.getElementById('notifications-toggle').checked = settings.showNotifications !== false;
     document.getElementById('recording-indicator-toggle').checked = settings.showRecordingIndicator !== false;
+    document.getElementById('transcription-preview-toggle').checked = settings.showTranscriptionPreview === true;
     document.getElementById('start-with-windows-toggle').checked = settings.startWithWindows === true;
     document.getElementById('start-minimized-toggle').checked = settings.startMinimized !== false;
     document.getElementById('theme-select').value = settings.theme || 'system';
@@ -167,6 +197,8 @@ function initializeEventListeners() {
     // General settings
     document.getElementById('capture-hotkey-btn').addEventListener('click', startHotkeyCapture);
     document.getElementById('hotkey-input').addEventListener('click', startHotkeyCapture);
+    document.getElementById('capture-window-toggle-hotkey-btn').addEventListener('click', startWindowToggleHotkeyCapture);
+    document.getElementById('window-toggle-hotkey-input').addEventListener('click', startWindowToggleHotkeyCapture);
     document.getElementById('save-general-btn').addEventListener('click', saveGeneralSettings);
 
     // Recording output folder
@@ -195,6 +227,11 @@ function initializeEventListeners() {
     document.getElementById('save-transcription-btn').addEventListener('click', saveTranscriptionToFile);
     document.getElementById('audio-file-path').addEventListener('input', updateTranscribeButton);
 
+    // History page
+    document.getElementById('history-search').addEventListener('input', filterHistory);
+    document.getElementById('export-history-btn').addEventListener('click', exportHistory);
+    document.getElementById('clear-history-btn').addEventListener('click', clearHistory);
+
     // About page
     document.getElementById('github-link').addEventListener('click', () => {
         window.voxtether.openExternal('https://github.com/KennethHeine/VoxTether');
@@ -205,11 +242,21 @@ function initializeEventListeners() {
     document.getElementById('releases-link').addEventListener('click', () => {
         window.voxtether.openExternal('https://github.com/KennethHeine/VoxTether/releases');
     });
+    document.getElementById('check-updates-btn').addEventListener('click', checkForUpdates);
 
     // Theme change
     document.getElementById('theme-select').addEventListener('change', (e) => {
         applyTheme(e.target.value);
     });
+
+    // Statistics reset
+    document.getElementById('reset-stats-btn').addEventListener('click', resetStatistics);
+
+    // Transcription preview modal (Feature 7)
+    document.getElementById('preview-close-btn').addEventListener('click', closePreviewModal);
+    document.getElementById('preview-cancel-btn').addEventListener('click', closePreviewModal);
+    document.getElementById('preview-copy-btn').addEventListener('click', previewCopyOnly);
+    document.getElementById('preview-insert-btn').addEventListener('click', previewInsert);
 
     // Global keyboard listener for hotkey capture
     document.addEventListener('keydown', handleHotkeyCapture);
@@ -243,6 +290,17 @@ function setupIPCListeners() {
     window.voxtether.onStopRecording(() => {
         handleStopRecording();
     });
+
+    // Auto-updater events (Feature 18)
+    window.voxtether.onUpdateAvailable((info) => {
+        console.log('Update available:', info.version);
+        showUpdateNotification(info);
+    });
+
+    window.voxtether.onUpdateDownloaded((info) => {
+        console.log('Update downloaded:', info.version);
+        showUpdateReadyNotification(info);
+    });
 }
 
 // ============================================================================
@@ -251,10 +309,20 @@ function setupIPCListeners() {
 
 function startHotkeyCapture() {
     isCapturingHotkey = true;
+    capturingHotkeyType = 'ptt';
     const input = document.getElementById('hotkey-input');
     input.value = 'Press hotkey combination...';
     input.classList.add('capturing');
     document.getElementById('capture-hotkey-btn').textContent = 'Listening...';
+}
+
+function startWindowToggleHotkeyCapture() {
+    isCapturingHotkey = true;
+    capturingHotkeyType = 'windowToggle';
+    const input = document.getElementById('window-toggle-hotkey-input');
+    input.value = 'Press hotkey combination...';
+    input.classList.add('capturing');
+    document.getElementById('capture-window-toggle-hotkey-btn').textContent = 'Listening...';
 }
 
 function handleHotkeyCapture(event) {
@@ -281,16 +349,29 @@ function handleHotkeyCapture(event) {
         parts.push(key);
         const hotkey = parts.join('+');
 
-        document.getElementById('hotkey-input').value = hotkey;
+        if (capturingHotkeyType === 'windowToggle') {
+            document.getElementById('window-toggle-hotkey-input').value = hotkey;
+        } else {
+            document.getElementById('hotkey-input').value = hotkey;
+        }
         stopHotkeyCapture();
     }
 }
 
 function stopHotkeyCapture() {
     isCapturingHotkey = false;
-    const input = document.getElementById('hotkey-input');
-    input.classList.remove('capturing');
-    document.getElementById('capture-hotkey-btn').textContent = 'Capture';
+
+    if (capturingHotkeyType === 'windowToggle') {
+        const input = document.getElementById('window-toggle-hotkey-input');
+        input.classList.remove('capturing');
+        document.getElementById('capture-window-toggle-hotkey-btn').textContent = 'Capture';
+    } else {
+        const input = document.getElementById('hotkey-input');
+        input.classList.remove('capturing');
+        document.getElementById('capture-hotkey-btn').textContent = 'Capture';
+    }
+
+    capturingHotkeyType = null;
 }
 
 // ============================================================================
@@ -391,6 +472,10 @@ async function handleStartRecording() {
 
         recordingState.mediaRecorder.start(100); // Collect data every 100ms
         recordingState.isRecording = true;
+        recordingState.startTime = Date.now();  // Record start time for duration tracking
+
+        // Set up audio level monitoring (Feature 8)
+        setupRecordingLevelMonitor();
 
         console.log('Recording started');
         updateRecordingStatus('recording');
@@ -409,6 +494,9 @@ async function handleStopRecording() {
     if (!recordingState.isRecording) return;
 
     recordingState.isRecording = false;
+
+    // Stop audio level monitoring
+    stopRecordingLevelMonitor();
 
     if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== 'inactive') {
         recordingState.mediaRecorder.stop();
@@ -436,6 +524,9 @@ async function processRecording() {
     updateRecordingStatus('transcribing');
     let tempPath = null;
     let audioBase64 = null;
+
+    // Calculate recording duration
+    const recordingDurationMs = recordingState.startTime ? Date.now() - recordingState.startTime : 0;
 
     try {
         // Create audio blob from chunks
@@ -471,6 +562,9 @@ async function processRecording() {
 
                     // Save audio and/or transcript to output folder if enabled
                     await saveRecordingToFolder(audioBase64, text);
+
+                    // Add to history
+                    addToHistory(text, recordingDurationMs);
 
                     showNotification('Transcription complete', 'success');
                 } else {
@@ -694,8 +788,23 @@ async function saveTempAudio(uint8Array) {
 
 /**
  * Handle transcription output based on settings
+ * @param {string} text - The transcribed text
  */
 async function handleTranscriptionOutput(text) {
+    // Check if preview modal is enabled
+    if (settings.showTranscriptionPreview) {
+        showTranscriptionPreviewModal(text);
+        return; // Preview modal handles the output
+    }
+
+    // Direct output without preview
+    await performTranscriptionOutput(text);
+}
+
+/**
+ * Perform the actual transcription output (clipboard/paste)
+ */
+async function performTranscriptionOutput(text) {
     const outputMode = settings.outputMode || 'ClipboardAndPaste';
 
     switch (outputMode) {
@@ -708,6 +817,60 @@ async function handleTranscriptionOutput(text) {
         await window.voxtether.copyToClipboard(text);
         break;
     }
+}
+
+// ============================================================================
+// Transcription Preview Modal (Feature 7)
+// ============================================================================
+
+let _pendingPreviewDuration = 0;
+
+/**
+ * Show the transcription preview modal
+ */
+function showTranscriptionPreviewModal(text, durationMs = 0) {
+    _pendingPreviewDuration = durationMs;
+    const modal = document.getElementById('transcription-preview-modal');
+    const textarea = document.getElementById('preview-text');
+
+    textarea.value = text;
+    modal.classList.remove('hidden');
+    textarea.focus();
+    textarea.select();
+}
+
+/**
+ * Close the preview modal (cancel)
+ */
+function closePreviewModal() {
+    const modal = document.getElementById('transcription-preview-modal');
+    modal.classList.add('hidden');
+    document.getElementById('preview-text').value = '';
+    _pendingPreviewDuration = 0;
+}
+
+/**
+ * Copy only without inserting
+ */
+async function previewCopyOnly() {
+    const text = document.getElementById('preview-text').value.trim();
+    if (text) {
+        await window.voxtether.copyToClipboard(text);
+        showNotification('Copied to clipboard', 'success');
+    }
+    closePreviewModal();
+}
+
+/**
+ * Insert the text (copy to clipboard and close)
+ */
+async function previewInsert() {
+    const text = document.getElementById('preview-text').value.trim();
+    if (text) {
+        await performTranscriptionOutput(text);
+        showNotification('Transcription inserted', 'success');
+    }
+    closePreviewModal();
 }
 
 /**
@@ -745,10 +908,12 @@ function updateRecordingStatus(status) {
 async function saveGeneralSettings() {
     const newSettings = {
         hotkey: document.getElementById('hotkey-input').value,
+        windowToggleHotkey: document.getElementById('window-toggle-hotkey-input').value,
         language: document.getElementById('language-select').value,
         outputMode: document.getElementById('output-mode-select').value,
         showNotifications: document.getElementById('notifications-toggle').checked,
         showRecordingIndicator: document.getElementById('recording-indicator-toggle').checked,
+        showTranscriptionPreview: document.getElementById('transcription-preview-toggle').checked,
         startWithWindows: document.getElementById('start-with-windows-toggle').checked,
         startMinimized: document.getElementById('start-minimized-toggle').checked,
         theme: document.getElementById('theme-select').value,
@@ -1540,6 +1705,9 @@ async function loadAboutInfo() {
         const modelsPath = document.getElementById('models-path');
         modelsPath.textContent = appInfo.modelsPath;
         modelsPath.addEventListener('click', () => window.voxtether.openPath(appInfo.modelsPath));
+
+        // Update statistics display
+        updateStatisticsDisplay();
     } catch (error) {
         console.error('Failed to load app info:', error);
     }
@@ -1590,14 +1758,669 @@ function formatSize(bytes) {
     return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
 }
 
-function showNotification(message, type = 'info') {
-    // For now, use console and native notification
+// ============================================================================
+// Toast Notification System
+// ============================================================================
+
+const toastIcons = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
+};
+
+const toastTitles = {
+    success: 'Success',
+    error: 'Error',
+    warning: 'Warning',
+    info: 'Info'
+};
+
+/**
+ * Show a toast notification
+ * @param {string} message - The message to display
+ * @param {string} type - Type of notification: 'success', 'error', 'warning', 'info'
+ * @param {number} duration - Duration in ms before auto-dismiss (default: 4000, 0 = no auto-dismiss)
+ */
+function showNotification(message, type = 'info', duration = 4000) {
     console.log(`[${type.toUpperCase()}] ${message}`);
 
-    // Could add a toast notification system here
-    // For now, using alert for important messages
-    if (type === 'error') {
-        alert(message);
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        // Fallback to alert if container doesn't exist
+        if (type === 'error') alert(message);
+        return;
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.setAttribute('role', 'alert');
+
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.textContent = toastIcons[type] || toastIcons.info;
+    icon.setAttribute('aria-hidden', 'true');
+
+    const content = document.createElement('div');
+    content.className = 'toast-content';
+
+    const title = document.createElement('span');
+    title.className = 'toast-title';
+    title.textContent = toastTitles[type] || toastTitles.info;
+
+    const msg = document.createElement('span');
+    msg.className = 'toast-message';
+    msg.textContent = message;
+
+    content.appendChild(title);
+    content.appendChild(msg);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close';
+    closeBtn.textContent = '×';
+    closeBtn.setAttribute('aria-label', 'Close notification');
+    closeBtn.setAttribute('type', 'button');
+
+    toast.appendChild(icon);
+    toast.appendChild(content);
+    toast.appendChild(closeBtn);
+
+    // Dismiss function
+    const dismissToast = () => {
+        toast.classList.add('hiding');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 200);
+    };
+
+    // Click to dismiss
+    toast.addEventListener('click', dismissToast);
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dismissToast();
+    });
+
+    // Add to container
+    container.appendChild(toast);
+
+    // Auto-dismiss after duration (unless duration is 0)
+    if (duration > 0) {
+        setTimeout(dismissToast, duration);
+    }
+
+    // Limit to 5 visible toasts
+    const toasts = container.querySelectorAll('.toast:not(.hiding)');
+    if (toasts.length > 5) {
+        const oldest = toasts[0];
+        oldest.classList.add('hiding');
+        setTimeout(() => {
+            if (oldest.parentNode) {
+                oldest.parentNode.removeChild(oldest);
+            }
+        }, 200);
+    }
+}
+
+// ============================================================================
+// History Management
+// ============================================================================
+
+/**
+ * Load history from localStorage
+ */
+function loadHistory() {
+    try {
+        const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (stored) {
+            historyItems = JSON.parse(stored);
+        }
+        renderHistory();
+    } catch (error) {
+        console.error('Failed to load history:', error);
+        historyItems = [];
+    }
+}
+
+/**
+ * Save history to localStorage
+ */
+function saveHistory() {
+    try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyItems));
+    } catch (error) {
+        console.error('Failed to save history:', error);
+    }
+}
+
+/**
+ * Add a transcription to history
+ * @param {string} text - The transcribed text
+ * @param {number} durationMs - Recording duration in milliseconds
+ */
+function addToHistory(text, durationMs = 0) {
+    if (!text || !text.trim()) return;
+
+    const item = {
+        id: Date.now().toString(),
+        text: text.trim(),
+        timestamp: new Date().toISOString(),
+        durationMs: durationMs,
+        characters: text.trim().length
+    };
+
+    // Add to beginning of array
+    historyItems.unshift(item);
+
+    // Limit to MAX_HISTORY_ITEMS
+    if (historyItems.length > MAX_HISTORY_ITEMS) {
+        historyItems = historyItems.slice(0, MAX_HISTORY_ITEMS);
+    }
+
+    saveHistory();
+    renderHistory();
+
+    // Update statistics
+    updateStatistics(durationMs, text.trim().length);
+}
+
+/**
+ * Render history list
+ */
+function renderHistory(filter = '') {
+    const historyList = document.getElementById('history-list');
+    const emptyState = document.getElementById('history-empty');
+
+    if (!historyList) return;
+
+    // Filter items if search term provided
+    const filteredItems = filter
+        ? historyItems.filter(item => item.text.toLowerCase().includes(filter.toLowerCase()))
+        : historyItems;
+
+    // Clear existing items except empty state
+    historyList.querySelectorAll('.history-item').forEach(el => el.remove());
+
+    if (filteredItems.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+    }
+
+    emptyState.classList.add('hidden');
+
+    filteredItems.forEach(item => {
+        const historyItem = createHistoryItemElement(item);
+        historyList.appendChild(historyItem);
+    });
+}
+
+/**
+ * Create a history item DOM element
+ */
+function createHistoryItemElement(item) {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.dataset.id = item.id;
+
+    // Header with timestamp and actions
+    const header = document.createElement('div');
+    header.className = 'history-item-header';
+
+    const time = document.createElement('span');
+    time.className = 'history-item-time';
+    time.textContent = formatTimestamp(item.timestamp);
+
+    const actions = document.createElement('div');
+    actions.className = 'history-item-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn-icon';
+    copyBtn.textContent = '📋';
+    copyBtn.title = 'Copy to clipboard';
+    copyBtn.addEventListener('click', () => copyHistoryItem(item.text));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-icon';
+    deleteBtn.textContent = '🗑️';
+    deleteBtn.title = 'Delete';
+    deleteBtn.addEventListener('click', () => deleteHistoryItem(item.id));
+
+    actions.appendChild(copyBtn);
+    actions.appendChild(deleteBtn);
+
+    header.appendChild(time);
+    header.appendChild(actions);
+
+    // Text content
+    const textDiv = document.createElement('div');
+    textDiv.className = 'history-item-text';
+    textDiv.textContent = item.text;
+
+    // Expand button for long text
+    const expandBtn = document.createElement('button');
+    expandBtn.className = 'history-item-expand hidden';
+    expandBtn.textContent = 'Show more';
+
+    // Check if text is long enough to need expansion
+    if (item.text.length > 200) {
+        expandBtn.classList.remove('hidden');
+        expandBtn.addEventListener('click', () => {
+            textDiv.classList.toggle('expanded');
+            expandBtn.textContent = textDiv.classList.contains('expanded') ? 'Show less' : 'Show more';
+        });
+    }
+
+    // Meta info
+    const meta = document.createElement('div');
+    meta.className = 'history-item-meta';
+    meta.textContent = `${item.characters} characters`;
+    if (item.durationMs > 0) {
+        meta.textContent += ` • ${(item.durationMs / 1000).toFixed(1)}s recording`;
+    }
+
+    div.appendChild(header);
+    div.appendChild(textDiv);
+    div.appendChild(expandBtn);
+    div.appendChild(meta);
+
+    return div;
+}
+
+/**
+ * Format timestamp for display
+ */
+function formatTimestamp(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+
+    return date.toLocaleDateString();
+}
+
+/**
+ * Copy history item text to clipboard
+ */
+async function copyHistoryItem(text) {
+    try {
+        await window.voxtether.copyToClipboard(text);
+        showNotification('Copied to clipboard', 'success');
+    } catch (error) {
+        console.error('Failed to copy:', error);
+        showNotification('Failed to copy to clipboard', 'error');
+    }
+}
+
+/**
+ * Delete a history item
+ */
+function deleteHistoryItem(id) {
+    historyItems = historyItems.filter(item => item.id !== id);
+    saveHistory();
+    renderHistory(document.getElementById('history-search')?.value || '');
+    showNotification('Item deleted', 'info');
+}
+
+/**
+ * Filter history by search term
+ */
+function filterHistory() {
+    const searchTerm = document.getElementById('history-search').value;
+    renderHistory(searchTerm);
+}
+
+/**
+ * Export history to a file
+ */
+async function exportHistory() {
+    if (historyItems.length === 0) {
+        showNotification('No history to export', 'warning');
+        return;
+    }
+
+    // Format history as text
+    const exportText = historyItems.map(item => {
+        const date = new Date(item.timestamp).toLocaleString();
+        return `[${date}]\n${item.text}\n`;
+    }).join('\n---\n\n');
+
+    try {
+        await window.voxtether.copyToClipboard(exportText);
+        showNotification('History copied to clipboard', 'success');
+    } catch (error) {
+        console.error('Failed to export history:', error);
+        showNotification('Failed to export history', 'error');
+    }
+}
+
+/**
+ * Clear all history
+ */
+function clearHistory() {
+    if (historyItems.length === 0) {
+        showNotification('History is already empty', 'info');
+        return;
+    }
+
+    // Confirm before clearing
+    if (confirm('Are you sure you want to clear all transcription history?')) {
+        historyItems = [];
+        saveHistory();
+        renderHistory();
+        showNotification('History cleared', 'success');
+    }
+}
+
+// ============================================================================
+// Statistics Management
+// ============================================================================
+
+/**
+ * Load statistics from localStorage
+ */
+function loadStatistics() {
+    try {
+        const stored = localStorage.getItem(STATS_STORAGE_KEY);
+        if (stored) {
+            statistics = { ...statistics, ...JSON.parse(stored) };
+        }
+    } catch (error) {
+        console.error('Failed to load statistics:', error);
+    }
+}
+
+/**
+ * Save statistics to localStorage
+ */
+function saveStatistics() {
+    try {
+        localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(statistics));
+    } catch (error) {
+        console.error('Failed to save statistics:', error);
+    }
+}
+
+/**
+ * Update statistics after a recording
+ */
+function updateStatistics(durationMs, characterCount) {
+    statistics.totalRecordings++;
+    statistics.totalDurationMs += durationMs || 0;
+    statistics.totalCharacters += characterCount || 0;
+    statistics.lastRecordingDate = new Date().toISOString();
+    saveStatistics();
+}
+
+/**
+ * Reset statistics
+ */
+function resetStatistics() {
+    if (confirm('Are you sure you want to reset all statistics?')) {
+        statistics = {
+            totalRecordings: 0,
+            totalDurationMs: 0,
+            totalCharacters: 0,
+            lastRecordingDate: null
+        };
+        saveStatistics();
+        updateStatisticsDisplay();
+        showNotification('Statistics reset', 'success');
+    }
+}
+
+/**
+ * Update statistics display on About page
+ */
+function updateStatisticsDisplay() {
+    const statsContainer = document.getElementById('stats-container');
+    if (!statsContainer) return;
+
+    const totalRecordings = statsContainer.querySelector('#stat-total-recordings');
+    const totalDuration = statsContainer.querySelector('#stat-total-duration');
+    const totalCharacters = statsContainer.querySelector('#stat-total-characters');
+
+    if (totalRecordings) totalRecordings.textContent = statistics.totalRecordings.toLocaleString();
+    if (totalDuration) totalDuration.textContent = formatDuration(statistics.totalDurationMs);
+    if (totalCharacters) totalCharacters.textContent = statistics.totalCharacters.toLocaleString();
+}
+
+/**
+ * Format duration for display
+ */
+function formatDuration(ms) {
+    if (!ms || ms < 1000) return '0s';
+
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    if (hours > 0) {
+        return `${hours}h ${minutes % 60}m`;
+    }
+    if (minutes > 0) {
+        return `${minutes}m ${seconds % 60}s`;
+    }
+    return `${seconds}s`;
+}
+
+// ============================================================================
+// Audio Device Hot-Swap Detection (Feature 5)
+// ============================================================================
+
+/**
+ * Set up audio device change detection
+ */
+function setupAudioDeviceDetection() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.addEventListener) {
+        console.log('Audio device detection not supported');
+        return;
+    }
+
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    console.log('Audio device change detection enabled');
+}
+
+/**
+ * Handle audio device changes (connect/disconnect)
+ */
+async function handleDeviceChange() {
+    console.log('Audio device change detected');
+
+    // Refresh device lists
+    await loadMicDevices();
+
+    // Show notification
+    showNotification('Audio devices changed', 'info');
+
+    // If on audio page, show updated message
+    const audioPage = document.getElementById('page-audio');
+    if (audioPage && audioPage.classList.contains('active')) {
+        showNotification('Device list updated', 'info');
+    }
+}
+
+// ============================================================================
+// Recording Level Monitoring (Feature 8)
+// ============================================================================
+
+/**
+ * Set up audio level monitoring during recording
+ */
+function setupRecordingLevelMonitor() {
+    if (!recordingState.stream) return;
+
+    try {
+        // Create audio context and analyser
+        recordingState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        recordingState.analyser = recordingState.audioContext.createAnalyser();
+        recordingState.analyser.fftSize = 256;
+        recordingState.analyser.smoothingTimeConstant = 0.8;
+
+        const source = recordingState.audioContext.createMediaStreamSource(recordingState.stream);
+        source.connect(recordingState.analyser);
+
+        recordingState.audioData = new Uint8Array(recordingState.analyser.frequencyBinCount);
+
+        // Show the level meter
+        const levelMeter = document.getElementById('recording-level-meter');
+        if (levelMeter) {
+            levelMeter.classList.remove('hidden');
+        }
+
+        // Start animation loop
+        animateRecordingLevel();
+
+    } catch (error) {
+        console.error('Failed to set up level monitor:', error);
+    }
+}
+
+/**
+ * Stop audio level monitoring
+ */
+function stopRecordingLevelMonitor() {
+    // Cancel animation
+    if (recordingState.levelAnimationId) {
+        cancelAnimationFrame(recordingState.levelAnimationId);
+        recordingState.levelAnimationId = null;
+    }
+
+    // Close audio context
+    if (recordingState.audioContext) {
+        try {
+            recordingState.audioContext.close();
+        } catch (_e) {
+            // Ignore close errors
+        }
+        recordingState.audioContext = null;
+        recordingState.analyser = null;
+        recordingState.audioData = null;
+    }
+
+    // Hide the level meter and reset bar
+    const levelMeter = document.getElementById('recording-level-meter');
+    const levelBar = document.getElementById('recording-level-bar');
+    if (levelMeter) {
+        levelMeter.classList.add('hidden');
+    }
+    if (levelBar) {
+        levelBar.style.width = '0%';
+    }
+}
+
+/**
+ * Animation loop for recording level meter
+ */
+function animateRecordingLevel() {
+    if (!recordingState.isRecording || !recordingState.analyser) {
+        return;
+    }
+
+    // Get audio data
+    recordingState.analyser.getByteFrequencyData(recordingState.audioData);
+
+    // Calculate average level
+    let sum = 0;
+    for (let i = 0; i < recordingState.audioData.length; i++) {
+        sum += recordingState.audioData[i];
+    }
+    const average = sum / recordingState.audioData.length;
+    const level = Math.min(100, (average / 128) * 100);
+
+    // Update level bar
+    const levelBar = document.getElementById('recording-level-bar');
+    if (levelBar) {
+        levelBar.style.width = `${level}%`;
+    }
+
+    // Schedule next frame
+    recordingState.levelAnimationId = requestAnimationFrame(animateRecordingLevel);
+}
+
+// ============================================================================
+// Auto-Updater UI (Feature 18)
+// ============================================================================
+
+let _pendingUpdateInfo = null;
+
+/**
+ * Show notification when update is available
+ */
+function showUpdateNotification(info) {
+    _pendingUpdateInfo = info;
+    showNotification(`Update ${info.version} available. See the About page to download.`, 'info', 0);
+
+    // Update the About page if it exists
+    updateAboutPageUpdateStatus(info.version, 'available');
+}
+
+/**
+ * Show notification when update is ready to install
+ */
+function showUpdateReadyNotification(info) {
+    showNotification(`Update ${info.version} ready to install. Restart to apply.`, 'success', 0);
+
+    // Update the About page
+    updateAboutPageUpdateStatus(info.version, 'ready');
+}
+
+/**
+ * Update the About page with update status
+ */
+function updateAboutPageUpdateStatus(version, status) {
+    const updateSection = document.getElementById('update-status-section');
+    if (!updateSection) return;
+
+    updateSection.classList.remove('hidden');
+
+    const statusText = updateSection.querySelector('#update-status-text');
+    const actionBtn = updateSection.querySelector('#update-action-btn');
+
+    if (status === 'available') {
+        statusText.textContent = `Version ${version} is available`;
+        actionBtn.textContent = 'Download Update';
+        actionBtn.classList.remove('hidden');
+        actionBtn.onclick = async () => {
+            actionBtn.textContent = 'Downloading...';
+            actionBtn.disabled = true;
+            await window.voxtether.downloadUpdate();
+        };
+    } else if (status === 'ready') {
+        statusText.textContent = `Version ${version} is ready to install`;
+        actionBtn.textContent = 'Restart & Install';
+        actionBtn.classList.remove('hidden');
+        actionBtn.disabled = false;
+        actionBtn.onclick = () => {
+            window.voxtether.installUpdate();
+        };
+    }
+}
+
+/**
+ * Check for updates manually
+ */
+async function checkForUpdates() {
+    showNotification('Checking for updates...', 'info');
+    try {
+        const result = await window.voxtether.checkForUpdates();
+        if (result.available && result.updateInfo) {
+            showUpdateNotification(result.updateInfo);
+        } else if (result.error) {
+            showNotification(result.error, 'info');
+        } else {
+            showNotification('You are using the latest version', 'success');
+        }
+    } catch (_error) {
+        showNotification('Failed to check for updates', 'error');
     }
 }
 

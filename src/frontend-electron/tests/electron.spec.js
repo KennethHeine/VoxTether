@@ -73,12 +73,14 @@ test.describe('VoxTether Electron App', () => {
     const audioNav = window.locator('[data-page="audio"]');
     const modelsNav = window.locator('[data-page="models"]');
     const transcribeNav = window.locator('[data-page="transcribe"]');
+    const historyNav = window.locator('[data-page="history"]');
     const aboutNav = window.locator('[data-page="about"]');
 
     await expect(generalNav).toBeVisible();
     await expect(audioNav).toBeVisible();
     await expect(modelsNav).toBeVisible();
     await expect(transcribeNav).toBeVisible();
+    await expect(historyNav).toBeVisible();
     await expect(aboutNav).toBeVisible();
   });
 
@@ -436,5 +438,116 @@ test.describe('Navigation State', () => {
     await expect(modelsPage).not.toHaveClass(/active/);
     await expect(transcribePage).toHaveClass(/active/);
     await expect(aboutPage).not.toHaveClass(/active/);
+  });
+});
+
+/**
+ * Test suite for new features
+ */
+test.describe('New Features', () => {
+  let electronApp;
+  let window;
+
+  test.beforeEach(async () => {
+    electronApp = await electron.launch(electronLaunchOptions);
+    window = await electronApp.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+  });
+
+  test.afterEach(async () => {
+    if (electronApp) {
+      await electronApp.close();
+    }
+  });
+
+  test('should navigate to History page when clicked', async () => {
+    // Click on History navigation item
+    const historyNav = window.locator('[data-page="history"]');
+    await historyNav.click();
+
+    // Verify History page is now visible
+    const historyPage = window.locator('#page-history');
+    await expect(historyPage).toHaveClass(/active/);
+
+    // Check for History header
+    const header = window.locator('#page-history h1');
+    await expect(header).toHaveText('Transcription History');
+  });
+
+  test('should have history controls on History page', async () => {
+    // Navigate to History page
+    const historyNav = window.locator('[data-page="history"]');
+    await historyNav.click();
+
+    // Check for history controls
+    const searchInput = window.locator('#history-search');
+    await expect(searchInput).toBeVisible();
+
+    const exportBtn = window.locator('#export-history-btn');
+    await expect(exportBtn).toBeVisible();
+
+    const clearBtn = window.locator('#clear-history-btn');
+    await expect(clearBtn).toBeVisible();
+  });
+
+  test('should have window toggle hotkey input on General page', async () => {
+    const windowToggleInput = window.locator('#window-toggle-hotkey-input');
+    await expect(windowToggleInput).toBeVisible();
+
+    const captureBtn = window.locator('#capture-window-toggle-hotkey-btn');
+    await expect(captureBtn).toBeVisible();
+    await expect(captureBtn).toHaveText('Capture');
+  });
+
+  test('should have transcription preview toggle on General page', async () => {
+    const previewToggle = window.locator('.toggle-switch:has(#transcription-preview-toggle)');
+    await expect(previewToggle).toBeVisible();
+  });
+
+  test('should have statistics section on About page', async () => {
+    // Navigate to About page
+    const aboutNav = window.locator('[data-page="about"]');
+    await aboutNav.click();
+
+    // Check for statistics container
+    const statsContainer = window.locator('#stats-container');
+    await expect(statsContainer).toBeVisible();
+
+    // Check for statistics elements
+    const totalRecordings = window.locator('#stat-total-recordings');
+    await expect(totalRecordings).toBeVisible();
+
+    const totalDuration = window.locator('#stat-total-duration');
+    await expect(totalDuration).toBeVisible();
+
+    const totalCharacters = window.locator('#stat-total-characters');
+    await expect(totalCharacters).toBeVisible();
+
+    // Check for reset button
+    const resetBtn = window.locator('#reset-stats-btn');
+    await expect(resetBtn).toBeVisible();
+  });
+
+  test('should have check for updates button on About page', async () => {
+    // Navigate to About page
+    const aboutNav = window.locator('[data-page="about"]');
+    await aboutNav.click();
+
+    // Check for updates button
+    const updateBtn = window.locator('#check-updates-btn');
+    await expect(updateBtn).toBeVisible();
+    await expect(updateBtn).toContainText('Check for Updates');
+  });
+
+  test('should have toast notification container', async () => {
+    // Toast container exists but may not be visible until toasts are shown
+    const toastContainer = window.locator('#toast-container');
+    await expect(toastContainer).toHaveCount(1);
+  });
+
+  test('should have transcription preview modal', async () => {
+    // The modal should exist but be hidden
+    const modal = window.locator('#transcription-preview-modal');
+    await expect(modal).toHaveClass(/hidden/);
   });
 });

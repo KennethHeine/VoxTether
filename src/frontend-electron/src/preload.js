@@ -68,6 +68,20 @@ contextBridge.exposeInMainWorld('voxtether', {
         ipcRenderer.on('stop-recording', () => callback());
     },
 
+    // Auto-updater (Feature 18)
+    checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+    downloadUpdate: () => ipcRenderer.invoke('download-update'),
+    installUpdate: () => ipcRenderer.invoke('install-update'),
+    onUpdateAvailable: (callback) => {
+        ipcRenderer.on('update-available', (event, info) => callback(info));
+    },
+    onUpdateDownloadProgress: (callback) => {
+        ipcRenderer.on('update-download-progress', (event, progress) => callback(progress));
+    },
+    onUpdateDownloaded: (callback) => {
+        ipcRenderer.on('update-downloaded', (event, info) => callback(info));
+    },
+
     // Remove listeners
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);

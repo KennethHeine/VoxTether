@@ -11,12 +11,23 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 
+// Auto-updater (Feature 18)
+let autoUpdater = null;
+try {
+    // electron-updater is only available in packaged builds
+    autoUpdater = require('electron-updater').autoUpdater;
+} catch (_e) {
+    console.log('Auto-updater not available (development mode)');
+}
+
 // Application state
 let mainWindow = null;
 let tray = null;
 let isRecording = false;
 let settings = null;
 let registeredHotkey = null;
+let registeredWindowToggleHotkey = null;
+let recordingOverlayWindow = null;  // Recording indicator overlay (Feature 3)
 
 // Paths
 const userDataPath = app.getPath('userData');
@@ -36,6 +47,7 @@ const isDebug = process.argv.includes('--debug');
  */
 const defaultSettings = {
     hotkey: 'Ctrl+Shift+Space',
+    windowToggleHotkey: 'Ctrl+Shift+V',
     modelName: 'small',
     language: 'auto',
     outputMode: 'ClipboardAndPaste',
@@ -51,7 +63,8 @@ const defaultSettings = {
     theme: 'system',
     recordingOutputFolder: '',
     saveRecordingAudio: false,
-    saveRecordingTranscript: false
+    saveRecordingTranscript: false,
+    showTranscriptionPreview: false
 };
 
 /**
@@ -130,6 +143,111 @@ function createMainWindow() {
     });
 
     return mainWindow;
+}
+
+// ============================================================================
+// Recording Indicator Overlay (Feature 3)
+// ============================================================================
+
+/**
+ * Create the recording indicator overlay window
+ */
+function createRecordingOverlay() {
+    if (recordingOverlayWindow) {
+        return recordingOverlayWindow;
+    }
+
+    // Get screen dimensions
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth } = primaryDisplay.workAreaSize;
+
+    // Create a small, always-on-top window
+    recordingOverlayWindow = new BrowserWindow({
+        width: 60,
+        height: 60,
+        x: screenWidth - 80,  // Position in top-right corner
+        y: 20,
+        frame: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        resizable: false,
+        movable: true,
+        focusable: false,
+        show: false,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+        }
+    });
+
+    // Load inline HTML for the overlay
+    const overlayHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {
+                    margin: 0;
+                    padding: 0;
+                    background: transparent;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                    -webkit-app-region: drag;
+                }
+                .recording-dot {
+                    width: 40px;
+                    height: 40px;
+                    background-color: #dc3232;
+                    border-radius: 50%;
+                    box-shadow: 0 0 15px rgba(220, 50, 50, 0.8);
+                    animation: pulse 1.5s ease-in-out infinite;
+                }
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.7; transform: scale(0.9); }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="recording-dot"></div>
+        </body>
+        </html>
+    `;
+
+    recordingOverlayWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(overlayHtml));
+
+    recordingOverlayWindow.on('closed', () => {
+        recordingOverlayWindow = null;
+    });
+
+    return recordingOverlayWindow;
+}
+
+/**
+ * Show the recording overlay
+ */
+function showRecordingOverlay() {
+    if (!settings.showRecordingIndicator) {
+        return;
+    }
+
+    const overlay = createRecordingOverlay();
+    if (overlay && !overlay.isDestroyed()) {
+        overlay.showInactive();
+    }
+}
+
+/**
+ * Hide the recording overlay
+ */
+function hideRecordingOverlay() {
+    if (recordingOverlayWindow && !recordingOverlayWindow.isDestroyed()) {
+        recordingOverlayWindow.hide();
+    }
 }
 
 /**
@@ -383,6 +501,66 @@ function registerHotkey() {
 }
 
 /**
+ * Register the window toggle global hotkey (Feature 4)
+ */
+function registerWindowToggleHotkey() {
+    // Unregister previous hotkey if exists
+    if (registeredWindowToggleHotkey) {
+        try {
+            globalShortcut.unregister(registeredWindowToggleHotkey);
+        } catch (error) {
+            console.warn('Failed to unregister previous window toggle hotkey:', error);
+        }
+        registeredWindowToggleHotkey = null;
+    }
+
+    const hotkey = settings.windowToggleHotkey;
+    if (!hotkey) {
+        console.log('No window toggle hotkey configured');
+        return false;
+    }
+
+    try {
+        // Convert our hotkey format to Electron's format
+        const electronHotkey = convertToElectronHotkey(hotkey);
+        console.log(`Registering window toggle hotkey: ${hotkey} -> ${electronHotkey}`);
+
+        const success = globalShortcut.register(electronHotkey, () => {
+            toggleWindowVisibility();
+        });
+
+        if (success) {
+            registeredWindowToggleHotkey = electronHotkey;
+            console.log('Window toggle hotkey registered successfully');
+            return true;
+        } else {
+            console.error('Failed to register window toggle hotkey');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error registering window toggle hotkey:', error);
+        return false;
+    }
+}
+
+/**
+ * Toggle main window visibility
+ */
+function toggleWindowVisibility() {
+    if (!mainWindow) {
+        createMainWindow();
+        return;
+    }
+
+    if (mainWindow.isVisible()) {
+        mainWindow.hide();
+    } else {
+        mainWindow.show();
+        mainWindow.focus();
+    }
+}
+
+/**
  * Convert our hotkey format to Electron's accelerator format
  */
 function convertToElectronHotkey(hotkey) {
@@ -413,6 +591,9 @@ function startRecording() {
     isRecording = true;
     console.log('Recording started');
 
+    // Show recording overlay indicator (Feature 3)
+    showRecordingOverlay();
+
     // Update tray menu
     updateTrayMenu();
 
@@ -431,6 +612,9 @@ function stopRecording() {
 
     isRecording = false;
     console.log('Recording stopped');
+
+    // Hide recording overlay indicator (Feature 3)
+    hideRecordingOverlay();
 
     // Update tray menu
     updateTrayMenu();
@@ -451,12 +635,18 @@ ipcMain.handle('get-settings', () => settings);
 
 ipcMain.handle('save-settings', (event, newSettings) => {
     const hotkeyChanged = newSettings.hotkey && newSettings.hotkey !== settings.hotkey;
+    const windowToggleHotkeyChanged = newSettings.windowToggleHotkey && newSettings.windowToggleHotkey !== settings.windowToggleHotkey;
     settings = { ...settings, ...newSettings };
     const saved = saveSettings();
 
     // Re-register hotkey if it changed
     if (hotkeyChanged) {
         registerHotkey();
+    }
+
+    // Re-register window toggle hotkey if it changed
+    if (windowToggleHotkeyChanged) {
+        registerWindowToggleHotkey();
     }
 
     return saved;
@@ -813,6 +1003,95 @@ ipcMain.handle('get-app-info', () => ({
     logsPath: logsPath
 }));
 
+// Auto-updater IPC handlers (Feature 18)
+ipcMain.handle('check-for-updates', async () => {
+    if (!autoUpdater) {
+        return { available: false, error: 'Auto-updater not available in development mode' };
+    }
+    try {
+        const result = await autoUpdater.checkForUpdates();
+        return { available: !!result, updateInfo: result?.updateInfo };
+    } catch (error) {
+        return { available: false, error: error.message };
+    }
+});
+
+ipcMain.handle('download-update', async () => {
+    if (!autoUpdater) {
+        return { success: false, error: 'Auto-updater not available' };
+    }
+    try {
+        await autoUpdater.downloadUpdate();
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('install-update', () => {
+    if (autoUpdater) {
+        autoUpdater.quitAndInstall();
+    }
+});
+
+// ============================================================================
+// Auto-Updater Setup (Feature 18)
+// ============================================================================
+
+/**
+ * Set up auto-updater event handlers
+ */
+function setupAutoUpdater() {
+    if (!autoUpdater) {
+        console.log('Auto-updater not available');
+        return;
+    }
+
+    // Configure auto-updater
+    autoUpdater.autoDownload = false;  // Don't auto-download, let user decide
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('checking-for-update', () => {
+        console.log('Checking for updates...');
+    });
+
+    autoUpdater.on('update-available', (info) => {
+        console.log('Update available:', info.version);
+        // Notify renderer about available update
+        if (mainWindow) {
+            mainWindow.webContents.send('update-available', info);
+        }
+    });
+
+    autoUpdater.on('update-not-available', () => {
+        console.log('No updates available');
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+        if (mainWindow) {
+            mainWindow.webContents.send('update-download-progress', progress);
+        }
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+        console.log('Update downloaded:', info.version);
+        if (mainWindow) {
+            mainWindow.webContents.send('update-downloaded', info);
+        }
+    });
+
+    autoUpdater.on('error', (error) => {
+        console.error('Auto-updater error:', error);
+    });
+
+    // Check for updates on startup (after a short delay)
+    setTimeout(() => {
+        autoUpdater.checkForUpdates().catch(err => {
+            console.log('Update check failed:', err.message);
+        });
+    }, 5000);
+}
+
 // ============================================================================
 // Application Lifecycle
 // ============================================================================
@@ -869,6 +1148,12 @@ app.whenReady().then(async () => {
 
     // Register global hotkey
     registerHotkey();
+
+    // Register window toggle hotkey
+    registerWindowToggleHotkey();
+
+    // Set up auto-updater
+    setupAutoUpdater();
 
     console.log('VoxTether Electron ready');
 });

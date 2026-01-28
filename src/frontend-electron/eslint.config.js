@@ -33,7 +33,8 @@ export default [
                 MediaRecorder: "readonly",
                 Blob: "readonly",
                 FileReader: "readonly",
-                btoa: "readonly"
+                btoa: "readonly",
+                localStorage: "readonly"
             }
         },
         rules: {

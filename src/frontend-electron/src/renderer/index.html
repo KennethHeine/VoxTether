@@ -32,6 +32,10 @@
                     <span class="nav-icon">📝</span>
                     <span class="nav-text">Transcribe</span>
                 </li>
+                <li class="nav-item" data-page="history">
+                    <span class="nav-icon">📜</span>
+                    <span class="nav-text">History</span>
+                </li>
                 <li class="nav-item" data-page="about">
                     <span class="nav-icon">ℹ️</span>
                     <span class="nav-text">About</span>
@@ -64,6 +68,17 @@
 
                 <div class="setting-group">
                     <div class="setting-header">
+                        <h3>Window Toggle Hotkey</h3>
+                        <p class="setting-description">Press this key combination to show/hide the settings window</p>
+                    </div>
+                    <div class="setting-control">
+                        <input type="text" id="window-toggle-hotkey-input" class="text-input" readonly placeholder="Click to capture hotkey">
+                        <button class="btn btn-secondary" id="capture-window-toggle-hotkey-btn">Capture</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
                         <h3>Test Recording</h3>
                         <p class="setting-description">Test push-to-talk recording without using the hotkey</p>
                     </div>
@@ -71,6 +86,9 @@
                         <button class="btn btn-primary" id="start-test-recording-btn">🎤 Start Recording</button>
                         <button class="btn btn-danger hidden" id="stop-test-recording-btn">⏹ Stop Recording</button>
                         <span class="recording-status" id="recording-status"></span>
+                        <div class="recording-level-meter hidden" id="recording-level-meter">
+                            <div class="level-bar" id="recording-level-bar"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -132,6 +150,19 @@
                     <div class="setting-control">
                         <label class="toggle-switch">
                             <input type="checkbox" id="recording-indicator-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Show Transcription Preview</h3>
+                        <p class="setting-description">Show a preview dialog to edit transcription before inserting</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="transcription-preview-toggle">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -418,6 +449,27 @@
                 </div>
             </div>
 
+            <!-- History Page -->
+            <div class="page" id="page-history">
+                <h1>Transcription History</h1>
+
+                <div class="setting-group history-controls">
+                    <div class="setting-control history-toolbar">
+                        <input type="text" id="history-search" class="text-input" placeholder="Search history...">
+                        <button class="btn btn-secondary" id="export-history-btn">📥 Export</button>
+                        <button class="btn btn-danger" id="clear-history-btn">🗑️ Clear All</button>
+                    </div>
+                </div>
+
+                <div class="history-list" id="history-list">
+                    <div class="history-empty" id="history-empty">
+                        <span class="history-empty-icon">📝</span>
+                        <p>No transcription history yet.</p>
+                        <p class="text-secondary">Your push-to-talk transcriptions will appear here.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- About Page -->
             <div class="page" id="page-about">
                 <h1>About VoxTether</h1>
@@ -438,6 +490,27 @@
                         <li>✅ Customizable hotkeys</li>
                         <li>✅ Privacy-first design</li>
                     </ul>
+                </div>
+
+                <div class="about-section" id="stats-container">
+                    <h3>Usage Statistics</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Total Recordings:</span>
+                            <span class="info-value" id="stat-total-recordings">0</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Total Duration:</span>
+                            <span class="info-value" id="stat-total-duration">0s</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Characters Transcribed:</span>
+                            <span class="info-value" id="stat-total-characters">0</span>
+                        </div>
+                    </div>
+                    <div class="action-buttons" style="justify-content: center; margin-top: 16px;">
+                        <button class="btn btn-secondary" id="reset-stats-btn">Reset Statistics</button>
+                    </div>
                 </div>
 
                 <div class="about-section">
@@ -471,6 +544,21 @@
                     </div>
                 </div>
 
+                <div class="about-section hidden" id="update-status-section">
+                    <h3>Update Available</h3>
+                    <p id="update-status-text">A new version is available</p>
+                    <div class="action-buttons" style="justify-content: center; margin-top: 12px;">
+                        <button class="btn btn-primary hidden" id="update-action-btn">Download Update</button>
+                    </div>
+                </div>
+
+                <div class="about-section">
+                    <h3>Check for Updates</h3>
+                    <div class="action-buttons" style="justify-content: center;">
+                        <button class="btn btn-secondary" id="check-updates-btn">🔄 Check for Updates</button>
+                    </div>
+                </div>
+
                 <div class="about-section credits">
                     <h3>Credits</h3>
                     <p>Built with faster-whisper, Electron, and ❤️</p>
@@ -478,6 +566,28 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Transcription Preview Modal (Feature 7) -->
+    <div class="modal-overlay hidden" id="transcription-preview-modal">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="transcription-preview-title" aria-describedby="transcription-preview-description">
+            <div class="modal-header">
+                <h3 id="transcription-preview-title">Transcription Preview</h3>
+                <button class="modal-close" id="preview-close-btn" aria-label="Close transcription preview">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="transcription-preview-description" class="modal-description">Edit the transcription below before inserting:</p>
+                <textarea id="preview-text" class="transcription-textarea" rows="6" placeholder="Transcription text..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="preview-cancel-btn">Cancel</button>
+                <button class="btn btn-secondary" id="preview-copy-btn">📋 Copy Only</button>
+                <button class="btn btn-primary" id="preview-insert-btn">✓ Insert</button>
+            </div>
+        </div>
     </div>
 
     <script src="renderer.js"></script>
