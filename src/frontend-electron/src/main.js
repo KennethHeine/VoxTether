@@ -744,38 +744,54 @@ ipcMain.handle('save-recording-output', async (event, options) => {
             return { success: false, error: 'No output folder configured' };
         }
 
-        if (!saveAudio && !saveTranscript) {
+        // Security: Validate baseFolder is an absolute path and doesn't contain traversal sequences
+        const normalizedBase = path.normalize(baseFolder);
+        if (!path.isAbsolute(normalizedBase) || normalizedBase.includes('..')) {
+            return { success: false, error: 'Invalid output folder path' };
+        }
+
+        // Verify base folder exists and is writable
+        if (!fs.existsSync(normalizedBase)) {
+            return { success: false, error: 'Output folder does not exist' };
+        }
+
+        // Check if we actually have data to save
+        const willSaveAudio = saveAudio && audioData;
+        const willSaveTranscript = saveTranscript && transcript;
+
+        if (!willSaveAudio && !willSaveTranscript) {
             return { success: true, message: 'Nothing to save' };
         }
 
-        // Create timestamped folder name (e.g., "2024-01-15_14-30-45")
+        // Create timestamped folder name using local time (e.g., "2024-01-15_14-30-45")
         const now = new Date();
-        const folderName = now.toISOString()
-            .replace(/T/, '_')
-            .replace(/:/g, '-')
-            .replace(/\..+/, '');
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const folderName = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
 
-        const outputFolder = path.join(baseFolder, folderName);
+        const outputFolder = path.join(normalizedBase, folderName);
 
-        // Create the folder
-        if (!fs.existsSync(outputFolder)) {
-            fs.mkdirSync(outputFolder, { recursive: true });
-        }
+        // Create the folder using async operations
+        await fs.promises.mkdir(outputFolder, { recursive: true });
 
         let audioPath = null;
         let transcriptPath = null;
 
         // Save audio file if requested
-        if (saveAudio && audioData) {
+        if (willSaveAudio) {
             const buffer = Buffer.from(audioData, 'base64');
             audioPath = path.join(outputFolder, 'recording.wav');
-            fs.writeFileSync(audioPath, buffer);
+            await fs.promises.writeFile(audioPath, buffer);
         }
 
         // Save transcript if requested
-        if (saveTranscript && transcript) {
+        if (willSaveTranscript) {
             transcriptPath = path.join(outputFolder, 'transcript.txt');
-            fs.writeFileSync(transcriptPath, transcript, 'utf8');
+            await fs.promises.writeFile(transcriptPath, transcript, 'utf8');
         }
 
         return {

@@ -449,14 +449,10 @@ async function processRecording() {
         const arrayBuffer = await wavBlob.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
 
-        // Keep base64 for potential saving
+        // Keep base64 for potential saving - only encode if we'll actually save
         if (settings.saveRecordingAudio && settings.recordingOutputFolder) {
-            let binary = '';
-            const len = uint8Array.byteLength;
-            for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(uint8Array[i]);
-            }
-            audioBase64 = btoa(binary);
+            // Use chunked approach for better performance with large files
+            audioBase64 = uint8ArrayToBase64(uint8Array);
         }
 
         // Create a temporary file path
@@ -501,6 +497,20 @@ async function processRecording() {
 
     recordingState.audioChunks = [];
     updateRecordingStatus('ready');
+}
+
+/**
+ * Convert Uint8Array to base64 string efficiently using chunked approach
+ */
+function uint8ArrayToBase64(uint8Array) {
+    // Process in chunks of 8192 bytes to avoid stack overflow
+    const chunkSize = 8192;
+    const chunks = [];
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+        chunks.push(String.fromCharCode.apply(null, chunk));
+    }
+    return btoa(chunks.join(''));
 }
 
 /**
