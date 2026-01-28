@@ -1235,6 +1235,9 @@ h3 {
     margin: -4px;
     flex-shrink: 0;
     transition: color var(--transition-fast);
+    background: none;
+    border: none;
+    line-height: 1;
 }
 
 .toast-close:hover {

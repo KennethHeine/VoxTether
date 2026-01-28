@@ -540,8 +540,9 @@ test.describe('New Features', () => {
   });
 
   test('should have toast notification container', async () => {
+    // Toast container exists but may not be visible until toasts are shown
     const toastContainer = window.locator('#toast-container');
-    await expect(toastContainer).toBeVisible();
+    await expect(toastContainer).toHaveCount(1);
   });
 
   test('should have transcription preview modal', async () => {

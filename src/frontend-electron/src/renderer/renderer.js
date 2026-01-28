@@ -788,22 +788,17 @@ async function saveTempAudio(uint8Array) {
 
 /**
  * Handle transcription output based on settings
- */
-/**
- * Handle transcription output based on settings
  * @param {string} text - The transcribed text
- * @returns {Promise<boolean>} - Whether the text was immediately processed (false if preview modal shown)
  */
 async function handleTranscriptionOutput(text) {
     // Check if preview modal is enabled
     if (settings.showTranscriptionPreview) {
         showTranscriptionPreviewModal(text);
-        return false; // Preview modal handles the output
+        return; // Preview modal handles the output
     }
 
     // Direct output without preview
     await performTranscriptionOutput(text);
-    return true;
 }
 
 /**
@@ -1821,10 +1816,11 @@ function showNotification(message, type = 'info', duration = 4000) {
     content.appendChild(title);
     content.appendChild(msg);
 
-    const closeBtn = document.createElement('span');
+    const closeBtn = document.createElement('button');
     closeBtn.className = 'toast-close';
     closeBtn.textContent = '×';
     closeBtn.setAttribute('aria-label', 'Close notification');
+    closeBtn.setAttribute('type', 'button');
 
     toast.appendChild(icon);
     toast.appendChild(content);
@@ -2361,7 +2357,7 @@ let _pendingUpdateInfo = null;
  */
 function showUpdateNotification(info) {
     _pendingUpdateInfo = info;
-    showNotification(`Update ${info.version} available! Click to download.`, 'info', 0);
+    showNotification(`Update ${info.version} available. See the About page to download.`, 'info', 0);
 
     // Update the About page if it exists
     updateAboutPageUpdateStatus(info.version, 'available');
