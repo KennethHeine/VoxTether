@@ -1,8 +1,6 @@
 """Model management API endpoints."""
 
-import asyncio
 import logging
-import os
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request

@@ -4,7 +4,6 @@ import asyncio
 import atexit
 import logging
 import os
-import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -321,10 +320,6 @@ class TranscriberService:
         Returns:
             True if successful.
         """
-        # Update settings temporarily
-        old_device = settings.device
-        old_compute_type = settings.compute_type
-        
         try:
             # We can't modify pydantic settings directly, so we'll just reload
             current_model = self._model_name

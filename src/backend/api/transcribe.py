@@ -1,9 +1,8 @@
 """Transcription API endpoints."""
 
 import logging
-import tempfile
 import os
-from pathlib import Path
+import tempfile
 from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
