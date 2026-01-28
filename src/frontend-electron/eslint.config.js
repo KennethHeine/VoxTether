@@ -24,7 +24,12 @@ export default [
                 confirm: "readonly",
                 alert: "readonly",
                 document: "readonly",
-                window: "readonly"
+                window: "readonly",
+                navigator: "readonly",
+                requestAnimationFrame: "readonly",
+                cancelAnimationFrame: "readonly",
+                AudioContext: "readonly",
+                webkitAudioContext: "readonly"
             }
         },
         rules: {

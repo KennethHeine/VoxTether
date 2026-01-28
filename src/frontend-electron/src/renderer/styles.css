@@ -398,6 +398,121 @@ h3 {
     border-radius: var(--radius-small);
 }
 
+/* Mic Test Section */
+.mic-test-section {
+    padding: 20px;
+}
+
+.mic-test-container {
+    margin-top: 16px;
+}
+
+.mic-test-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.mic-test-controls .select-input {
+    min-width: 250px;
+    flex: 1;
+}
+
+.mic-test-visualizer {
+    padding: 16px;
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-medium);
+    margin-bottom: 16px;
+}
+
+.volume-meter-container {
+    margin-bottom: 20px;
+}
+
+.volume-meter-container label,
+.waveform-container label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.volume-meter {
+    height: 24px;
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-small);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.volume-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(to right, #32b432, #ffd700, #dc3232);
+    transition: width 0.05s ease-out;
+    border-radius: var(--radius-small) 0 0 var(--radius-small);
+}
+
+.volume-peak {
+    position: absolute;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background-color: #ffffff;
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+    left: 0%;
+    transition: left 0.1s ease-out;
+}
+
+.volume-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+}
+
+.waveform-container {
+    margin-top: 16px;
+}
+
+.waveform-container canvas {
+    width: 100%;
+    height: 120px;
+    background-color: var(--bg-primary);
+    border-radius: var(--radius-small);
+    border: 1px solid var(--border-color);
+}
+
+.mic-test-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-small);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.mic-test-status.active {
+    background-color: rgba(50, 180, 50, 0.1);
+    color: var(--success-color);
+}
+
+.mic-test-status.error {
+    background-color: rgba(220, 50, 50, 0.1);
+    color: var(--error-color);
+}
+
+.status-icon {
+    font-size: 16px;
+}
+
 /* Device info */
 .device-info {
     background-color: var(--bg-secondary);

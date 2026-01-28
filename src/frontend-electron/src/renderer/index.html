@@ -194,16 +194,45 @@
                     </div>
                 </div>
 
-                <div class="setting-group">
+                <div class="setting-group mic-test-section">
                     <div class="setting-header">
                         <h3>Test Microphone</h3>
-                        <p class="setting-description">Record a 2-second test and show the transcription</p>
+                        <p class="setting-description">Test your microphone with real-time visual feedback (client-side only, no backend required)</p>
                     </div>
-                    <div class="setting-control">
-                        <button class="btn btn-secondary" id="test-microphone-btn">🎤 Test Recording</button>
-                    </div>
-                    <div id="test-result" class="test-result hidden">
-                        <p><strong>Result:</strong> <span id="test-result-text"></span></p>
+                    
+                    <div class="mic-test-container">
+                        <div class="mic-test-controls">
+                            <select id="mic-device-select" class="select-input">
+                                <option value="">Loading devices...</option>
+                            </select>
+                            <button class="btn btn-secondary" id="start-mic-test-btn">🎤 Start Test</button>
+                            <button class="btn btn-danger hidden" id="stop-mic-test-btn">⏹ Stop Test</button>
+                        </div>
+                        
+                        <div class="mic-test-visualizer hidden" id="mic-test-visualizer">
+                            <div class="volume-meter-container">
+                                <label>Volume Level</label>
+                                <div class="volume-meter">
+                                    <div class="volume-bar" id="volume-bar"></div>
+                                    <div class="volume-peak" id="volume-peak"></div>
+                                </div>
+                                <div class="volume-labels">
+                                    <span>0%</span>
+                                    <span id="peak-label">Peak: 0%</span>
+                                    <span>100%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="waveform-container">
+                                <label>Audio Waveform</label>
+                                <canvas id="waveform-canvas" width="460" height="120"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="mic-test-status" id="mic-test-status">
+                            <span class="status-icon">ℹ️</span>
+                            <span class="status-message">Click "Start Test" to begin microphone testing</span>
+                        </div>
                     </div>
                 </div>
 

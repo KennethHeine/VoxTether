@@ -258,7 +258,7 @@ function updateTrayMenu() {
 async function checkBackendConnection() {
     return new Promise((resolve) => {
         let resolved = false;
-        
+
         const req = http.get(`${BACKEND_URL}/api/health`, (res) => {
             resolved = true;
             if (res.statusCode === 200) {
