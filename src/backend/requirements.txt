@@ -15,6 +15,6 @@ faster-whisper>=1.0.0
 # Model management
 huggingface-hub>=0.20.0
 
-# Optional CUDA support (install separately if needed)
-# nvidia-cublas-cu12
-# nvidia-cudnn-cu12
+# CUDA support (out comment if should only run cpu)
+nvidia-cublas-cu12
+nvidia-cudnn-cu12

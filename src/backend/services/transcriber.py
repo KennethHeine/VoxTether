@@ -3,7 +3,9 @@
 import asyncio
 import atexit
 import logging
+import os
 import subprocess
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -13,6 +15,42 @@ from typing import Optional
 from config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _setup_cuda_dll_paths() -> None:
+    """Add NVIDIA CUDA DLL paths to system PATH on Windows.
+    
+    This is required for ctranslate2 to find cublas64_12.dll and other
+    CUDA runtime libraries when nvidia-cublas-cu12 is installed via pip.
+    Must be called before importing ctranslate2 or faster_whisper.
+    """
+    if sys.platform != "win32":
+        return
+    
+    # Find the site-packages nvidia directory
+    site_packages = Path(sys.prefix) / "Lib" / "site-packages" / "nvidia"
+    if not site_packages.exists():
+        return
+    
+    # Add all nvidia bin directories to PATH
+    nvidia_bin_paths = []
+    for subdir in ["cublas", "cudnn", "cuda_runtime", "cufft", "curand"]:
+        bin_path = site_packages / subdir / "bin"
+        if bin_path.exists():
+            nvidia_bin_paths.append(str(bin_path))
+    
+    if nvidia_bin_paths:
+        current_path = os.environ.get("PATH", "")
+        new_paths = os.pathsep.join(nvidia_bin_paths)
+        
+        # Only add if not already present
+        if nvidia_bin_paths[0] not in current_path:
+            os.environ["PATH"] = new_paths + os.pathsep + current_path
+            logger.debug(f"Added NVIDIA DLL paths to PATH: {nvidia_bin_paths}")
+
+
+# Setup CUDA DLL paths before any CUDA imports
+_setup_cuda_dll_paths()
 
 # Thread pool for blocking operations
 _executor = ThreadPoolExecutor(max_workers=2)
