@@ -837,6 +837,9 @@ if (!gotTheLock) {
 app.whenReady().then(async () => {
     console.log('VoxTether Electron starting...');
 
+    // Remove the default application menu (File, Edit, View, Window, Help)
+    Menu.setApplicationMenu(null);
+
     // Load settings
     loadSettings();
 
