@@ -6,7 +6,7 @@
  * server running on localhost.
  */
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, shell, clipboard } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, shell, clipboard, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -16,6 +16,7 @@ let mainWindow = null;
 let tray = null;
 let isRecording = false;
 let settings = null;
+let registeredHotkey = null;
 
 // Paths
 const userDataPath = app.getPath('userData');
@@ -331,6 +332,114 @@ function backendRequest(method, endpoint, body = null) {
 }
 
 // ============================================================================
+// Global Hotkey Registration
+// ============================================================================
+
+/**
+ * Register the push-to-talk global hotkey
+ */
+function registerHotkey() {
+    // Unregister previous hotkey if exists
+    if (registeredHotkey) {
+        try {
+            globalShortcut.unregister(registeredHotkey);
+        } catch (error) {
+            console.warn('Failed to unregister previous hotkey:', error);
+        }
+        registeredHotkey = null;
+    }
+
+    const hotkey = settings.hotkey;
+    if (!hotkey) {
+        console.log('No hotkey configured');
+        return false;
+    }
+
+    try {
+        // Convert our hotkey format to Electron's format
+        const electronHotkey = convertToElectronHotkey(hotkey);
+        console.log(`Registering hotkey: ${hotkey} -> ${electronHotkey}`);
+
+        const success = globalShortcut.register(electronHotkey, () => {
+            // Toggle recording on hotkey press
+            toggleRecording();
+        });
+
+        if (success) {
+            registeredHotkey = electronHotkey;
+            console.log('Hotkey registered successfully');
+            return true;
+        } else {
+            console.error('Failed to register hotkey');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error registering hotkey:', error);
+        return false;
+    }
+}
+
+/**
+ * Convert our hotkey format to Electron's accelerator format
+ */
+function convertToElectronHotkey(hotkey) {
+    // Our format: Ctrl+Shift+Space
+    // Electron format: CommandOrControl+Shift+Space
+    return hotkey
+        .replace(/Ctrl/g, 'CommandOrControl')
+        .replace(/Win/g, 'Super');
+}
+
+/**
+ * Toggle recording state
+ */
+function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+/**
+ * Start recording
+ */
+function startRecording() {
+    if (isRecording) return;
+
+    isRecording = true;
+    console.log('Recording started');
+
+    // Update tray menu
+    updateTrayMenu();
+
+    // Notify renderer to start recording
+    if (mainWindow) {
+        mainWindow.webContents.send('recording-state-changed', true);
+        mainWindow.webContents.send('start-recording');
+    }
+}
+
+/**
+ * Stop recording
+ */
+function stopRecording() {
+    if (!isRecording) return;
+
+    isRecording = false;
+    console.log('Recording stopped');
+
+    // Update tray menu
+    updateTrayMenu();
+
+    // Notify renderer to stop recording
+    if (mainWindow) {
+        mainWindow.webContents.send('recording-state-changed', false);
+        mainWindow.webContents.send('stop-recording');
+    }
+}
+
+// ============================================================================
 // IPC Handlers - Communication between main and renderer processes
 // ============================================================================
 
@@ -338,8 +447,31 @@ function backendRequest(method, endpoint, body = null) {
 ipcMain.handle('get-settings', () => settings);
 
 ipcMain.handle('save-settings', (event, newSettings) => {
+    const hotkeyChanged = newSettings.hotkey && newSettings.hotkey !== settings.hotkey;
     settings = { ...settings, ...newSettings };
-    return saveSettings();
+    const saved = saveSettings();
+
+    // Re-register hotkey if it changed
+    if (hotkeyChanged) {
+        registerHotkey();
+    }
+
+    return saved;
+});
+
+// Recording control from renderer
+ipcMain.handle('start-recording-manual', () => {
+    startRecording();
+    return { success: true };
+});
+
+ipcMain.handle('stop-recording-manual', () => {
+    stopRecording();
+    return { success: true };
+});
+
+ipcMain.handle('get-recording-state', () => {
+    return { isRecording };
 });
 
 // Backend communication
@@ -539,6 +671,43 @@ ipcMain.handle('save-transcript', async (event, filePath, content) => {
     }
 });
 
+ipcMain.handle('save-audio-file', async (event, audioData) => {
+    try {
+        // audioData is a base64 encoded string or array of bytes
+        const tempDir = path.join(userDataPath, 'temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        const timestamp = Date.now();
+        const tempPath = path.join(tempDir, `recording_${timestamp}.wav`);
+
+        // Convert base64 to buffer if needed
+        let buffer;
+        if (typeof audioData === 'string') {
+            buffer = Buffer.from(audioData, 'base64');
+        } else {
+            buffer = Buffer.from(audioData);
+        }
+
+        fs.writeFileSync(tempPath, buffer);
+        return { success: true, filePath: tempPath };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('delete-temp-file', async (event, filePath) => {
+    try {
+        if (fs.existsSync(filePath) && filePath.includes('temp')) {
+            fs.unlinkSync(filePath);
+        }
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('copy-file', async (event, sourcePath, destFolder) => {
     try {
         const fileName = path.basename(sourcePath);
@@ -609,6 +778,9 @@ app.whenReady().then(async () => {
         console.error('Failed to check backend connection:', error);
     }
 
+    // Register global hotkey
+    registerHotkey();
+
     console.log('VoxTether Electron ready');
 });
 
@@ -630,6 +802,8 @@ app.on('activate', () => {
 // Clean up on quit
 app.on('before-quit', () => {
     app.isQuitting = true;
+    // Unregister all shortcuts
+    globalShortcut.unregisterAll();
 });
 
 // Note: Backend is managed separately, no cleanup needed here

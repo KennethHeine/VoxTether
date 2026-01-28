@@ -863,6 +863,34 @@ h3 {
     accent-color: var(--accent-color);
 }
 
+/* Recording status indicator */
+.recording-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+    padding: 4px 12px;
+    border-radius: var(--radius-small);
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.recording-status.recording {
+    color: var(--error-color);
+    font-weight: 500;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.recording-status.transcribing {
+    color: var(--accent-color);
+    font-weight: 500;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 /* Hidden class */
 .hidden {
     display: none !important;

@@ -29,7 +29,11 @@ export default [
                 requestAnimationFrame: "readonly",
                 cancelAnimationFrame: "readonly",
                 AudioContext: "readonly",
-                webkitAudioContext: "readonly"
+                webkitAudioContext: "readonly",
+                MediaRecorder: "readonly",
+                Blob: "readonly",
+                FileReader: "readonly",
+                btoa: "readonly"
             }
         },
         rules: {

@@ -23,6 +23,11 @@ contextBridge.exposeInMainWorld('voxtether', {
     deleteModel: (modelName) => ipcRenderer.invoke('delete-model', modelName),
     transcribe: (audioPath, language) => ipcRenderer.invoke('transcribe', audioPath, language),
 
+    // Recording control
+    startRecordingManual: () => ipcRenderer.invoke('start-recording-manual'),
+    stopRecordingManual: () => ipcRenderer.invoke('stop-recording-manual'),
+    getRecordingState: () => ipcRenderer.invoke('get-recording-state'),
+
     // Clipboard
     copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
 
@@ -34,6 +39,8 @@ contextBridge.exposeInMainWorld('voxtether', {
     selectAudioFile: () => ipcRenderer.invoke('select-audio-file'),
     selectOutputFolder: () => ipcRenderer.invoke('select-output-folder'),
     saveTranscript: (filePath, content) => ipcRenderer.invoke('save-transcript', filePath, content),
+    saveAudioFile: (audioData) => ipcRenderer.invoke('save-audio-file', audioData),
+    deleteTempFile: (filePath) => ipcRenderer.invoke('delete-temp-file', filePath),
     copyFile: (sourcePath, destFolder) => ipcRenderer.invoke('copy-file', sourcePath, destFolder),
 
     // App info
@@ -51,6 +58,12 @@ contextBridge.exposeInMainWorld('voxtether', {
     },
     onStatusChanged: (callback) => {
         ipcRenderer.on('status-changed', (event, status) => callback(status));
+    },
+    onStartRecording: (callback) => {
+        ipcRenderer.on('start-recording', () => callback());
+    },
+    onStopRecording: (callback) => {
+        ipcRenderer.on('stop-recording', () => callback());
     },
 
     // Remove listeners
