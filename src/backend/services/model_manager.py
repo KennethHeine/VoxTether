@@ -49,7 +49,7 @@ AVAILABLE_MODELS = {
         "display_name": "Large V3 Turbo",
         "size_mb": 1600,
         "description": "Excellent accuracy with faster speed. Great GPU option.",
-        "repo_id": "Systran/faster-whisper-large-v3-turbo",
+        "repo_id": "deepdml/faster-whisper-large-v3-turbo-ct2",
     },
     "distil-large-v3": {
         "display_name": "Distil Large V3",
