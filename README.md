@@ -185,7 +185,7 @@ Use "auto" for automatic detection, or specify a language code:
 
 1. Ensure NVIDIA drivers are up to date
 2. Install CUDA packages: `pip install nvidia-cublas-cu12 nvidia-cudnn-cu12`
-3. Run healthcheck: `python -m src.main --healthcheck`
+3. Check backend logs for CUDA availability
 
 ### Audio Not Recording
 
@@ -206,19 +206,6 @@ VoxTether uses low-level keyboard hooks for global hotkey detection. Some antivi
 To resolve:
 1. Add VoxTether to your antivirus exclusions
 2. Verify the download hash matches the release
-
-## Command Line
-
-```bash
-# Run with debug logging
-python -m src.main --debug
-
-# Run healthcheck
-python -m src.main --healthcheck
-
-# Show version
-python -m src.main --version
-```
 
 ## Performance Targets
 
@@ -245,19 +232,13 @@ VoxTether/
 │   │   │   └── renderer/        # UI (HTML/CSS/JS)
 │   │   └── package.json
 │   │
-│   ├── backend/                 # Python Backend (FastAPI)
-│   │   ├── api/                 # REST API endpoints
-│   │   ├── services/            # Business logic
-│   │   ├── main.py              # FastAPI entry point
-│   │   └── requirements.txt     # Python dependencies
-│   │
-│   └── (legacy Python UI)       # Original Python implementation
-│       ├── main.py
-│       ├── tray.py
-│       └── ...
+│   └── backend/                 # Python Backend (FastAPI)
+│       ├── api/                 # REST API endpoints
+│       ├── services/            # Business logic
+│       ├── main.py              # FastAPI entry point
+│       └── requirements.txt     # Python dependencies
 │
 ├── build/                       # Build scripts
-├── tests/                       # Unit tests
 ├── docs/                        # Documentation
 └── assets/                      # Application assets
 ```
@@ -265,14 +246,15 @@ VoxTether/
 ### Running Tests
 
 ```bash
-# Python backend tests
-cd src/backend
-pip install pytest
-pytest
-
-# Electron frontend (lint only)
+# Electron frontend E2E tests
 cd src/frontend-electron
+npm test
+
+# Frontend linting
 npm run lint
+
+# Backend linting
+ruff check src/backend/
 ```
 
 ### Building for Release

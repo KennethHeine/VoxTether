@@ -218,11 +218,6 @@ VoxTether/
 │   │   ├── main.py                  # FastAPI entry point
 │   │   ├── config.py                # Configuration
 │   │   └── requirements.txt
-│   │
-│   └── (legacy Python code)         # Original Python implementation
-│       ├── main.py
-│       ├── tray.py
-│       └── ...
 │
 ├── installer/
 │   └── VoxTether.iss                # Inno Setup script
