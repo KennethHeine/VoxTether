@@ -203,6 +203,28 @@ test.describe('VoxTether Electron App', () => {
     await expect(saveBtn).toHaveText('Save Settings');
   });
 
+  test('should have recording output settings on General page', async () => {
+    // Check for recording output folder input
+    const outputFolderInput = window.locator('#recording-output-folder');
+    await expect(outputFolderInput).toBeVisible();
+
+    // Check for browse and clear buttons
+    const selectFolderBtn = window.locator('#select-recording-folder-btn');
+    await expect(selectFolderBtn).toBeVisible();
+    await expect(selectFolderBtn).toHaveText('Browse...');
+
+    const clearFolderBtn = window.locator('#clear-recording-folder-btn');
+    await expect(clearFolderBtn).toBeVisible();
+    await expect(clearFolderBtn).toHaveText('Clear');
+
+    // Check for save audio and save transcript toggles
+    const saveAudioToggle = window.locator('.toggle-switch:has(#save-recording-audio-toggle)');
+    await expect(saveAudioToggle).toBeVisible();
+
+    const saveTranscriptToggle = window.locator('.toggle-switch:has(#save-recording-transcript-toggle)');
+    await expect(saveTranscriptToggle).toBeVisible();
+  });
+
   test('should display status indicator in sidebar', async () => {
     const statusIndicator = window.locator('#status-indicator');
     await expect(statusIndicator).toBeVisible();
