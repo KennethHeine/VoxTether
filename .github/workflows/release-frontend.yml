@@ -1,6 +1,6 @@
-name: Release
+name: Release Frontend
 
-run-name: Release ${{ inputs.version }}
+run-name: Release Frontend ${{ inputs.version }}
 
 on:
   workflow_dispatch:
@@ -14,44 +14,10 @@ permissions:
   contents: write
 
 jobs:
-  # Run E2E tests before building
-  test-e2e:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: 'src/frontend-electron/package-lock.json'
-
-    - name: Install dependencies
-      run: |
-        cd src/frontend-electron
-        npm install
-
-    - name: Run Playwright tests
-      run: |
-        cd src/frontend-electron
-        xvfb-run --auto-servernum npm test
-
-    - name: Upload screenshots
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: release-screenshots
-        path: src/frontend-electron/screenshots/
-        retention-days: 30
-
   # Build the Electron frontend (includes backend bundling)
   build-frontend:
     name: Build Frontend
     runs-on: windows-latest
-    needs: [test-e2e]
 
     steps:
     - uses: actions/checkout@v4

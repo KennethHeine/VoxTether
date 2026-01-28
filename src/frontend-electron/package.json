@@ -72,13 +72,13 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "../../assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": true,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/icon.ico"
+      "installerIcon": "../../assets/icon.ico"
     }
   }
 }
