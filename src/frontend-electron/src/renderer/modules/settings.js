@@ -142,7 +142,7 @@ export async function saveAudioSettings() {
 export async function selectRecordingFolder() {
     try {
         const result = await window.voxtether.selectRecordingFolder();
-        if (result && result.folderPath) {
+        if (result && result.success && result.folderPath) {
             document.getElementById('recording-output-folder').value = result.folderPath;
         }
     } catch (error) {

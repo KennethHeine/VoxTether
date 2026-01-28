@@ -13,7 +13,7 @@ import {
     clearHistoryItems
 } from './state.js';
 import { showNotification } from './notifications.js';
-import { formatTimestamp, escapeHtml } from './utils.js';
+import { formatTimestamp } from './utils.js';
 
 /**
  * Load history from localStorage
@@ -81,11 +81,13 @@ export function renderHistory(filter = '') {
         : items;
 
     if (filteredItems.length === 0) {
-        container.innerHTML = `
-            <div class="history-empty">
-                <p>${filter ? 'No matching transcriptions found' : 'No transcription history yet'}</p>
-            </div>
-        `;
+        container.innerHTML = '';
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'history-empty';
+        const emptyP = document.createElement('p');
+        emptyP.textContent = filter ? 'No matching transcriptions found' : 'No transcription history yet';
+        emptyDiv.appendChild(emptyP);
+        container.appendChild(emptyDiv);
         return;
     }
 
@@ -111,29 +113,67 @@ function createHistoryItemElement(item) {
         ? item.text.substring(0, 150) + '...'
         : item.text;
 
-    div.innerHTML = `
-        <div class="history-item-content">
-            <div class="history-item-text">${escapeHtml(preview)}</div>
-            <div class="history-item-meta">
-                <span class="history-item-time">${formatTimestamp(item.timestamp)}</span>
-                ${item.durationMs ? `<span class="history-item-duration">${formatDurationShort(item.durationMs)}</span>` : ''}
-                <span class="history-item-chars">${item.characters || item.charCount || 0} chars</span>
-            </div>
-        </div>
-        <div class="history-item-actions">
-            <button class="btn-icon copy-history-btn" title="Copy to clipboard">📋</button>
-            <button class="btn-icon delete-history-btn" title="Delete">🗑️</button>
-        </div>
-    `;
+    // Character count (support both old and new property names)
+    const charCount = item.characters || 0;
+
+    // Build DOM structure safely
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'history-item-content';
+
+    const textDiv = document.createElement('div');
+    textDiv.className = 'history-item-text';
+    textDiv.textContent = preview;
+    contentDiv.appendChild(textDiv);
+
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'history-item-meta';
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'history-item-time';
+    timeSpan.textContent = formatTimestamp(item.timestamp);
+    metaDiv.appendChild(timeSpan);
+
+    if (item.durationMs) {
+        const durationSpan = document.createElement('span');
+        durationSpan.className = 'history-item-duration';
+        durationSpan.textContent = formatDurationShort(item.durationMs);
+        metaDiv.appendChild(durationSpan);
+    }
+
+    const charsSpan = document.createElement('span');
+    charsSpan.className = 'history-item-chars';
+    charsSpan.textContent = `${charCount} chars`;
+    metaDiv.appendChild(charsSpan);
+
+    contentDiv.appendChild(metaDiv);
+    div.appendChild(contentDiv);
+
+    // Actions
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'history-item-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'btn-icon copy-history-btn';
+    copyBtn.title = 'Copy to clipboard';
+    copyBtn.textContent = '📋';
+    actionsDiv.appendChild(copyBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-icon delete-history-btn';
+    deleteBtn.title = 'Delete';
+    deleteBtn.textContent = '🗑️';
+    actionsDiv.appendChild(deleteBtn);
+
+    div.appendChild(actionsDiv);
 
     // Add event listeners
-    div.querySelector('.copy-history-btn').addEventListener('click', async (e) => {
+    copyBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         await window.voxtether.copyToClipboard(item.text);
         showNotification('Copied to clipboard', 'success');
     });
 
-    div.querySelector('.delete-history-btn').addEventListener('click', (e) => {
+    deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         deleteHistoryItemById(item.id);
     });
@@ -142,9 +182,9 @@ function createHistoryItemElement(item) {
     div.addEventListener('click', () => {
         div.classList.toggle('expanded');
         if (div.classList.contains('expanded')) {
-            div.querySelector('.history-item-text').textContent = item.text;
+            textDiv.textContent = item.text;
         } else {
-            div.querySelector('.history-item-text').textContent = preview;
+            textDiv.textContent = preview;
         }
     });
 
