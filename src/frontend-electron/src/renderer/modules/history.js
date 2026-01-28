@@ -56,7 +56,7 @@ export function addToHistory(text, durationMs = 0) {
         text: text.trim(),
         timestamp: new Date().toISOString(),
         durationMs: durationMs,
-        charCount: text.trim().length
+        characters: text.trim().length
     };
 
     addHistoryItem(item);
@@ -117,7 +117,7 @@ function createHistoryItemElement(item) {
             <div class="history-item-meta">
                 <span class="history-item-time">${formatTimestamp(item.timestamp)}</span>
                 ${item.durationMs ? `<span class="history-item-duration">${formatDurationShort(item.durationMs)}</span>` : ''}
-                <span class="history-item-chars">${item.charCount} chars</span>
+                <span class="history-item-chars">${item.characters || item.charCount || 0} chars</span>
             </div>
         </div>
         <div class="history-item-actions">
@@ -199,8 +199,8 @@ export async function exportHistory() {
         ).join('\n\n');
 
         const result = await window.voxtether.selectOutputFolder();
-        if (result && result.path) {
-            const filePath = `${result.path}/voxtether_history_${Date.now()}.txt`;
+        if (result && result.folderPath) {
+            const filePath = `${result.folderPath}/voxtether_history_${Date.now()}.txt`;
             await window.voxtether.saveTranscript(filePath, content);
             showNotification('History exported successfully', 'success');
         }

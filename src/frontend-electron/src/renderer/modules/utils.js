@@ -119,7 +119,7 @@ export function getSupportedMimeType() {
     }
 
     console.warn('No supported audio MIME type found, using default');
-    return '';
+    return 'audio/webm';
 }
 
 /**

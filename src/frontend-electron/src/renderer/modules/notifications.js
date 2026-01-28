@@ -36,14 +36,25 @@ export function showNotification(message, type = 'info', duration = 4000) {
         icon = 'ℹ';
     }
 
-    toast.innerHTML = `
-        <span class="toast-icon">${icon}</span>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close">×</button>
-    `;
+    // Create toast structure safely (avoiding innerHTML for user content)
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toast-icon';
+    iconSpan.textContent = icon;
+
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'toast-message';
+    messageSpan.textContent = message;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close';
+    closeBtn.textContent = '×';
+
+    toast.appendChild(iconSpan);
+    toast.appendChild(messageSpan);
+    toast.appendChild(closeBtn);
 
     // Close button handler
-    toast.querySelector('.toast-close').addEventListener('click', () => {
+    closeBtn.addEventListener('click', () => {
         removeToast(toast);
     });
 
