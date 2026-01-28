@@ -19,14 +19,15 @@ module.exports = defineConfig({
     // Timeout for assertions
     timeout: 10000,
   },
-  // Run tests in parallel
-  fullyParallel: true,
+  // Don't run tests in parallel - Electron tests should run sequentially
+  // to avoid resource conflicts (shared userData, backend port 5678, etc.)
+  fullyParallel: false,
   // Fail fast on CI
   forbidOnly: !!process.env.CI,
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
-  // Number of workers for parallel test execution
-  workers: 4,
+  // Number of workers - keep at 1 for Electron tests to avoid conflicts
+  workers: 1,
   // Reporter to use
   reporter: [
     ['list'],
