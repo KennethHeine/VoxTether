@@ -26,11 +26,14 @@ VoxTether uses **pytest** as the primary testing framework for the Python backen
 ### Installation
 
 ```bash
+# From src/backend directory
+cd src/backend
+
 # Install runtime dependencies
 pip install -r requirements.txt
 
 # Install development dependencies (includes test tools)
-pip install -r requirements-dev.txt
+pip install -r ../../requirements-dev.txt
 ```
 
 ---
@@ -422,22 +425,27 @@ Starts the FastAPI server and checks health endpoint:
     curl -f http://127.0.0.1:5678/api/health || echo "Health check failed"
 ```
 
-### Test Python Job
+### Test Backend Job
 
-Runs the full pytest suite:
+Tests that the FastAPI server starts correctly:
 
 ```yaml
-- name: Install dependencies
+- name: Install backend dependencies
   run: |
     python -m pip install --upgrade pip
-    pip install -r requirements.txt
-    pip install -r requirements-dev.txt
+    pip install -r src/backend/requirements.txt
 
-- name: Run linting (ruff)
-  run: ruff check src/ tests/
+- name: Run backend linting (ruff)
+  run: |
+    pip install ruff
+    ruff check src/backend/
 
-- name: Run tests
-  run: pytest tests/ -v --tb=short
+- name: Test backend starts correctly
+  run: |
+    cd src/backend
+    timeout 10 python -m uvicorn main:app --host 127.0.0.1 --port 5678 &
+    sleep 5
+    curl -f http://127.0.0.1:5678/api/health || echo "Health check failed"
 ```
 
 ### Pipeline Triggers
@@ -552,11 +560,12 @@ class TestExampleClass:
 Ensure you're in a virtual environment with all dependencies:
 
 ```bash
+cd src/backend
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 pip install -r requirements.txt
-pip install -r requirements-dev.txt
+pip install -r ../../requirements-dev.txt
 ```
 
 ### PortAudio Not Found
