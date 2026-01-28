@@ -217,7 +217,7 @@ faster-whisper: Available
 2. Install as a service:
 
 ```powershell
-nssm install VoxTetherBackend "C:\Python311\python.exe" "C:\path\to\src\backend\cli.py serve"
+nssm install VoxTetherBackend "C:\Python313\python.exe" "C:\path\to\src\backend\cli.py serve"
 nssm set VoxTetherBackend AppDirectory "C:\path\to\src\backend"
 nssm start VoxTetherBackend
 ```
