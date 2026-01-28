@@ -20,6 +20,25 @@ const MODEL_INFO = {
 let settings = {};
 let isCapturingHotkey = false;
 
+// Mic test state
+let micTestState = {
+    isRunning: false,
+    stream: null,
+    audioContext: null,
+    analyser: null,
+    animationId: null,
+    peakLevel: 0,
+    audioData: null,
+    // Cached DOM elements for animation loop performance
+    elements: {
+        volumeBar: null,
+        volumePeak: null,
+        peakLabel: null,
+        canvas: null,
+        canvasCtx: null
+    }
+};
+
 // ============================================================================
 // Initialization
 // ============================================================================
@@ -39,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadAboutInfo();
     await loadModels();
     await checkDeviceInfo();
+    await loadMicDevices();
 
     // Set up IPC event listeners
     setupIPCListeners();
@@ -110,6 +130,11 @@ function initializeNavigation() {
 }
 
 function navigateTo(pageName) {
+    // Stop mic test if leaving audio page and it's running
+    if (micTestState.isRunning) {
+        stopMicTest();
+    }
+
     // Update nav items
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.toggle('active', item.dataset.page === pageName);
@@ -133,8 +158,12 @@ function initializeEventListeners() {
 
     // Audio settings
     document.getElementById('refresh-devices-btn').addEventListener('click', refreshAudioDevices);
-    document.getElementById('test-microphone-btn').addEventListener('click', testMicrophone);
     document.getElementById('save-audio-btn').addEventListener('click', saveAudioSettings);
+
+    // Mic test controls
+    document.getElementById('start-mic-test-btn').addEventListener('click', startMicTest);
+    document.getElementById('stop-mic-test-btn').addEventListener('click', stopMicTest);
+    document.getElementById('mic-device-select').addEventListener('change', handleMicDeviceChange);
 
     // About page
     document.getElementById('github-link').addEventListener('click', () => {
@@ -169,7 +198,9 @@ function setupIPCListeners() {
 
     // Test microphone request from tray
     window.voxtether.onTestMicrophone(() => {
-        testMicrophone();
+        // Navigate to audio page and start mic test
+        navigateTo('audio');
+        startMicTest();
     });
 }
 
@@ -250,38 +281,313 @@ async function saveAudioSettings() {
 }
 
 async function refreshAudioDevices() {
-    // Audio devices are handled by the backend/NAudio
-    // For now, just show a refresh notification
+    await loadMicDevices();
     showNotification('Audio devices refreshed', 'info');
 }
 
-async function testMicrophone() {
-    const btn = document.getElementById('test-microphone-btn');
-    const resultDiv = document.getElementById('test-result');
-    const resultText = document.getElementById('test-result-text');
+// ============================================================================
+// Microphone Test (Client-side using Web Audio API)
+// ============================================================================
 
-    btn.disabled = true;
-    btn.textContent = '🔴 Recording...';
-    resultDiv.classList.add('hidden');
+/**
+ * Load available microphone devices using the MediaDevices API
+ */
+async function loadMicDevices() {
+    const micSelect = document.getElementById('mic-device-select');
 
-    // Simulate a 2-second recording test
-    // In a real implementation, this would trigger the backend
     try {
-        updateStatus('Testing...', 'recording');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Request permission to access audio devices
+        // This is needed to get device labels
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Stop the stream immediately, we just needed permission
+            stream.getTracks().forEach(track => track.stop());
+        } catch (_e) {
+            // Permission denied or no devices available - continue anyway
+        }
 
-        // Mock result - in real implementation, call transcribe API
-        resultText.textContent = '(Test recording - backend integration pending)';
-        resultDiv.classList.remove('hidden');
-        updateStatus('Ready', 'ready');
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+
+        // Clear existing options
+        micSelect.innerHTML = '';
+
+        if (audioInputs.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No microphones found';
+            micSelect.appendChild(option);
+            return;
+        }
+
+        audioInputs.forEach((device, index) => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.textContent = device.label || `Microphone ${index + 1}`;
+            micSelect.appendChild(option);
+        });
+
     } catch (error) {
-        resultText.textContent = `Error: ${error.message}`;
-        resultDiv.classList.remove('hidden');
-        updateStatus('Error', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '🎤 Test Recording';
+        console.error('Failed to load mic devices:', error);
+        micSelect.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Error loading devices';
+        micSelect.appendChild(option);
     }
+}
+
+/**
+ * Handle microphone device selection change
+ */
+async function handleMicDeviceChange() {
+    // If mic test is running, restart with new device
+    if (micTestState.isRunning) {
+        await stopMicTest();
+        await startMicTest();
+    }
+}
+
+/**
+ * Start the microphone test with real-time visualization
+ */
+async function startMicTest() {
+    const startBtn = document.getElementById('start-mic-test-btn');
+    const stopBtn = document.getElementById('stop-mic-test-btn');
+    const visualizer = document.getElementById('mic-test-visualizer');
+    const statusDiv = document.getElementById('mic-test-status');
+    const micSelect = document.getElementById('mic-device-select');
+
+    const selectedDeviceId = micSelect.value;
+
+    if (!selectedDeviceId) {
+        updateMicTestStatus('error', '❌', 'No microphone selected');
+        return;
+    }
+
+    try {
+        // Request microphone access
+        const constraints = {
+            audio: {
+                deviceId: { exact: selectedDeviceId },
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+            }
+        };
+
+        micTestState.stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        // Create audio context and analyser
+        micTestState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        micTestState.analyser = micTestState.audioContext.createAnalyser();
+        micTestState.analyser.fftSize = 2048;
+        micTestState.analyser.smoothingTimeConstant = 0.8;
+
+        const source = micTestState.audioContext.createMediaStreamSource(micTestState.stream);
+        source.connect(micTestState.analyser);
+
+        // Initialize audio data buffer
+        micTestState.audioData = new Uint8Array(micTestState.analyser.frequencyBinCount);
+        micTestState.peakLevel = 0;
+        micTestState.isRunning = true;
+
+        // Cache DOM elements for animation loop performance
+        micTestState.elements.volumeBar = document.getElementById('volume-bar');
+        micTestState.elements.volumePeak = document.getElementById('volume-peak');
+        micTestState.elements.peakLabel = document.getElementById('peak-label');
+        micTestState.elements.canvas = document.getElementById('waveform-canvas');
+        if (micTestState.elements.canvas) {
+            micTestState.elements.canvasCtx = micTestState.elements.canvas.getContext('2d');
+        }
+
+        // Update UI
+        startBtn.classList.add('hidden');
+        stopBtn.classList.remove('hidden');
+        visualizer.classList.remove('hidden');
+        statusDiv.classList.add('active');
+        statusDiv.classList.remove('error');
+
+        updateMicTestStatus('active', '🎤', 'Listening... Speak into your microphone');
+
+        // Start visualization loop
+        animateMicTest();
+
+    } catch (error) {
+        console.error('Failed to start mic test:', error);
+
+        let errorMessage = 'Failed to access microphone';
+        if (error.name === 'NotAllowedError') {
+            errorMessage = 'Microphone access denied. Please allow microphone access.';
+        } else if (error.name === 'NotFoundError') {
+            errorMessage = 'No microphone found. Please connect a microphone.';
+        } else if (error.name === 'NotReadableError') {
+            errorMessage = 'Microphone is in use by another application.';
+        }
+
+        updateMicTestStatus('error', '❌', errorMessage);
+        await stopMicTest();
+    }
+}
+
+/**
+ * Stop the microphone test
+ */
+async function stopMicTest() {
+    const startBtn = document.getElementById('start-mic-test-btn');
+    const stopBtn = document.getElementById('stop-mic-test-btn');
+    const visualizer = document.getElementById('mic-test-visualizer');
+
+    micTestState.isRunning = false;
+
+    // Cancel animation
+    if (micTestState.animationId) {
+        cancelAnimationFrame(micTestState.animationId);
+        micTestState.animationId = null;
+    }
+
+    // Stop audio stream
+    if (micTestState.stream) {
+        micTestState.stream.getTracks().forEach(track => track.stop());
+        micTestState.stream = null;
+    }
+
+    // Close audio context
+    if (micTestState.audioContext) {
+        try {
+            await micTestState.audioContext.close();
+        } catch (_e) {
+            // Ignore close errors
+        }
+        micTestState.audioContext = null;
+        micTestState.analyser = null;
+    }
+
+    // Reset peak level
+    micTestState.peakLevel = 0;
+
+    // Update UI
+    startBtn.classList.remove('hidden');
+    stopBtn.classList.add('hidden');
+    visualizer.classList.add('hidden');
+
+    const statusDiv = document.getElementById('mic-test-status');
+    statusDiv.classList.remove('active');
+    statusDiv.classList.remove('error');
+    updateMicTestStatus('', 'ℹ️', 'Click "Start Test" to begin microphone testing');
+}
+
+/**
+ * Animation loop for mic test visualization
+ */
+function animateMicTest() {
+    if (!micTestState.isRunning || !micTestState.analyser) {
+        return;
+    }
+
+    // Get audio data
+    micTestState.analyser.getByteTimeDomainData(micTestState.audioData);
+
+    // Calculate RMS level
+    let sum = 0;
+    for (let i = 0; i < micTestState.audioData.length; i++) {
+        const value = (micTestState.audioData[i] - 128) / 128;
+        sum += value * value;
+    }
+    const rms = Math.sqrt(sum / micTestState.audioData.length);
+    const level = Math.min(1, rms * 3); // Scale for visibility
+
+    // Update peak level with decay
+    if (level > micTestState.peakLevel) {
+        micTestState.peakLevel = level;
+    } else {
+        micTestState.peakLevel = Math.max(level, micTestState.peakLevel * 0.98);
+    }
+
+    // Update volume bar using cached elements
+    const { volumeBar, volumePeak, peakLabel } = micTestState.elements;
+    if (volumeBar && volumePeak && peakLabel) {
+        volumeBar.style.width = `${level * 100}%`;
+        volumePeak.style.left = `${micTestState.peakLevel * 100}%`;
+        peakLabel.textContent = `Peak: ${Math.round(micTestState.peakLevel * 100)}%`;
+    }
+
+    // Draw waveform
+    drawWaveform();
+
+    // Schedule next frame
+    micTestState.animationId = requestAnimationFrame(animateMicTest);
+}
+
+/**
+ * Draw the audio waveform on canvas
+ */
+function drawWaveform() {
+    const { canvas, canvasCtx } = micTestState.elements;
+    if (!canvas || !canvasCtx || !micTestState.audioData) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Get theme colors
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const bgColor = isDark ? '#202020' : '#f9f9f9';
+    const lineColor = isDark ? '#4682B4' : '#0078d4';
+    const centerLineColor = isDark ? '#404040' : '#e0e0e0';
+
+    // Clear canvas
+    canvasCtx.fillStyle = bgColor;
+    canvasCtx.fillRect(0, 0, width, height);
+
+    // Draw center line
+    canvasCtx.beginPath();
+    canvasCtx.strokeStyle = centerLineColor;
+    canvasCtx.lineWidth = 1;
+    canvasCtx.moveTo(0, height / 2);
+    canvasCtx.lineTo(width, height / 2);
+    canvasCtx.stroke();
+
+    // Draw waveform
+    canvasCtx.beginPath();
+    canvasCtx.strokeStyle = lineColor;
+    canvasCtx.lineWidth = 2;
+
+    const sliceWidth = width / micTestState.audioData.length;
+    let x = 0;
+
+    for (let i = 0; i < micTestState.audioData.length; i++) {
+        const v = micTestState.audioData[i] / 128.0;
+        const y = (v * height) / 2;
+
+        if (i === 0) {
+            canvasCtx.moveTo(x, y);
+        } else {
+            canvasCtx.lineTo(x, y);
+        }
+
+        x += sliceWidth;
+    }
+
+    canvasCtx.stroke();
+}
+
+/**
+ * Update mic test status display
+ */
+function updateMicTestStatus(state, icon, message) {
+    const statusDiv = document.getElementById('mic-test-status');
+    if (!statusDiv) return;
+
+    const iconSpan = statusDiv.querySelector('.status-icon');
+    const messageSpan = statusDiv.querySelector('.status-message');
+
+    statusDiv.classList.remove('active', 'error');
+    if (state) {
+        statusDiv.classList.add(state);
+    }
+
+    if (iconSpan) iconSpan.textContent = icon;
+    if (messageSpan) messageSpan.textContent = message;
 }
 
 // ============================================================================

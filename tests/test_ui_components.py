@@ -8,12 +8,6 @@ try:
 except ImportError:
     RecordingIndicator = None
 
-try:
-    from src.ui.mic_test import MicTestWindow, show_mic_test
-except ImportError:
-    MicTestWindow = None
-    show_mic_test = None
-
 
 @pytest.mark.skipif(RecordingIndicator is None, reason="RecordingIndicator not available")
 class TestRecordingIndicator:
@@ -53,41 +47,6 @@ class TestRecordingIndicator:
         assert indicator.is_running is False
 
 
-@pytest.mark.skipif(MicTestWindow is None, reason="MicTestWindow not available")
-class TestMicTestWindow:
-    """Tests for the MicTestWindow class."""
-
-    def test_import_mic_test(self):
-        """Test that the mic test module can be imported."""
-        assert MicTestWindow is not None
-        assert show_mic_test is not None
-
-    def test_mic_test_window_initialization(self):
-        """Test MicTestWindow initialization."""
-        window = MicTestWindow()
-
-        assert window._root is None
-        assert window._window is None
-        assert window._is_running is False
-        assert window._devices == []
-
-    def test_mic_test_window_with_callbacks(self):
-        """Test MicTestWindow with callbacks."""
-        close_called = False
-        device_changed = None
-
-        def on_close():
-            nonlocal close_called
-            close_called = True
-
-        def on_device_change(device_id):
-            nonlocal device_changed
-            device_changed = device_id
-
-        window = MicTestWindow(
-            on_close=on_close,
-            on_device_change=on_device_change,
-        )
-
-        assert window._on_close == on_close
-        assert window._on_device_change == on_device_change
+# Note: MicTestWindow has been moved to the Electron frontend
+# The mic test functionality is now implemented client-side using Web Audio API
+# See: src/frontend-electron/src/renderer/renderer.js

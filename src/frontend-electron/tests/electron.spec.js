@@ -223,14 +223,22 @@ test.describe('VoxTether Electron App', () => {
     await expect(refreshBtn).toBeVisible();
   });
 
-  test('should have test microphone button on Audio page', async () => {
+  test('should have mic test controls on Audio page', async () => {
     // Navigate to Audio page
     const audioNav = window.locator('[data-page="audio"]');
     await audioNav.click();
     
-    // Check for test microphone button
-    const testMicBtn = window.locator('#test-microphone-btn');
-    await expect(testMicBtn).toBeVisible();
+    // Check for mic test elements
+    const micDeviceSelect = window.locator('#mic-device-select');
+    await expect(micDeviceSelect).toBeVisible();
+    
+    const startMicTestBtn = window.locator('#start-mic-test-btn');
+    await expect(startMicTestBtn).toBeVisible();
+    await expect(startMicTestBtn).toHaveText('🎤 Start Test');
+    
+    // Check for mic test status
+    const micTestStatus = window.locator('#mic-test-status');
+    await expect(micTestStatus).toBeVisible();
   });
 
   test('should display app version on About page', async () => {
