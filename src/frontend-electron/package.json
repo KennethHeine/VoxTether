@@ -28,7 +28,7 @@
     "url": "https://github.com/KennethHeine/VoxTether.git"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.1",
+    "@playwright/test": "^1.58.0",
     "electron": "^40.0.0",
     "electron-builder": "^26.5.0",
     "eslint": "^9.18.0"
