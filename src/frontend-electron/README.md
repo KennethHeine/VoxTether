@@ -1,6 +1,6 @@
 # VoxTether Electron Frontend
 
-This is the Electron.js-based frontend for VoxTether, a push-to-talk dictation application for Windows.
+This is the Electron.js-based frontend for VoxTether, a voice dictation application for Windows.
 
 ## Features
 
@@ -146,7 +146,8 @@ Settings are stored in the user's app data directory:
 
 ```json
 {
-  "hotkey": "Ctrl+Shift+Space",
+  "windowToggleHotkey": "Ctrl+Shift+V",
+  "toggleRecordingHotkey": "Ctrl+Shift+R",
   "modelName": "small",
   "language": "auto",
   "outputMode": "ClipboardAndPaste",

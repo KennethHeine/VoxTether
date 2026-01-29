@@ -25,9 +25,9 @@ export const STATS_STORAGE_KEY = 'voxtether_stats';
 const state = {
     settings: {},
     isCapturingHotkey: false,
-    capturingHotkeyType: null, // 'ptt' or 'windowToggle'
+    capturingHotkeyType: null, // 'windowToggle' or 'toggleRecording'
 
-    // Recording state for push-to-talk
+    // Recording state
     recording: {
         isRecording: false,
         mediaRecorder: null,

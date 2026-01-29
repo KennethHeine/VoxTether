@@ -144,11 +144,11 @@ test.describe('VoxTether Electron App', () => {
     await expect(header).toHaveText('About VoxTether');
   });
 
-  test('should have hotkey input field on General Settings page', async () => {
-    const hotkeyInput = window.locator('#hotkey-input');
+  test('should have toggle recording hotkey input field on General Settings page', async () => {
+    const hotkeyInput = window.locator('#toggle-recording-hotkey-input');
     await expect(hotkeyInput).toBeVisible();
     
-    const captureBtn = window.locator('#capture-hotkey-btn');
+    const captureBtn = window.locator('#capture-toggle-recording-hotkey-btn');
     await expect(captureBtn).toBeVisible();
     await expect(captureBtn).toHaveText('Capture');
   });

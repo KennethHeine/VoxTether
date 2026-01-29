@@ -4,27 +4,27 @@ This document provides a comprehensive overview of all features available in the
 
 ## Overview
 
-VoxTether is a push-to-talk dictation application for Windows that provides fully offline speech-to-text transcription. The Electron frontend communicates with a Python FastAPI backend running faster-whisper for transcription.
+VoxTether is a voice dictation application for Windows that provides fully offline speech-to-text transcription. The Electron frontend communicates with a Python FastAPI backend running faster-whisper for transcription.
 
 ---
 
 ## Core Features
 
-### 1. Push-to-Talk Recording
+### 1. Recording
 
-The primary feature of VoxTether - hold a customizable hotkey to record speech, release to transcribe.
+The primary feature of VoxTether - use a customizable hotkey to toggle recording, then transcribe your speech.
 
 | Feature | Description |
 |---------|-------------|
 | **Global Hotkey** | Works system-wide, even when VoxTether is not focused |
-| **Default Hotkey** | `Ctrl+Shift+Space` (fully customizable) |
+| **Default Hotkey** | `Ctrl+Shift+R` (fully customizable) |
 | **Real-time Status** | Visual indicator shows recording state |
 | **Auto-transcription** | Automatically sends audio to backend when recording stops |
 
 **How it works:**
-1. Press and hold the configured hotkey
+1. Press the configured hotkey to start recording
 2. Speak into your microphone
-3. Release the hotkey
+3. Press the hotkey again to stop recording
 4. Audio is sent to the backend for transcription
 5. Transcribed text is automatically pasted at cursor position
 
@@ -68,7 +68,8 @@ Configure core application behavior:
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| Push-to-Talk Hotkey | Key combination to trigger recording | `Ctrl+Shift+Space` |
+| Window Toggle Hotkey | Key combination to show/hide settings window | `Ctrl+Shift+V` |
+| Toggle Recording Hotkey | Key combination to start/stop recording | `Ctrl+Shift+R` |
 | Language | Language for speech recognition | Auto Detect |
 | Output Mode | How transcribed text is inserted | Clipboard + Paste |
 | Show Notifications | Display notifications after transcription | Enabled |
@@ -123,7 +124,7 @@ Manage speech recognition models:
 
 ### Transcribe Page
 
-Transcribe audio files (not just push-to-talk):
+Transcribe audio files (not just live recordings):
 
 | Feature | Description |
 |---------|-------------|
@@ -215,7 +216,8 @@ VoxTether uses a Windows 11 Fluent Design-inspired interface:
 
 | Shortcut | Action |
 |----------|--------|
-| Configurable hotkey | Start/stop push-to-talk recording |
+| `Ctrl+Shift+R` | Start/stop recording (configurable) |
+| `Ctrl+Shift+V` | Show/hide settings window (configurable) |
 | Double-click tray | Open settings window |
 
 ---

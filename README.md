@@ -1,10 +1,10 @@
 # VoxTether
 
-Push-to-talk dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
+Voice dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 
 ## Features
 
-- **Push-to-talk recording**: Press and hold a global hotkey to record, release to transcribe
+- **Toggle recording**: Press a global hotkey to start/stop recording
 - **GPU acceleration**: Native CUDA 12 support with automatic fallback to CPU
 - **Fully offline**: Uses faster-whisper for local speech-to-text, no internet required after model download
 - **Modern UI**: Built with Electron for a clean, Windows 11 Fluent-inspired interface
