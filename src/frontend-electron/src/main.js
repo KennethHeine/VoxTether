@@ -254,13 +254,19 @@ function hideRecordingOverlay() {
  * Get the application icon path
  */
 function getIconPath() {
-    // Check in assets folder
+    // In packaged app, check extraResources folder
+    const resourcesIcon = path.join(process.resourcesPath || '', 'assets', 'icon.ico');
+    if (fs.existsSync(resourcesIcon)) {
+        return resourcesIcon;
+    }
+
+    // Check in frontend-electron assets folder (development mode)
     const assetsIcon = path.join(__dirname, '..', 'assets', 'icon.ico');
     if (fs.existsSync(assetsIcon)) {
         return assetsIcon;
     }
 
-    // Check in root assets folder
+    // Check in root assets folder (development mode)
     const rootIcon = path.join(__dirname, '..', '..', '..', 'assets', 'icon.ico');
     if (fs.existsSync(rootIcon)) {
         return rootIcon;
@@ -1012,6 +1018,19 @@ ipcMain.handle('check-for-updates', async () => {
         const result = await autoUpdater.checkForUpdates();
         return { available: !!result, updateInfo: result?.updateInfo };
     } catch (error) {
+        // Handle missing configuration or file not found errors
+        // Check for common error indicators across platforms and versions
+        const isConfigError = error.code === 'ENOENT' ||
+            error.code === 'ERR_UPDATER_NO_PUBLISHED_VERSIONS' ||
+            (error.message && (
+                error.message.includes('ENOENT') ||
+                error.message.includes('app-update') ||
+                error.message.includes('no such file') ||
+                error.message.includes('Cannot find')
+            ));
+        if (isConfigError) {
+            return { available: false, error: 'Update configuration not found. This may be a development or portable build.' };
+        }
         return { available: false, error: error.message };
     }
 });
@@ -1039,6 +1058,34 @@ ipcMain.handle('install-update', () => {
 // ============================================================================
 
 /**
+ * Ensure app-update.yml exists in resources folder
+ * This file is required by electron-updater to check for updates.
+ * If it doesn't exist (e.g., older builds), create it at runtime.
+ */
+function ensureAppUpdateConfig() {
+    if (!app.isPackaged) {
+        return; // Not needed in development mode
+    }
+
+    const resourcesPath = process.resourcesPath;
+    const appUpdatePath = path.join(resourcesPath, 'app-update.yml');
+
+    if (!fs.existsSync(appUpdatePath)) {
+        console.log('Creating missing app-update.yml...');
+        const config = `provider: github
+owner: KennethHeine
+repo: VoxTether
+`;
+        try {
+            fs.writeFileSync(appUpdatePath, config, 'utf8');
+            console.log('Created app-update.yml successfully');
+        } catch (error) {
+            console.error('Failed to create app-update.yml:', error.message);
+        }
+    }
+}
+
+/**
  * Set up auto-updater event handlers
  */
 function setupAutoUpdater() {
@@ -1046,6 +1093,9 @@ function setupAutoUpdater() {
         console.log('Auto-updater not available');
         return;
     }
+
+    // Ensure app-update.yml exists before configuring updater
+    ensureAppUpdateConfig();
 
     // Configure auto-updater
     autoUpdater.autoDownload = false;  // Don't auto-download, let user decide
