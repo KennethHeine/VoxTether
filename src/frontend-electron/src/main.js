@@ -27,6 +27,7 @@ let isRecording = false;
 let settings = null;
 let registeredHotkey = null;
 let registeredWindowToggleHotkey = null;
+let registeredToggleRecordingHotkey = null;
 let recordingOverlayWindow = null;  // Recording indicator overlay (Feature 3)
 
 // Paths
@@ -48,6 +49,7 @@ const isDebug = process.argv.includes('--debug');
 const defaultSettings = {
     hotkey: 'Ctrl+Shift+Space',
     windowToggleHotkey: 'Ctrl+Shift+V',
+    toggleRecordingHotkey: 'Ctrl+Shift+R',
     modelName: 'small',
     language: 'auto',
     outputMode: 'ClipboardAndPaste',
@@ -550,6 +552,51 @@ function registerWindowToggleHotkey() {
 }
 
 /**
+ * Register the toggle recording global hotkey (for longer recordings)
+ * Unlike push-to-talk, this toggles recording on/off with a single press
+ */
+function registerToggleRecordingHotkey() {
+    // Unregister previous hotkey if exists
+    if (registeredToggleRecordingHotkey) {
+        try {
+            globalShortcut.unregister(registeredToggleRecordingHotkey);
+        } catch (error) {
+            console.warn('Failed to unregister previous toggle recording hotkey:', error);
+        }
+        registeredToggleRecordingHotkey = null;
+    }
+
+    const hotkey = settings.toggleRecordingHotkey;
+    if (!hotkey) {
+        console.log('No toggle recording hotkey configured');
+        return false;
+    }
+
+    try {
+        // Convert our hotkey format to Electron's format
+        const electronHotkey = convertToElectronHotkey(hotkey);
+        console.log(`Registering toggle recording hotkey: ${hotkey} -> ${electronHotkey}`);
+
+        const success = globalShortcut.register(electronHotkey, () => {
+            // Toggle recording on/off with a single press
+            toggleRecording();
+        });
+
+        if (success) {
+            registeredToggleRecordingHotkey = electronHotkey;
+            console.log('Toggle recording hotkey registered successfully');
+            return true;
+        } else {
+            console.error('Failed to register toggle recording hotkey');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error registering toggle recording hotkey:', error);
+        return false;
+    }
+}
+
+/**
  * Toggle main window visibility
  */
 function toggleWindowVisibility() {
@@ -642,6 +689,7 @@ ipcMain.handle('get-settings', () => settings);
 ipcMain.handle('save-settings', (event, newSettings) => {
     const hotkeyChanged = newSettings.hotkey && newSettings.hotkey !== settings.hotkey;
     const windowToggleHotkeyChanged = newSettings.windowToggleHotkey && newSettings.windowToggleHotkey !== settings.windowToggleHotkey;
+    const toggleRecordingHotkeyChanged = newSettings.toggleRecordingHotkey && newSettings.toggleRecordingHotkey !== settings.toggleRecordingHotkey;
     settings = { ...settings, ...newSettings };
     const saved = saveSettings();
 
@@ -653,6 +701,11 @@ ipcMain.handle('save-settings', (event, newSettings) => {
     // Re-register window toggle hotkey if it changed
     if (windowToggleHotkeyChanged) {
         registerWindowToggleHotkey();
+    }
+
+    // Re-register toggle recording hotkey if it changed
+    if (toggleRecordingHotkeyChanged) {
+        registerToggleRecordingHotkey();
     }
 
     return saved;
@@ -1201,6 +1254,9 @@ app.whenReady().then(async () => {
 
     // Register window toggle hotkey
     registerWindowToggleHotkey();
+
+    // Register toggle recording hotkey
+    registerToggleRecordingHotkey();
 
     // Set up auto-updater
     setupAutoUpdater();

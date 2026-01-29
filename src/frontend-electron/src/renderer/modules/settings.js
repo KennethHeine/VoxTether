@@ -35,6 +35,9 @@ export function applySettingsToUI() {
     const windowToggleInput = document.getElementById('window-toggle-hotkey-input');
     if (windowToggleInput) windowToggleInput.value = settings.windowToggleHotkey || 'Ctrl+Shift+V';
 
+    const toggleRecordingInput = document.getElementById('toggle-recording-hotkey-input');
+    if (toggleRecordingInput) toggleRecordingInput.value = settings.toggleRecordingHotkey || 'Ctrl+Shift+R';
+
     const languageSelect = document.getElementById('language-select');
     if (languageSelect) languageSelect.value = settings.language || 'auto';
 
@@ -130,6 +133,7 @@ export async function saveGeneralSettings() {
     const newSettings = {
         hotkey: getElementValue('hotkey-input', 'Ctrl+Shift+Space'),
         windowToggleHotkey: getElementValue('window-toggle-hotkey-input', 'Ctrl+Shift+V'),
+        toggleRecordingHotkey: getElementValue('toggle-recording-hotkey-input', 'Ctrl+Shift+R'),
         language: getElementValue('language-select', 'auto'),
         outputMode: getElementValue('output-mode-select', 'ClipboardAndPaste'),
         showNotifications: getElementChecked('notifications-toggle', true),
