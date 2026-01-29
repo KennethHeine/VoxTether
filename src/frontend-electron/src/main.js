@@ -1058,6 +1058,34 @@ ipcMain.handle('install-update', () => {
 // ============================================================================
 
 /**
+ * Ensure app-update.yml exists in resources folder
+ * This file is required by electron-updater to check for updates.
+ * If it doesn't exist (e.g., older builds), create it at runtime.
+ */
+function ensureAppUpdateConfig() {
+    if (!app.isPackaged) {
+        return; // Not needed in development mode
+    }
+
+    const resourcesPath = process.resourcesPath;
+    const appUpdatePath = path.join(resourcesPath, 'app-update.yml');
+
+    if (!fs.existsSync(appUpdatePath)) {
+        console.log('Creating missing app-update.yml...');
+        const config = `provider: github
+owner: KennethHeine
+repo: VoxTether
+`;
+        try {
+            fs.writeFileSync(appUpdatePath, config, 'utf8');
+            console.log('Created app-update.yml successfully');
+        } catch (error) {
+            console.error('Failed to create app-update.yml:', error.message);
+        }
+    }
+}
+
+/**
  * Set up auto-updater event handlers
  */
 function setupAutoUpdater() {
@@ -1065,6 +1093,9 @@ function setupAutoUpdater() {
         console.log('Auto-updater not available');
         return;
     }
+
+    // Ensure app-update.yml exists before configuring updater
+    ensureAppUpdateConfig();
 
     // Configure auto-updater
     autoUpdater.autoDownload = false;  // Don't auto-download, let user decide
