@@ -56,7 +56,7 @@ jobs:
     - name: Build Electron app
       run: |
         cd src/frontend-electron
-        npm run build
+        npx electron-builder --win --x64 --publish never
       shell: pwsh
 
     - name: Create GitHub Release
