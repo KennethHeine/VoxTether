@@ -1,7 +1,7 @@
 /**
  * VoxTether Recording Module
  *
- * Handles push-to-talk recording, audio processing, and transcription.
+ * Handles recording, audio processing, and transcription.
  */
 
 import { getSettings, getRecordingState, setRecordingState } from './state.js';

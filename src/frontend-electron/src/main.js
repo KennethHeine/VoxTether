@@ -584,8 +584,8 @@ function registerWindowToggleHotkey() {
 }
 
 /**
- * Register the toggle recording global hotkey (for longer recordings)
- * Unlike push-to-talk, this toggles recording on/off with a single press
+ * Register the toggle recording global hotkey
+ * Toggles recording on/off with a single press
  */
 function registerToggleRecordingHotkey() {
     // Unregister previous hotkey if exists
