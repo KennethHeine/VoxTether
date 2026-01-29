@@ -10,6 +10,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, shell, cli
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const { GlobalKeyboardListener } = require('node-global-key-listener');
 
 // Auto-updater (Feature 18)
 let autoUpdater = null;
@@ -29,6 +30,8 @@ let registeredHotkey = null;
 let registeredWindowToggleHotkey = null;
 let registeredToggleRecordingHotkey = null;
 let recordingOverlayWindow = null;  // Recording indicator overlay (Feature 3)
+let globalKeyboardListener = null;  // Push-to-talk keyboard listener
+let pttHotkeyActive = false;        // Track if PTT hotkey is currently being held
 
 // Paths
 const userDataPath = app.getPath('userData');
@@ -465,18 +468,127 @@ function backendRequest(method, endpoint, body = null) {
 // ============================================================================
 
 /**
- * Register the push-to-talk global hotkey
+ * Normalize a key name from hotkey capture format to node-global-key-listener format
+ * @param {string} key - Key name from hotkey capture (e.g., "Space", "Up", "Enter")
+ * @returns {string} Normalized key name for node-global-key-listener
+ */
+function normalizeKeyName(key) {
+    if (!key) return '';
+    const upper = key.toUpperCase();
+
+    // Map browser KeyboardEvent.key values to node-global-key-listener names
+    const keyMap = {
+        'SPACE': 'SPACE',
+        'ENTER': 'RETURN',
+        'RETURN': 'RETURN',
+        'TAB': 'TAB',
+        'ESCAPE': 'ESCAPE',
+        'ESC': 'ESCAPE',
+        'BACKSPACE': 'BACKSPACE',
+        'DELETE': 'DELETE',
+        'INSERT': 'INSERT',
+        'HOME': 'HOME',
+        'END': 'END',
+        'PAGEUP': 'PAGE UP',
+        'PAGEDOWN': 'PAGE DOWN',
+        // Arrow keys - hotkey.js converts ArrowUp to Up
+        'UP': 'UP ARROW',
+        'DOWN': 'DOWN ARROW',
+        'LEFT': 'LEFT ARROW',
+        'RIGHT': 'RIGHT ARROW',
+        // Function keys
+        'F1': 'F1', 'F2': 'F2', 'F3': 'F3', 'F4': 'F4',
+        'F5': 'F5', 'F6': 'F6', 'F7': 'F7', 'F8': 'F8',
+        'F9': 'F9', 'F10': 'F10', 'F11': 'F11', 'F12': 'F12'
+    };
+
+    return keyMap[upper] || upper;
+}
+
+/**
+ * Parse hotkey string into components for matching with keyboard events
+ * @param {string} hotkey - Hotkey string like "Ctrl+Shift+Space"
+ * @returns {Object} Object with modifiers and key (only first non-modifier key is used)
+ */
+function parseHotkey(hotkey) {
+    if (!hotkey) return null;
+
+    const parts = hotkey.split('+');
+    const modifiers = {
+        ctrl: false,
+        shift: false,
+        alt: false,
+        meta: false
+    };
+    let key = null;
+
+    for (const part of parts) {
+        const p = part.toUpperCase();
+        if (p === 'CTRL' || p === 'CONTROL') {
+            modifiers.ctrl = true;
+        } else if (p === 'SHIFT') {
+            modifiers.shift = true;
+        } else if (p === 'ALT') {
+            modifiers.alt = true;
+        } else if (p === 'WIN' || p === 'META' || p === 'SUPER') {
+            modifiers.meta = true;
+        } else if (!key) {
+            // Only use the first non-modifier key (ignore additional keys)
+            key = normalizeKeyName(p);
+        }
+    }
+
+    return { modifiers, key };
+}
+
+/**
+ * Check if the current keyboard state matches the configured hotkey
+ * @param {Object} event - Keyboard event from node-global-key-listener
+ * @param {Object} down - Currently held keys
+ * @param {Object} parsedHotkey - Parsed hotkey object
+ * @returns {boolean} True if hotkey matches
+ */
+function matchesHotkey(event, down, parsedHotkey) {
+    if (!parsedHotkey || !parsedHotkey.key) return false;
+
+    // Check if the main key matches
+    const eventKey = event.name ? event.name.toUpperCase() : '';
+    if (eventKey !== parsedHotkey.key) return false;
+
+    // Check modifiers
+    const ctrlHeld = down['LEFT CTRL'] || down['RIGHT CTRL'];
+    const shiftHeld = down['LEFT SHIFT'] || down['RIGHT SHIFT'];
+    const altHeld = down['LEFT ALT'] || down['RIGHT ALT'];
+    const metaHeld = down['LEFT META'] || down['RIGHT META'];
+
+    if (parsedHotkey.modifiers.ctrl !== !!ctrlHeld) return false;
+    if (parsedHotkey.modifiers.shift !== !!shiftHeld) return false;
+    if (parsedHotkey.modifiers.alt !== !!altHeld) return false;
+    if (parsedHotkey.modifiers.meta !== !!metaHeld) return false;
+
+    return true;
+}
+
+/**
+ * Register the push-to-talk global hotkey using node-global-key-listener
+ * This enables true push-to-talk behavior (hold to record, release to stop)
  */
 function registerHotkey() {
-    // Unregister previous hotkey if exists
-    if (registeredHotkey) {
+    // Stop previous listener if exists
+    if (globalKeyboardListener) {
         try {
-            globalShortcut.unregister(registeredHotkey);
+            // Stop any active recording before killing the listener
+            if (pttHotkeyActive && isRecording) {
+                stopRecording();
+            }
+            globalKeyboardListener.kill();
         } catch (error) {
-            console.warn('Failed to unregister previous hotkey:', error);
+            console.warn('Failed to stop previous keyboard listener:', error);
         }
-        registeredHotkey = null;
+        globalKeyboardListener = null;
     }
+    registeredHotkey = null;
+    pttHotkeyActive = false;
 
     const hotkey = settings.hotkey;
     if (!hotkey) {
@@ -485,25 +597,35 @@ function registerHotkey() {
     }
 
     try {
-        // Convert our hotkey format to Electron's format
-        const electronHotkey = convertToElectronHotkey(hotkey);
-        console.log(`Registering hotkey: ${hotkey} -> ${electronHotkey}`);
+        const parsedHotkey = parseHotkey(hotkey);
+        console.log(`Registering push-to-talk hotkey: ${hotkey}`, parsedHotkey);
 
-        const success = globalShortcut.register(electronHotkey, () => {
-            // Toggle recording on hotkey press
-            toggleRecording();
+        globalKeyboardListener = new GlobalKeyboardListener();
+
+        globalKeyboardListener.addListener((event, down) => {
+            // Check if this event matches our configured hotkey
+            const matches = matchesHotkey(event, down, parsedHotkey);
+
+            if (event.state === 'DOWN' && matches && !pttHotkeyActive) {
+                // Key pressed - start recording
+                pttHotkeyActive = true;
+                startRecording();
+            } else if (event.state === 'UP' && pttHotkeyActive) {
+                // Key released - stop recording
+                // Check if the released key is the main hotkey key
+                const eventKey = event.name ? event.name.toUpperCase() : '';
+                if (eventKey === parsedHotkey.key) {
+                    pttHotkeyActive = false;
+                    stopRecording();
+                }
+            }
         });
 
-        if (success) {
-            registeredHotkey = electronHotkey;
-            console.log('Hotkey registered successfully');
-            return true;
-        } else {
-            console.error('Failed to register hotkey');
-            return false;
-        }
+        registeredHotkey = hotkey;
+        console.log('Push-to-talk hotkey registered successfully');
+        return true;
     } catch (error) {
-        console.error('Error registering hotkey:', error);
+        console.error('Error registering push-to-talk hotkey:', error);
         return false;
     }
 }
@@ -1290,6 +1412,20 @@ app.on('before-quit', () => {
     app.isQuitting = true;
     // Unregister all shortcuts
     globalShortcut.unregisterAll();
+    // Stop any active recording before quitting
+    if (pttHotkeyActive && isRecording) {
+        stopRecording();
+    }
+    pttHotkeyActive = false;
+    // Stop the global keyboard listener for push-to-talk
+    if (globalKeyboardListener) {
+        try {
+            globalKeyboardListener.kill();
+        } catch (error) {
+            console.warn('Failed to stop keyboard listener:', error);
+        }
+        globalKeyboardListener = null;
+    }
 });
 
 // Note: Backend is managed separately, no cleanup needed here
