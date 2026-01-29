@@ -63,7 +63,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: installer-build
-        path: src/frontend-electron/dist/*.exe
+        path: src/frontend-electron/dist/*-Setup.exe
 
     - name: Upload portable artifact
       uses: actions/upload-artifact@v4
@@ -130,15 +130,6 @@ jobs:
         
         # Create ZIP
         Compress-Archive -Path "build\portable\*" -DestinationPath "build\VoxTether-$version-win-x64.zip"
-      shell: pwsh
-
-    - name: Rename installer
-      run: |
-        $version = "${{ needs.build-frontend.outputs.version }}"
-        $installerFile = Get-ChildItem -Path "build\installer\" -Filter "*.exe" | Select-Object -First 1
-        if ($installerFile) {
-          Move-Item $installerFile.FullName "build\installer\VoxTether-$version-Setup.exe"
-        }
       shell: pwsh
 
     - name: Create GitHub Release
