@@ -6,7 +6,7 @@ This guide explains how to install and run the VoxTether Electron frontend clien
 
 The VoxTether frontend is an Electron desktop application that provides:
 - System tray integration
-- Push-to-talk recording
+- Toggle recording via global hotkey
 - Settings management
 - Connection to the backend server
 
@@ -116,7 +116,8 @@ All settings are stored in `%APPDATA%\VoxTether\settings.json`.
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `hotkey` | Push-to-talk key combination | `Ctrl+Shift+Space` |
+| `windowToggleHotkey` | Show/hide settings window | `Ctrl+Shift+V` |
+| `toggleRecordingHotkey` | Start/stop recording | `Ctrl+Shift+R` |
 | `modelName` | Model to use for transcription | `small` |
 | `language` | Transcription language | `auto` |
 | `outputMode` | How to output text | `ClipboardAndPaste` |
@@ -151,11 +152,11 @@ The application runs in the system tray. Right-click the tray icon for options:
 - **About** - Show version information
 - **Exit** - Close the application
 
-### Push-to-Talk
+### Toggle Recording
 
-1. Press and hold the hotkey (default: `Ctrl+Shift+Space`)
+1. Press the hotkey (default: `Ctrl+Shift+R`) to start recording
 2. Speak into your microphone
-3. Release the hotkey
+3. Press the hotkey again to stop recording
 4. The transcribed text is automatically typed/pasted
 
 ### Changing Hotkey

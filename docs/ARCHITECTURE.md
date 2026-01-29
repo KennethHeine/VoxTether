@@ -1,6 +1,6 @@
 # VoxTether Architecture
 
-This document describes the client-server architecture of VoxTether, a push-to-talk dictation application.
+This document describes the client-server architecture of VoxTether, a voice dictation application.
 
 ## Overview
 

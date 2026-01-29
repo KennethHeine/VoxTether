@@ -1,6 +1,6 @@
 # VoxTether Installation Guide
 
-This guide covers installation and setup for VoxTether, a push-to-talk dictation application for Windows.
+This guide covers installation and setup for VoxTether, a voice dictation application for Windows.
 
 ## System Requirements
 

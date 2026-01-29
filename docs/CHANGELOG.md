@@ -37,7 +37,8 @@ The entire frontend has been rewritten from WinUI 3 (.NET) to Electron.js for a 
 - Backend server connection status indicator
 
 #### General Settings
-- **Push-to-Talk Hotkey**: Customizable key combination capture
+- **Toggle Recording Hotkey**: Customizable key combination capture
+- **Window Toggle Hotkey**: Show/hide the settings window
 - **Language Selection**: Choose from 11+ languages or auto-detect
 - **Output Mode**: Clipboard only, Clipboard + Paste, or Simulate Typing
 - **Notifications**: Toggle transcription notifications

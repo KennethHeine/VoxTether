@@ -11,22 +11,6 @@ import {
 } from './state.js';
 
 /**
- * Start capturing push-to-talk hotkey
- */
-export function startHotkeyCapture() {
-    setCapturingHotkey(true, 'ptt');
-    const input = document.getElementById('hotkey-input');
-    const btn = document.getElementById('capture-hotkey-btn');
-    if (input) {
-        input.value = 'Press hotkey combination...';
-        input.classList.add('capturing');
-    }
-    if (btn) {
-        btn.textContent = 'Listening...';
-    }
-}
-
-/**
  * Start capturing window toggle hotkey
  */
 export function startWindowToggleHotkeyCapture() {
@@ -92,9 +76,6 @@ export function handleHotkeyCapture(event) {
         } else if (getCapturingHotkeyType() === 'toggleRecording') {
             const input = document.getElementById('toggle-recording-hotkey-input');
             if (input) input.value = hotkey;
-        } else {
-            const input = document.getElementById('hotkey-input');
-            if (input) input.value = hotkey;
         }
         stopHotkeyCapture();
     }
@@ -115,11 +96,6 @@ export function stopHotkeyCapture() {
     } else if (type === 'toggleRecording') {
         const input = document.getElementById('toggle-recording-hotkey-input');
         const btn = document.getElementById('capture-toggle-recording-hotkey-btn');
-        if (input) input.classList.remove('capturing');
-        if (btn) btn.textContent = 'Capture';
-    } else {
-        const input = document.getElementById('hotkey-input');
-        const btn = document.getElementById('capture-hotkey-btn');
         if (input) input.classList.remove('capturing');
         if (btn) btn.textContent = 'Capture';
     }

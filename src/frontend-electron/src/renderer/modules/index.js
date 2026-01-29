@@ -25,7 +25,6 @@ import {
 
 // Hotkey capture
 import {
-    startHotkeyCapture,
     startWindowToggleHotkeyCapture,
     startToggleRecordingHotkeyCapture,
     handleHotkeyCapture
@@ -110,13 +109,7 @@ import {
  * Initialize all event listeners
  */
 function initializeEventListeners() {
-    // General settings
-    const captureHotkeyBtn = document.getElementById('capture-hotkey-btn');
-    if (captureHotkeyBtn) captureHotkeyBtn.addEventListener('click', startHotkeyCapture);
-
-    const hotkeyInput = document.getElementById('hotkey-input');
-    if (hotkeyInput) hotkeyInput.addEventListener('click', startHotkeyCapture);
-
+    // General settings - window toggle hotkey
     const captureWindowToggleBtn = document.getElementById('capture-window-toggle-hotkey-btn');
     if (captureWindowToggleBtn) captureWindowToggleBtn.addEventListener('click', startWindowToggleHotkeyCapture);
 

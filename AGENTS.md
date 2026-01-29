@@ -4,7 +4,7 @@ This file provides context and instructions to help AI coding agents work effect
 
 ## Project Overview
 
-VoxTether is a push-to-talk dictation application for Windows 10/11. It uses a client-server architecture with an Electron frontend and Python FastAPI backend using faster-whisper for local speech-to-text transcription.
+VoxTether is a voice dictation application for Windows 10/11. It uses a client-server architecture with an Electron frontend and Python FastAPI backend using faster-whisper for local speech-to-text transcription.
 
 ## Setup Commands
 

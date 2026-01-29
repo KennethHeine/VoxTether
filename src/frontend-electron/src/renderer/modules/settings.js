@@ -29,9 +29,6 @@ export function applySettingsToUI() {
     const settings = getSettings();
 
     // General settings
-    const hotkeyInput = document.getElementById('hotkey-input');
-    if (hotkeyInput) hotkeyInput.value = settings.hotkey || 'Ctrl+Shift+Space';
-
     const windowToggleInput = document.getElementById('window-toggle-hotkey-input');
     if (windowToggleInput) windowToggleInput.value = settings.windowToggleHotkey || 'Ctrl+Shift+V';
 
@@ -131,7 +128,6 @@ function getElementChecked(id, defaultValue = false) {
  */
 export async function saveGeneralSettings() {
     const newSettings = {
-        hotkey: getElementValue('hotkey-input', 'Ctrl+Shift+Space'),
         windowToggleHotkey: getElementValue('window-toggle-hotkey-input', 'Ctrl+Shift+V'),
         toggleRecordingHotkey: getElementValue('toggle-recording-hotkey-input', 'Ctrl+Shift+R'),
         language: getElementValue('language-select', 'auto'),
