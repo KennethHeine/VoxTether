@@ -228,7 +228,16 @@ function initializeEventListeners() {
 function setupIPCListeners() {
     // Recording state changes (updates status indicator in sidebar)
     window.voxtether.onRecordingStateChanged((isRecording) => {
-        updateStatus(isRecording ? 'Recording...' : 'Ready', isRecording ? 'recording' : 'ready');
+        if (isRecording) {
+            updateStatus('Recording...', 'recording');
+        } else {
+            // When recording stops, check backend health to show appropriate status
+            if (isBackendAvailable) {
+                updateStatus('Ready', 'ready');
+            } else {
+                updateStatus('Backend Offline', 'error');
+            }
+        }
         updateTestRecordingUI(isRecording);
     });
 
@@ -279,6 +288,68 @@ function setupThemeListener() {
 }
 
 // ============================================================================
+// Backend Health Monitoring
+// ============================================================================
+
+// Health check interval in milliseconds (check every 5 seconds)
+const HEALTH_CHECK_INTERVAL = 5000;
+
+// Store interval ID for cleanup
+let healthCheckIntervalId = null;
+
+// Track if backend is currently available
+let isBackendAvailable = false;
+
+/**
+ * Check backend health and update the status indicator
+ * @returns {Promise<boolean>} True if backend is healthy, false otherwise
+ */
+async function checkBackendHealth() {
+    try {
+        const result = await window.voxtether.backendHealth();
+        if (result.success) {
+            isBackendAvailable = true;
+            // Only update to ready if we're not recording or processing
+            const currentState = await window.voxtether.getRecordingState();
+            if (!currentState.isRecording) {
+                updateStatus('Ready', 'ready');
+            }
+            return true;
+        } else {
+            isBackendAvailable = false;
+            updateStatus('Backend Offline', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('Backend health check failed:', error);
+        isBackendAvailable = false;
+        updateStatus('Backend Offline', 'error');
+        return false;
+    }
+}
+
+/**
+ * Start periodic backend health monitoring
+ */
+function startHealthMonitoring() {
+    // Clear any existing interval
+    if (healthCheckIntervalId) {
+        clearInterval(healthCheckIntervalId);
+    }
+
+    // Set up periodic health check
+    healthCheckIntervalId = setInterval(checkBackendHealth, HEALTH_CHECK_INTERVAL);
+}
+
+// Note: _stopHealthMonitoring is available for cleanup but not currently used
+function _stopHealthMonitoring() {
+    if (healthCheckIntervalId) {
+        clearInterval(healthCheckIntervalId);
+        healthCheckIntervalId = null;
+    }
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
@@ -303,6 +374,9 @@ async function initialize() {
     initializeEventListeners();
     applyTheme(settings.theme);
 
+    // Check backend health first to set correct initial status
+    await checkBackendHealth();
+
     // Load page data
     await loadAboutInfo();
     await loadModels();
@@ -317,6 +391,9 @@ async function initialize() {
 
     // Set up theme listener
     setupThemeListener();
+
+    // Start periodic backend health monitoring
+    startHealthMonitoring();
 
     console.log('VoxTether renderer ready');
 }
