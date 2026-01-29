@@ -14,9 +14,9 @@ permissions:
   contents: write
 
 jobs:
-  # Build the Electron frontend
-  build-frontend:
-    name: Build Frontend
+  # Build and release the Electron frontend
+  build-and-release:
+    name: Build and Release Frontend
     runs-on: windows-latest
 
     steps:
@@ -59,126 +59,51 @@ jobs:
         npm run build
       shell: pwsh
 
-    - name: Upload installer artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: installer-build
-        path: src/frontend-electron/dist/*-Setup.exe
-
-    - name: Upload portable artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: portable-build
-        path: src/frontend-electron/dist/win-unpacked/
-
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
-
-  # Create release
-  create-release:
-    name: Create Release
-    runs-on: windows-latest
-    needs: [build-frontend]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Download installer artifact
-      uses: actions/download-artifact@v7
-      with:
-        name: installer-build
-        path: build/installer/
-
-    - name: Download portable artifact
-      uses: actions/download-artifact@v7
-      with:
-        name: portable-build
-        path: build/portable/
-
-    - name: Create portable ZIP
-      run: |
-        $version = "${{ needs.build-frontend.outputs.version }}"
-        
-        # Create README
-        $readme = @"
-        VoxTether $version
-        ==================
-        
-        Push-to-talk dictation for Windows. Fully offline speech-to-text.
-        
-        Getting Started:
-        1. Run VoxTether.exe
-        2. On first run, you'll be prompted to download a speech recognition model
-        3. Press Ctrl+Shift+Space (default hotkey) to record
-        4. Release to transcribe and paste the text
-        
-        Requirements:
-        - Windows 10/11 (64-bit)
-        - For GPU acceleration: NVIDIA GPU with CUDA support
-        
-        For more information, visit:
-        https://github.com/KennethHeine/VoxTether
-        
-        License: MIT
-        "@
-        $readme | Out-File "build\portable\README.txt" -Encoding UTF8
-        
-        # Copy license
-        if (Test-Path "LICENSE") {
-          Copy-Item "LICENSE" "build\portable\LICENSE.txt"
-        }
-        
-        # Create ZIP
-        Compress-Archive -Path "build\portable\*" -DestinationPath "build\VoxTether-$version-win-x64.zip"
-      shell: pwsh
-
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v${{ needs.build-frontend.outputs.version }}
-        name: VoxTether v${{ needs.build-frontend.outputs.version }}
+        tag_name: frontend-v${{ steps.version.outputs.VERSION }}
+        name: VoxTether Frontend v${{ steps.version.outputs.VERSION }}
         body: |
-          ## VoxTether v${{ needs.build-frontend.outputs.version }}
+          ## VoxTether Frontend v${{ steps.version.outputs.VERSION }}
           
-          Push-to-talk dictation for Windows. Fully offline using faster-whisper.
+          Desktop UI for VoxTether - push-to-talk dictation application.
           
-          ### Downloads
+          ### Download
           
-          - **`VoxTether-${{ needs.build-frontend.outputs.version }}-Setup.exe`** - Windows installer (recommended)
-          - **`VoxTether-${{ needs.build-frontend.outputs.version }}-win-x64.zip`** - Portable ZIP
+          - **`VoxTether-${{ steps.version.outputs.VERSION }}-Setup.exe`** - Windows installer
           
           ### Installation
           
-          **Using Installer (Recommended):**
-          1. Download and run `VoxTether-${{ needs.build-frontend.outputs.version }}-Setup.exe`
+          1. Download and run `VoxTether-${{ steps.version.outputs.VERSION }}-Setup.exe`
           2. Follow the installation wizard
           3. Launch VoxTether from the Start Menu
           
-          **Using Portable ZIP:**
-          1. Download and extract the ZIP file
-          2. Run `VoxTether.exe`
-          
           ### First Run
           
-          On first launch, you'll be prompted to download a speech recognition model (recommended: "small" model).
+          1. Ensure the VoxTether Backend is running (look for `backend-v*` releases on the [Releases page](https://github.com/KennethHeine/VoxTether/releases))
+          2. On first launch, you'll be prompted to download a speech recognition model (recommended: "small" model)
+          3. Press Ctrl+Shift+Space (default hotkey) to record
+          4. Release to transcribe and paste the text
           
           ### Requirements
           
           - Windows 10/11 (64-bit)
-          - NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
+          - VoxTether Backend running on localhost:5678
           
-          See [Installation Guide](https://github.com/KennethHeine/VoxTether/blob/main/docs/INSTALLATION.md) for detailed instructions.
+          ### What's Included
           
-          ### Architecture
+          This is the **frontend component only**. It provides:
+          - System tray application with push-to-talk hotkey
+          - Audio recording and streaming to the backend
+          - Automatic text pasting after transcription
+          - Settings management (hotkey, model selection)
           
-          This release uses a hybrid architecture:
-          - **Frontend**: Electron.js - Cross-platform desktop UI
-          - **Backend**: Python FastAPI - faster-whisper transcription
+          > **Note:** For speech-to-text transcription, you also need the VoxTether Backend (look for `backend-v*` releases on the [Releases page](https://github.com/KennethHeine/VoxTether/releases)).
           
-          See [Architecture Documentation](https://github.com/KennethHeine/VoxTether/blob/main/docs/ARCHITECTURE.md) for details.
+          See [Installation Guide](https://github.com/KennethHeine/VoxTether/blob/main/docs/INSTALLATION.md) for detailed setup instructions.
         files: |
-          build/installer/VoxTether-${{ needs.build-frontend.outputs.version }}-Setup.exe
-          build/VoxTether-${{ needs.build-frontend.outputs.version }}-win-x64.zip
+          src/frontend-electron/dist/VoxTether-${{ steps.version.outputs.VERSION }}-Setup.exe
         generate_release_notes: true
         draft: false
         prerelease: false

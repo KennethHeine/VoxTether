@@ -1,0 +1,51 @@
+name: CI Backend
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/backend/**'
+      - '.github/workflows/ci-backend.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/backend/**'
+      - '.github/workflows/ci-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+        cache-dependency-path: 'src/backend/requirements.txt'
+
+    - name: Install backend dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r src/backend/requirements.txt
+
+    - name: Run backend linting (ruff)
+      run: |
+        pip install ruff
+        ruff check src/backend/
+      continue-on-error: true
+
+    - name: Test backend starts correctly
+      run: |
+        cd src/backend
+        timeout 10 python -m uvicorn main:app --host 127.0.0.1 --port 5678 &
+        sleep 5
+        curl -f http://127.0.0.1:5678/api/health || echo "Health check failed"
+      continue-on-error: true

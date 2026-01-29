@@ -14,9 +14,9 @@ permissions:
   contents: write
 
 jobs:
-  # Build the Python backend executable
-  build-backend:
-    name: Build Backend
+  # Build and release the Python backend
+  build-and-release:
+    name: Build and Release Backend
     runs-on: windows-latest
 
     steps:
@@ -50,33 +50,15 @@ jobs:
         pyinstaller --onefile --name vox-backend main.py
       shell: pwsh
 
-    - name: Upload backend artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: backend-build
-        path: src/backend/dist/vox-backend.exe
-
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
-
-  # Create release
-  create-release:
-    name: Create Release
-    runs-on: windows-latest
-    needs: [build-backend]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Download backend artifact
-      uses: actions/download-artifact@v7
-      with:
-        name: backend-build
-        path: build/backend/
-
     - name: Create backend ZIP
       run: |
-        $version = "${{ needs.build-backend.outputs.version }}"
+        $version = "${{ steps.version.outputs.VERSION }}"
+        
+        # Create build directory
+        New-Item -ItemType Directory -Path "build/backend" -Force
+        
+        # Copy executable
+        Copy-Item "src/backend/dist/vox-backend.exe" "build/backend/"
         
         # Create README
         $readme = @"
@@ -97,32 +79,32 @@ jobs:
         
         License: MIT
         "@
-        $readme | Out-File "build\backend\README.txt" -Encoding UTF8
+        $readme | Out-File "build/backend/README.txt" -Encoding UTF8
         
         # Copy license
         if (Test-Path "LICENSE") {
-          Copy-Item "LICENSE" "build\backend\LICENSE.txt"
+          Copy-Item "LICENSE" "build/backend/LICENSE.txt"
         }
         
         # Create ZIP
-        Compress-Archive -Path "build\backend\*" -DestinationPath "build\VoxTether-Backend-$version-win-x64.zip"
+        Compress-Archive -Path "build/backend/*" -DestinationPath "build/VoxTether-Backend-$version-win-x64.zip"
       shell: pwsh
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: backend-v${{ needs.build-backend.outputs.version }}
-        name: VoxTether Backend v${{ needs.build-backend.outputs.version }}
+        tag_name: backend-v${{ steps.version.outputs.VERSION }}
+        name: VoxTether Backend v${{ steps.version.outputs.VERSION }}
         body: |
-          ## VoxTether Backend v${{ needs.build-backend.outputs.version }}
+          ## VoxTether Backend v${{ steps.version.outputs.VERSION }}
           
           Python FastAPI backend for VoxTether - speech-to-text using faster-whisper.
           
-          ### Downloads
+          ### Download
           
-          - **`VoxTether-Backend-${{ needs.build-backend.outputs.version }}-win-x64.zip`** - Backend executable ZIP
+          - **`VoxTether-Backend-${{ steps.version.outputs.VERSION }}-win-x64.zip`** - Backend executable ZIP
           
-          ### Usage
+          ### Installation
           
           1. Download and extract the ZIP file
           2. Run `vox-backend.exe` to start the transcription server
@@ -139,9 +121,11 @@ jobs:
           - `POST /api/transcribe` - Transcribe audio
           - `GET /api/models` - List available models
           
+          > **Note:** This is the backend component only. You also need the VoxTether Frontend for the desktop UI (look for `frontend-v*` releases on the [Releases page](https://github.com/KennethHeine/VoxTether/releases)).
+          
           See [Architecture Documentation](https://github.com/KennethHeine/VoxTether/blob/main/docs/ARCHITECTURE.md) for details.
         files: |
-          build/VoxTether-Backend-${{ needs.build-backend.outputs.version }}-win-x64.zip
+          build/VoxTether-Backend-${{ steps.version.outputs.VERSION }}-win-x64.zip
         generate_release_notes: true
         draft: false
         prerelease: false
