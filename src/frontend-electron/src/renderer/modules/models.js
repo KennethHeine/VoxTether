@@ -2,18 +2,23 @@
  * VoxTether Models Module
  *
  * Handles model management, loading, downloading, and display.
+ * Displays all available models (both downloaded and not downloaded)
+ * with options to download or load them.
  */
 
 import { MODEL_INFO } from './state.js';
 import { showNotification } from './notifications.js';
 import { formatSize } from './utils.js';
 
-// Track active download
+// Track active download state
 let isDownloading = false;
-let _currentDownloadModel = null;
+
+// Track if download listener has been initialized
+let downloadListenerInitialized = false;
 
 /**
- * Load and display available models
+ * Load and display all available models (downloaded and not downloaded).
+ * Populates both the model selector dropdown and the models grid.
  */
 export async function loadModels() {
     const modelsGrid = document.getElementById('models-grid');
@@ -81,16 +86,17 @@ export async function loadModels() {
         for (const model of models) {
             const modelInfo = MODEL_INFO[model.name] || { displayName: model.display_name, sizeMb: model.size_mb, description: model.description };
             const isActive = model.name === currentModel;
-            const isDownloadedModel = model.downloaded;
+            const isDownloaded = model.downloaded;
+            const displayName = modelInfo.displayName || model.display_name;
 
             // Create card using DOM methods to prevent XSS
             const card = document.createElement('div');
-            card.className = `model-card ${isActive ? 'active' : ''} ${!isDownloadedModel ? 'not-downloaded' : ''}`;
+            card.className = `model-card ${isActive ? 'active' : ''} ${!isDownloaded ? 'not-downloaded' : ''}`;
             card.id = `model-card-${model.name}`;
 
             const nameDiv = document.createElement('div');
             nameDiv.className = 'model-name';
-            nameDiv.textContent = modelInfo.displayName || model.display_name;
+            nameDiv.textContent = displayName;
             card.appendChild(nameDiv);
 
             const descDiv = document.createElement('div');
@@ -104,9 +110,9 @@ export async function loadModels() {
             card.appendChild(sizeDiv);
 
             const statusDiv = document.createElement('div');
-            statusDiv.className = `model-status ${isDownloadedModel ? 'downloaded' : 'not-downloaded'}`;
+            statusDiv.className = `model-status ${isDownloaded ? 'downloaded' : 'not-downloaded'}`;
             statusDiv.id = `model-status-${model.name}`;
-            if (isDownloadedModel) {
+            if (isDownloaded) {
                 statusDiv.textContent = isActive ? '✓ Active' : '✓ Downloaded';
             } else {
                 statusDiv.textContent = '○ Not Downloaded';
@@ -117,11 +123,12 @@ export async function loadModels() {
             actionsDiv.className = 'model-actions';
             actionsDiv.id = `model-actions-${model.name}`;
 
-            if (isDownloadedModel) {
+            if (isDownloaded) {
                 if (!isActive) {
                     const loadBtn = document.createElement('button');
                     loadBtn.className = 'btn btn-primary btn-small';
                     loadBtn.textContent = 'Load Model';
+                    loadBtn.setAttribute('aria-label', `Load ${displayName} model`);
                     loadBtn.addEventListener('click', () => loadModel(model.name));
                     actionsDiv.appendChild(loadBtn);
                 } else {
@@ -137,6 +144,7 @@ export async function loadModels() {
                 downloadBtn.className = 'btn btn-primary btn-small';
                 downloadBtn.id = `download-btn-${model.name}`;
                 downloadBtn.textContent = '⬇ Download';
+                downloadBtn.setAttribute('aria-label', `Download ${displayName} model`);
                 downloadBtn.disabled = isDownloading;
                 downloadBtn.addEventListener('click', () => downloadModel(model.name));
                 actionsDiv.appendChild(downloadBtn);
@@ -171,7 +179,6 @@ export async function downloadModel(modelName) {
 
     try {
         isDownloading = true;
-        _currentDownloadModel = modelName;
 
         // Update UI to show downloading state
         const downloadBtn = document.getElementById(`download-btn-${modelName}`);
@@ -193,8 +200,6 @@ export async function downloadModel(modelName) {
 
         if (result.success) {
             showNotification(`Model ${modelName} downloaded successfully!`, 'success');
-            // Reload models to update the UI
-            await loadModels();
         } else {
             showNotification(`Failed to download model: ${result.error}`, 'error');
         }
@@ -203,7 +208,6 @@ export async function downloadModel(modelName) {
         showNotification(`Failed to download model: ${error.message}`, 'error');
     } finally {
         isDownloading = false;
-        _currentDownloadModel = null;
         hideDownloadProgress();
         // Re-enable download buttons and reload UI
         await loadModels();
@@ -239,25 +243,32 @@ function hideDownloadProgress() {
  * @param {Object} progress - Progress data from backend
  */
 export function updateDownloadProgress(progress) {
+    if (!progress || typeof progress !== 'object') return;
+
     const percentEl = document.getElementById('download-percent');
     const progressBar = document.getElementById('download-progress-bar');
     const sizeEl = document.getElementById('download-size');
     const speedEl = document.getElementById('download-speed');
 
     if (percentEl && progressBar) {
-        const percent = Math.round(progress.progress || 0);
+        const percent = Math.round(Number(progress.progress) || 0);
         percentEl.textContent = `${percent}%`;
         progressBar.style.width = `${percent}%`;
     }
 
     if (sizeEl) {
-        const downloaded = (progress.downloaded_mb || 0).toFixed(1);
-        const total = (progress.total_mb || 0).toFixed(1);
-        sizeEl.textContent = `${downloaded} MB / ${total} MB`;
+        const downloaded = Number(progress.downloaded_mb) || 0;
+        const total = Number(progress.total_mb) || 0;
+        sizeEl.textContent = `${downloaded.toFixed(1)} MB / ${total.toFixed(1)} MB`;
     }
 
-    if (speedEl && progress.speed_mbps) {
-        speedEl.textContent = `${progress.speed_mbps.toFixed(1)} MB/s`;
+    if (speedEl) {
+        const speed = Number(progress.speed_mbps);
+        if (!isNaN(speed) && speed > 0) {
+            speedEl.textContent = `${speed.toFixed(1)} MB/s`;
+        } else {
+            speedEl.textContent = '';
+        }
     }
 }
 
@@ -326,17 +337,24 @@ export async function checkDeviceInfo() {
 }
 
 /**
- * Initialize download progress listener
+ * Initialize download progress listener.
+ * This should only be called once during initialization.
+ * The listener updates the progress UI during downloads.
  */
 export function initializeDownloadListener() {
+    // Prevent duplicate listener registration
+    if (downloadListenerInitialized) {
+        return;
+    }
+    downloadListenerInitialized = true;
+
     window.voxtether.onDownloadProgress((data) => {
+        if (!data || typeof data !== 'object') return;
+
         if (data.status === 'downloading') {
             updateDownloadProgress(data);
-        } else if (data.status === 'complete') {
-            hideDownloadProgress();
-        } else if (data.status === 'error') {
-            hideDownloadProgress();
-            showNotification(`Download failed: ${data.error}`, 'error');
         }
+        // Note: 'complete' and 'error' statuses are handled by the downloadModel function
+        // to avoid race conditions with the finally block cleanup
     });
 }
