@@ -123,6 +123,8 @@ export async function handleStartRecording() {
         console.error('Failed to start recording:', error);
         showNotification('Failed to access microphone: ' + error.message, 'error');
         updateRecordingStatus('error');
+        // Hide overlay if recording failed to start
+        await window.voxtether.hideOverlay();
     }
 }
 

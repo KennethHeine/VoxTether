@@ -217,6 +217,10 @@ function createRecordingOverlay() {
                     position: relative;
                     overflow: hidden;
                 }
+                /* Hidden state - no visual */
+                .bar.hidden {
+                    display: none;
+                }
                 /* Recording state - solid red with pulse */
                 .bar.recording {
                     background-color: #dc3232;
@@ -241,18 +245,7 @@ function createRecordingOverlay() {
             </style>
         </head>
         <body>
-            <div class="bar recording" id="overlay-bar"></div>
-            <script>
-                // Listen for state changes from main process
-                window.addEventListener('message', (event) => {
-                    const bar = document.getElementById('overlay-bar');
-                    if (event.data.state === 'recording') {
-                        bar.className = 'bar recording';
-                    } else if (event.data.state === 'transcribing') {
-                        bar.className = 'bar transcribing';
-                    }
-                });
-            </script>
+            <div class="bar hidden" id="overlay-bar"></div>
         </body>
         </html>
     `;
@@ -267,18 +260,28 @@ function createRecordingOverlay() {
     return recordingOverlayWindow;
 }
 
+// Valid overlay states for security validation
+const VALID_OVERLAY_STATES = ['recording', 'transcribing'];
+
 /**
  * Update the overlay state (recording or transcribing)
  * @param {'recording'|'transcribing'} state - The state to show
  */
 function updateOverlayState(state) {
+    // Validate state to prevent XSS
+    if (!VALID_OVERLAY_STATES.includes(state)) {
+        console.warn(`Invalid overlay state: ${state}`);
+        return;
+    }
+
     if (recordingOverlayWindow && !recordingOverlayWindow.isDestroyed()) {
         recordingOverlayWindow.webContents.executeJavaScript(`
             document.getElementById('overlay-bar').className = 'bar ${state}';
-        `).catch(() => {
+        `).then(() => {
+            currentOverlayState = state;
+        }).catch(() => {
             // Ignore errors if window is being destroyed
         });
-        currentOverlayState = state;
     }
 }
 
@@ -291,10 +294,15 @@ function showRecordingOverlay(state = 'recording') {
         return;
     }
 
+    // Validate state to prevent XSS
+    if (!VALID_OVERLAY_STATES.includes(state)) {
+        console.warn(`Invalid overlay state: ${state}`);
+        return;
+    }
+
     const overlay = createRecordingOverlay();
     if (overlay && !overlay.isDestroyed()) {
-        currentOverlayState = state;
-        // Update state before showing if overlay already exists
+        // Update state before showing to avoid brief flicker
         updateOverlayState(state);
         overlay.showInactive();
     }
