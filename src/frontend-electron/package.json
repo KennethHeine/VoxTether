@@ -48,15 +48,6 @@
       "assets/**/*",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "../backend",
-        "to": "backend",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
     "win": {
       "target": [
         {
