@@ -85,8 +85,15 @@ VoxTether/
 ├── src/
 │   ├── backend/                 # Python Backend (FastAPI)
 │   │   ├── api/                 # REST API endpoints
+│   │   │   ├── health.py        # Health check endpoint
+│   │   │   ├── models.py        # Model management endpoints
+│   │   │   └── transcribe.py    # Transcription endpoint
 │   │   ├── services/            # Business logic
+│   │   │   ├── model_manager.py # Model download/management
+│   │   │   └── transcriber.py   # faster-whisper integration
 │   │   ├── main.py              # FastAPI entry point
+│   │   ├── cli.py               # CLI for model management
+│   │   ├── config.py            # Configuration settings
 │   │   └── requirements.txt     # Python dependencies
 │   │
 │   └── frontend-electron/       # Electron Frontend
@@ -94,11 +101,14 @@ VoxTether/
 │       │   ├── main.js          # Electron main process
 │       │   ├── preload.js       # Secure IPC bridge
 │       │   └── renderer/        # UI (HTML/CSS/JS)
+│       ├── tests/               # Playwright E2E tests
 │       └── package.json
 │
 ├── build/                       # Build scripts
 ├── assets/                      # Application assets (icons)
 ├── docs/                        # Documentation
+├── installer/                   # Installer scripts
+├── tests/                       # Backend test scripts
 └── requirements-dev.txt         # Development dependencies
 ```
 
@@ -108,7 +118,10 @@ VoxTether/
 | Component | File | Purpose |
 |-----------|------|---------|
 | **main.py** | `src/backend/main.py` | FastAPI application entry point |
+| **cli.py** | `src/backend/cli.py` | CLI tool for model management and server control |
+| **config.py** | `src/backend/config.py` | Configuration settings (pydantic-settings) |
 | **api/health.py** | `src/backend/api/health.py` | Health check endpoint |
+| **api/models.py** | `src/backend/api/models.py` | Model management endpoints (list, download, delete, load) |
 | **api/transcribe.py** | `src/backend/api/transcribe.py` | Transcription endpoint |
 | **services/transcriber.py** | `src/backend/services/transcriber.py` | faster-whisper integration |
 | **services/model_manager.py** | `src/backend/services/model_manager.py` | Model download/management |
@@ -119,19 +132,23 @@ VoxTether/
 | **main.js** | `src/frontend-electron/src/main.js` | Electron main process |
 | **preload.js** | `src/frontend-electron/src/preload.js` | Secure IPC bridge |
 | **renderer/** | `src/frontend-electron/src/renderer/` | UI components |
+| **tests/** | `src/frontend-electron/tests/` | Playwright E2E tests |
 
 ## CI/CD Pipeline
 
-### Pull Request CI (`.github/workflows/ci.yml`)
+CI/CD workflows are defined in `.github/workflows/`:
 
-Runs on every PR to `main`:
-1. **test-backend**: Tests FastAPI server starts correctly
-2. **build-frontend**: Builds Electron app
-3. **test-frontend-e2e**: Runs Playwright E2E tests
+### Backend CI (`.github/workflows/ci-backend.yml`)
+- Runs on PRs/pushes to `main` that modify `src/backend/**`
+- Tests: Linting (ruff), server startup test
 
-### Release Workflow (`.github/workflows/release.yml`)
+### Frontend CI (`.github/workflows/ci-frontend.yml`)
+- Runs on PRs/pushes to `main` that modify `src/frontend-electron/**`
+- Tests: Linting (ESLint), Electron build, Playwright E2E tests
 
-Manually triggered with version input. Builds frontend + backend, creates Windows installer and portable ZIP.
+### Release Workflows
+- `release-backend.yml` - Backend release
+- `release-frontend.yml` - Frontend release (creates Windows installer and portable ZIP)
 
 ## Code Style Guidelines
 
@@ -145,9 +162,11 @@ Manually triggered with version input. Builds frontend + backend, creates Window
 | File | Purpose |
 |------|---------|
 | `src/backend/requirements.txt` | Backend Python dependencies |
+| `src/backend/config.py` | Backend configuration settings |
 | `requirements-dev.txt` | Development dependencies |
 | `src/frontend-electron/package.json` | Frontend dependencies |
-| `.github/workflows/ci.yml` | CI pipeline |
+| `.github/workflows/ci-backend.yml` | Backend CI pipeline |
+| `.github/workflows/ci-frontend.yml` | Frontend CI pipeline |
 
 ## Dependency Management
 
