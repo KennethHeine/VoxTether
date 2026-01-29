@@ -20,21 +20,48 @@ The primary feature of VoxTether - use a customizable hotkey to toggle recording
 | **Default Hotkey** | `Ctrl+Shift+R` (fully customizable) |
 | **Real-time Status** | Visual indicator shows recording state |
 | **Auto-transcription** | Automatically sends audio to backend when recording stops |
+| **Test Recording** | Test recording directly from the settings UI without hotkeys |
+| **Recording Level Meter** | Real-time audio level visualization during recording |
 
 **How it works:**
 1. Press the configured hotkey to start recording
 2. Speak into your microphone
 3. Press the hotkey again to stop recording
 4. Audio is sent to the backend for transcription
-5. Transcribed text is automatically pasted at cursor position
+5. Transcribed text is automatically pasted at cursor position (or shown in preview dialog if enabled)
 
-### 2. System Tray Integration
+### 2. Recording Indicator Overlay
+
+A visual overlay bar appears at the top of the screen during recording and transcription.
+
+| State | Description |
+|-------|-------------|
+| **Recording** | Red pulsing bar indicates active recording |
+| **Transcribing** | Blue animated gradient indicates processing |
+| **Hidden** | Overlay is hidden when idle |
+
+The overlay can be enabled/disabled in General Settings.
+
+### 3. Transcription Preview (Optional)
+
+An optional preview dialog that appears after transcription, allowing you to edit the text before inserting.
+
+| Feature | Description |
+|---------|-------------|
+| **Edit Before Insert** | Modify transcription before pasting |
+| **Copy Only** | Copy to clipboard without pasting |
+| **Insert** | Paste the edited text at cursor position |
+| **Cancel** | Discard the transcription |
+
+Enable "Show Transcription Preview" in General Settings to use this feature.
+
+### 4. System Tray Integration
 
 VoxTether runs quietly in the system tray for quick access.
 
 | Feature | Description |
 |---------|-------------|
-| **Tray Icon** | Shows current status (Ready, Recording, Processing) |
+| **Tray Icon** | Shows current status (Ready, Recording) |
 | **Context Menu** | Right-click for quick actions |
 | **Double-click** | Opens the Settings window |
 | **Minimize to Tray** | Closing the window minimizes to tray instead of quitting |
@@ -48,7 +75,7 @@ VoxTether runs quietly in the system tray for quick access.
 - About VoxTether - Version information
 - Exit - Close the application completely
 
-### 3. Text Output Modes
+### 5. Text Output Modes
 
 Multiple ways to output transcribed text:
 
@@ -57,6 +84,46 @@ Multiple ways to output transcribed text:
 | **Clipboard + Paste** | Copies to clipboard and simulates Ctrl+V (Recommended) |
 | **Clipboard Only** | Copies to clipboard without pasting |
 | **Simulate Typing** | Types out the text character by character |
+
+### 6. Transcription History
+
+Track and manage your transcription history.
+
+| Feature | Description |
+|---------|-------------|
+| **History List** | View all past transcriptions with timestamps |
+| **Search** | Filter history by text content |
+| **Copy** | Copy any past transcription to clipboard |
+| **Delete** | Remove individual history items |
+| **Expand/Collapse** | Click items to see full transcription text |
+| **Export** | Export entire history to a text file |
+| **Clear All** | Delete all history items |
+
+History is stored locally in the browser's localStorage.
+
+### 7. Usage Statistics
+
+Track your transcription usage over time.
+
+| Statistic | Description |
+|-----------|-------------|
+| **Total Recordings** | Number of recordings made |
+| **Total Duration** | Cumulative recording time |
+| **Characters Transcribed** | Total characters transcribed |
+
+Statistics can be reset from the About page.
+
+### 8. Auto-Updater
+
+Automatic update checking and installation.
+
+| Feature | Description |
+|---------|-------------|
+| **Check for Updates** | Manual check from About page |
+| **Update Notification** | Notification when new version is available |
+| **Download Update** | Download update in background |
+| **Progress Tracking** | View download progress percentage |
+| **Restart & Install** | Install update and restart application |
 
 ---
 
@@ -70,10 +137,12 @@ Configure core application behavior:
 |---------|-------------|---------|
 | Window Toggle Hotkey | Key combination to show/hide settings window | `Ctrl+Shift+V` |
 | Toggle Recording Hotkey | Key combination to start/stop recording | `Ctrl+Shift+R` |
+| Test Recording | Button to test recording without hotkeys | - |
 | Language | Language for speech recognition | Auto Detect |
 | Output Mode | How transcribed text is inserted | Clipboard + Paste |
 | Show Notifications | Display notifications after transcription | Enabled |
-| Show Recording Indicator | Visual indicator while recording | Enabled |
+| Show Recording Indicator | Visual overlay indicator while recording | Enabled |
+| Show Transcription Preview | Show edit dialog before inserting text | Disabled |
 | Start with Windows | Launch VoxTether on Windows startup | Disabled |
 | Start Minimized | Start in system tray | Enabled |
 | Theme | Application color theme (System/Light/Dark) | System |
@@ -122,6 +191,46 @@ Manage speech recognition models:
 | Large v3 Turbo | ~1.6 GB | Best balance of speed and accuracy |
 | Distil Large v3 | ~1.1 GB | Fast high-quality transcription |
 
+### History Page
+
+View and manage past transcriptions:
+
+| Feature | Description |
+|---------|-------------|
+| History List | Chronological list of all transcriptions |
+| Search | Filter transcriptions by text content |
+| Copy | Copy individual transcriptions to clipboard |
+| Delete | Remove individual items from history |
+| Export | Save all history to a text file |
+| Clear All | Remove all history items |
+
+### About Page
+
+Application information and utilities:
+
+| Info | Description |
+|------|-------------|
+| Version | Current application version |
+| Platform | Windows/macOS/Linux |
+| Electron Version | Electron framework version |
+| Data Path | User data directory (clickable) |
+| Models Path | Downloaded models directory (clickable) |
+| Links | GitHub, Documentation, Releases |
+
+**Usage Statistics:**
+| Statistic | Description |
+|-----------|-------------|
+| Total Recordings | Number of recordings made |
+| Total Duration | Cumulative recording time |
+| Characters Transcribed | Total characters transcribed |
+
+**Update Section:**
+| Feature | Description |
+|---------|-------------|
+| Check for Updates | Manual update check button |
+| Update Status | Shows when update is available |
+| Download/Install | Download and install updates |
+
 ### Transcribe Page
 
 Transcribe audio files (not just live recordings):
@@ -136,18 +245,6 @@ Transcribe audio files (not just live recordings):
 
 **Supported Audio Formats:**
 - WAV, MP3, M4A, FLAC, OGG, WMA, AAC, WebM
-
-### About Page
-
-Application information:
-
-| Info | Description |
-|------|-------------|
-| Version | Current application version |
-| Platform | Windows/macOS/Linux |
-| Data Path | User data directory (clickable) |
-| Models Path | Downloaded models directory (clickable) |
-| Links | GitHub, Documentation, Releases |
 
 ---
 
@@ -232,6 +329,26 @@ All data is stored locally in the user's AppData folder:
 | `%APPDATA%\VoxTether\models\` | Downloaded speech models |
 | `%APPDATA%\VoxTether\logs\` | Application logs |
 | `%APPDATA%\VoxTether\temp\` | Temporary recordings |
+
+**Browser LocalStorage:**
+| Key | Contents |
+|-----|----------|
+| `voxtether_history` | Transcription history |
+| `voxtether_stats` | Usage statistics |
+
+---
+
+## Notifications
+
+VoxTether provides toast notifications for user feedback:
+
+| Type | Description |
+|------|-------------|
+| **Success** | Green notification for successful operations |
+| **Error** | Red notification for errors |
+| **Info** | Blue notification for information |
+
+Notifications appear briefly and can be disabled in General Settings.
 
 ---
 
