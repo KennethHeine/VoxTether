@@ -1,0 +1,98 @@
+name: CI Frontend
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/frontend-electron/**'
+      - '.github/workflows/ci-frontend.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/frontend-electron/**'
+      - '.github/workflows/ci-frontend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-frontend:
+    name: Build Frontend (Electron)
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'src/frontend-electron/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd src/frontend-electron
+        npm install
+      shell: pwsh
+
+    - name: Run linting
+      run: |
+        cd src/frontend-electron
+        npm run lint
+      continue-on-error: true
+      shell: pwsh
+
+    - name: Build Electron app
+      run: |
+        cd src/frontend-electron
+        npm run pack
+      shell: pwsh
+
+    - name: Upload frontend artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: src/frontend-electron/dist/
+        retention-days: 7
+
+  test-frontend-e2e:
+    name: Test Frontend (Playwright E2E)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'src/frontend-electron/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd src/frontend-electron
+        npm install
+
+    - name: Run Playwright tests
+      run: |
+        cd src/frontend-electron
+        xvfb-run --auto-servernum npm test
+
+    - name: Upload screenshots
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-screenshots
+        path: src/frontend-electron/screenshots/
+        retention-days: 7
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: playwright-test-results
+        path: src/frontend-electron/test-results/
+        retention-days: 7
