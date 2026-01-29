@@ -468,9 +468,47 @@ function backendRequest(method, endpoint, body = null) {
 // ============================================================================
 
 /**
+ * Normalize a key name from hotkey capture format to node-global-key-listener format
+ * @param {string} key - Key name from hotkey capture (e.g., "Space", "Up", "Enter")
+ * @returns {string} Normalized key name for node-global-key-listener
+ */
+function normalizeKeyName(key) {
+    if (!key) return '';
+    const upper = key.toUpperCase();
+
+    // Map browser KeyboardEvent.key values to node-global-key-listener names
+    const keyMap = {
+        'SPACE': 'SPACE',
+        'ENTER': 'RETURN',
+        'RETURN': 'RETURN',
+        'TAB': 'TAB',
+        'ESCAPE': 'ESCAPE',
+        'ESC': 'ESCAPE',
+        'BACKSPACE': 'BACKSPACE',
+        'DELETE': 'DELETE',
+        'INSERT': 'INSERT',
+        'HOME': 'HOME',
+        'END': 'END',
+        'PAGEUP': 'PAGE UP',
+        'PAGEDOWN': 'PAGE DOWN',
+        // Arrow keys - hotkey.js converts ArrowUp to Up
+        'UP': 'UP ARROW',
+        'DOWN': 'DOWN ARROW',
+        'LEFT': 'LEFT ARROW',
+        'RIGHT': 'RIGHT ARROW',
+        // Function keys
+        'F1': 'F1', 'F2': 'F2', 'F3': 'F3', 'F4': 'F4',
+        'F5': 'F5', 'F6': 'F6', 'F7': 'F7', 'F8': 'F8',
+        'F9': 'F9', 'F10': 'F10', 'F11': 'F11', 'F12': 'F12'
+    };
+
+    return keyMap[upper] || upper;
+}
+
+/**
  * Parse hotkey string into components for matching with keyboard events
  * @param {string} hotkey - Hotkey string like "Ctrl+Shift+Space"
- * @returns {Object} Object with modifiers and key
+ * @returns {Object} Object with modifiers and key (only first non-modifier key is used)
  */
 function parseHotkey(hotkey) {
     if (!hotkey) return null;
@@ -494,9 +532,9 @@ function parseHotkey(hotkey) {
             modifiers.alt = true;
         } else if (p === 'WIN' || p === 'META' || p === 'SUPER') {
             modifiers.meta = true;
-        } else {
-            // This is the main key
-            key = p;
+        } else if (!key) {
+            // Only use the first non-modifier key (ignore additional keys)
+            key = normalizeKeyName(p);
         }
     }
 
@@ -539,6 +577,10 @@ function registerHotkey() {
     // Stop previous listener if exists
     if (globalKeyboardListener) {
         try {
+            // Stop any active recording before killing the listener
+            if (pttHotkeyActive && isRecording) {
+                stopRecording();
+            }
             globalKeyboardListener.kill();
         } catch (error) {
             console.warn('Failed to stop previous keyboard listener:', error);
@@ -1364,6 +1406,11 @@ app.on('before-quit', () => {
     app.isQuitting = true;
     // Unregister all shortcuts
     globalShortcut.unregisterAll();
+    // Stop any active recording before quitting
+    if (pttHotkeyActive && isRecording) {
+        stopRecording();
+    }
+    pttHotkeyActive = false;
     // Stop the global keyboard listener for push-to-talk
     if (globalKeyboardListener) {
         try {
