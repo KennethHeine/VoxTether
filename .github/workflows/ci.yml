@@ -11,10 +11,33 @@ permissions:
   contents: read
 
 jobs:
+  # Detect which components changed
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          backend:
+            - 'src/backend/**'
+          frontend:
+            - 'src/frontend-electron/**'
+          workflows:
+            - '.github/workflows/**'
+
   # Test the Python backend
   test-backend:
     name: Test Backend
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflows == 'true' || github.event_name == 'workflow_dispatch' }}
 
     steps:
     - uses: actions/checkout@v4
@@ -49,6 +72,8 @@ jobs:
   build-frontend:
     name: Build Frontend (Electron)
     runs-on: windows-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true' || github.event_name == 'workflow_dispatch' }}
 
     steps:
     - uses: actions/checkout@v4
@@ -90,6 +115,8 @@ jobs:
   test-frontend-e2e:
     name: Test Frontend (Playwright E2E)
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflows == 'true' || github.event_name == 'workflow_dispatch' }}
 
     steps:
     - uses: actions/checkout@v4
@@ -131,13 +158,41 @@ jobs:
   build-complete:
     name: Build Complete
     runs-on: ubuntu-latest
-    needs: [test-backend, build-frontend, test-frontend-e2e]
+    needs: [changes, test-backend, build-frontend, test-frontend-e2e]
+    if: always()
 
     steps:
-    - name: Verify builds
+    - name: Check results
       run: |
-        echo "All builds and tests completed successfully!"
+        # Check if any required jobs failed (skipped is OK for conditional jobs)
+        BACKEND_RESULT="${{ needs.test-backend.result }}"
+        FRONTEND_BUILD_RESULT="${{ needs.build-frontend.result }}"
+        FRONTEND_E2E_RESULT="${{ needs.test-frontend-e2e.result }}"
+        
+        echo "Job results:"
+        echo "  test-backend: $BACKEND_RESULT"
+        echo "  build-frontend: $FRONTEND_BUILD_RESULT"
+        echo "  test-frontend-e2e: $FRONTEND_E2E_RESULT"
+        
+        # Fail if any job failed (but skipped is acceptable)
+        if [ "$BACKEND_RESULT" == "failure" ] || \
+           [ "$FRONTEND_BUILD_RESULT" == "failure" ] || \
+           [ "$FRONTEND_E2E_RESULT" == "failure" ]; then
+          echo "::error::Some jobs failed"
+          exit 1
+        fi
+        
+        # Check if at least one job ran (not all skipped)
+        if [ "$BACKEND_RESULT" == "skipped" ] && \
+           [ "$FRONTEND_BUILD_RESULT" == "skipped" ] && \
+           [ "$FRONTEND_E2E_RESULT" == "skipped" ]; then
+          echo "::warning::All jobs were skipped - no component changes detected"
+        fi
+        
         echo ""
-        echo "Deployment:"
-        echo "  Backend: Deploy Python code to server, run with 'python -m uvicorn main:app --port 5678'"
-        echo "  Frontend: Distribute Electron app to clients"
+        echo "All triggered builds and tests completed successfully!"
+        echo ""
+        echo "Changes detected:"
+        echo "  Backend: ${{ needs.changes.outputs.backend }}"
+        echo "  Frontend: ${{ needs.changes.outputs.frontend }}"
+        echo "  Workflows: ${{ needs.changes.outputs.workflows }}"
