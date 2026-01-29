@@ -17,6 +17,11 @@ export function updateStatus(text, state = 'ready') {
         if (textEl) {
             textEl.textContent = text;
         }
+        // Update the status dot class
+        const dotEl = indicator.querySelector('.status-dot');
+        if (dotEl) {
+            dotEl.className = `status-dot ${state}`;
+        }
     }
 }
 

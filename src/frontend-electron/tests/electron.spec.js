@@ -550,4 +550,21 @@ test.describe('New Features', () => {
     const modal = window.locator('#transcription-preview-modal');
     await expect(modal).toHaveClass(/hidden/);
   });
+
+  test('should show Backend Offline status when backend is not running', async () => {
+    // Since tests run without the backend, the status indicator should show "Backend Offline"
+    // Wait for the health check to complete and update the status
+    await window.waitForTimeout(2000);
+    
+    const statusIndicator = window.locator('#status-indicator');
+    await expect(statusIndicator).toBeVisible();
+    
+    // Check that the status text shows "Backend Offline"
+    const statusText = window.locator('#status-indicator .status-text');
+    await expect(statusText).toHaveText('Backend Offline');
+    
+    // Check that the status dot has the error class
+    const statusDot = window.locator('#status-indicator .status-dot');
+    await expect(statusDot).toHaveClass(/error/);
+  });
 });
