@@ -34,8 +34,15 @@ VoxTether/
 ├── src/
 │   ├── backend/                 # Python Backend (FastAPI)
 │   │   ├── api/                 # REST API endpoints
+│   │   │   ├── health.py        # Health check endpoint
+│   │   │   ├── models.py        # Model management endpoints
+│   │   │   └── transcribe.py    # Transcription endpoint
 │   │   ├── services/            # Business logic
+│   │   │   ├── model_manager.py # Model download/management
+│   │   │   └── transcriber.py   # faster-whisper integration
 │   │   ├── main.py              # FastAPI entry point
+│   │   ├── cli.py               # CLI for model management
+│   │   ├── config.py            # Configuration settings
 │   │   └── requirements.txt     # Python dependencies
 │   │
 │   └── frontend-electron/       # Electron Frontend
@@ -43,11 +50,14 @@ VoxTether/
 │       │   ├── main.js          # Electron main process
 │       │   ├── preload.js       # Secure IPC bridge
 │       │   └── renderer/        # UI (HTML/CSS/JS)
+│       ├── tests/               # Playwright E2E tests
 │       └── package.json
 │
 ├── build/                       # Build scripts
 ├── assets/                      # Application assets (icons)
 ├── docs/                        # Documentation
+├── installer/                   # Installer scripts
+├── tests/                       # Backend test scripts
 └── requirements-dev.txt         # Development dependencies
 ```
 
@@ -55,13 +65,19 @@ VoxTether/
 
 ### Backend (FastAPI)
 - `main.py` - FastAPI application entry point
-- `api/` - REST API endpoints for transcription, health, models
-- `services/` - Business logic (transcriber, model manager)
+- `cli.py` - CLI tool for model management and server control
+- `config.py` - Configuration settings (pydantic-settings)
+- `api/health.py` - Health check endpoint
+- `api/models.py` - Model management endpoints (list, download, delete, load)
+- `api/transcribe.py` - Transcription endpoint
+- `services/transcriber.py` - faster-whisper integration
+- `services/model_manager.py` - Model download and management
 
 ### Frontend (Electron)
 - `main.js` - Electron main process
 - `preload.js` - Secure IPC bridge
 - `renderer/` - UI components (HTML/CSS/JS)
+- `tests/` - Playwright E2E tests
 
 ## Code Style
 
@@ -78,11 +94,14 @@ VoxTether/
 
 ## CI/CD
 
-- CI workflow is defined in `.github/workflows/ci.yml`
-- Runs on pull requests to main branch
-- Tests backend (FastAPI server start)
-- Builds frontend (Electron)
-- Runs E2E tests (Playwright)
+CI/CD workflows are defined in `.github/workflows/`:
+- `ci-backend.yml` - Backend CI (linting, server start test)
+- `ci-frontend.yml` - Frontend CI (linting, build, Playwright E2E tests)
+- `release-backend.yml` - Backend release workflow
+- `release-frontend.yml` - Frontend release workflow
+- `copilot-setup-steps.yml` - GitHub Copilot setup
+
+Runs on pull requests and pushes to main branch (path-filtered).
 
 ## Platform
 
