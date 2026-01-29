@@ -40,7 +40,11 @@
   "build": {
     "appId": "com.voxtether.app",
     "productName": "VoxTether",
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "owner": "KennethHeine",
+      "repo": "VoxTether"
+    },
     "directories": {
       "output": "dist"
     },
@@ -48,6 +52,13 @@
       "src/**/*",
       "assets/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": ["**/*"]
+      }
     ],
     "win": {
       "target": [
@@ -60,15 +71,15 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "../../assets/icon.ico"
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": true,
       "allowElevation": true,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "../../assets/icon.ico",
-      "uninstallerIcon": "../../assets/icon.ico",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
       "artifactName": "${productName}-${version}-Setup.${ext}"
     },
     "portable": {

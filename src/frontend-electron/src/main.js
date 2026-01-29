@@ -254,13 +254,19 @@ function hideRecordingOverlay() {
  * Get the application icon path
  */
 function getIconPath() {
-    // Check in assets folder
+    // In packaged app, check extraResources folder
+    const resourcesIcon = path.join(process.resourcesPath || '', 'assets', 'icon.ico');
+    if (fs.existsSync(resourcesIcon)) {
+        return resourcesIcon;
+    }
+
+    // Check in frontend-electron assets folder (development mode)
     const assetsIcon = path.join(__dirname, '..', 'assets', 'icon.ico');
     if (fs.existsSync(assetsIcon)) {
         return assetsIcon;
     }
 
-    // Check in root assets folder
+    // Check in root assets folder (development mode)
     const rootIcon = path.join(__dirname, '..', '..', '..', 'assets', 'icon.ico');
     if (fs.existsSync(rootIcon)) {
         return rootIcon;
@@ -1012,6 +1018,10 @@ ipcMain.handle('check-for-updates', async () => {
         const result = await autoUpdater.checkForUpdates();
         return { available: !!result, updateInfo: result?.updateInfo };
     } catch (error) {
+        // Handle missing app-update.yml or other configuration issues
+        if (error.code === 'ENOENT' || error.message.includes('app-update.yml')) {
+            return { available: false, error: 'Update configuration not found. This may be a development or portable build.' };
+        }
         return { available: false, error: error.message };
     }
 });
