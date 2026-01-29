@@ -1018,8 +1018,17 @@ ipcMain.handle('check-for-updates', async () => {
         const result = await autoUpdater.checkForUpdates();
         return { available: !!result, updateInfo: result?.updateInfo };
     } catch (error) {
-        // Handle missing app-update.yml or other configuration issues
-        if (error.code === 'ENOENT' || error.message.includes('app-update.yml')) {
+        // Handle missing configuration or file not found errors
+        // Check for common error indicators across platforms and versions
+        const isConfigError = error.code === 'ENOENT' ||
+            error.code === 'ERR_UPDATER_NO_PUBLISHED_VERSIONS' ||
+            (error.message && (
+                error.message.includes('ENOENT') ||
+                error.message.includes('app-update') ||
+                error.message.includes('no such file') ||
+                error.message.includes('Cannot find')
+            ));
+        if (isConfigError) {
             return { available: false, error: 'Update configuration not found. This may be a development or portable build.' };
         }
         return { available: false, error: error.message };
