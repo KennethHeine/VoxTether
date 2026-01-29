@@ -1071,10 +1071,16 @@ ipcMain.handle('check-for-updates', async () => {
         const result = await autoUpdater.checkForUpdates();
         return { available: !!result, updateInfo: result?.updateInfo };
     } catch (error) {
+        // Handle "no published versions" error - this means no releases exist yet
+        // This is NOT a configuration error - user is on the latest version
+        if (error.code === 'ERR_UPDATER_NO_PUBLISHED_VERSIONS' ||
+            (error.message && error.message.includes('No published versions'))) {
+            return { available: false };  // No error, just no updates available
+        }
+
         // Handle missing configuration or file not found errors
         // Check for common error indicators across platforms and versions
         const isConfigError = error.code === 'ENOENT' ||
-            error.code === 'ERR_UPDATER_NO_PUBLISHED_VERSIONS' ||
             (error.message && (
                 error.message.includes('ENOENT') ||
                 error.message.includes('app-update') ||
