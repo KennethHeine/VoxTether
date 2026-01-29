@@ -27,6 +27,7 @@ import {
 import {
     startHotkeyCapture,
     startWindowToggleHotkeyCapture,
+    startToggleRecordingHotkeyCapture,
     handleHotkeyCapture
 } from './hotkey.js';
 
@@ -120,6 +121,12 @@ function initializeEventListeners() {
 
     const windowToggleInput = document.getElementById('window-toggle-hotkey-input');
     if (windowToggleInput) windowToggleInput.addEventListener('click', startWindowToggleHotkeyCapture);
+
+    const captureToggleRecordingBtn = document.getElementById('capture-toggle-recording-hotkey-btn');
+    if (captureToggleRecordingBtn) captureToggleRecordingBtn.addEventListener('click', startToggleRecordingHotkeyCapture);
+
+    const toggleRecordingInput = document.getElementById('toggle-recording-hotkey-input');
+    if (toggleRecordingInput) toggleRecordingInput.addEventListener('click', startToggleRecordingHotkeyCapture);
 
     const saveGeneralBtn = document.getElementById('save-general-btn');
     if (saveGeneralBtn) saveGeneralBtn.addEventListener('click', saveGeneralSettings);
