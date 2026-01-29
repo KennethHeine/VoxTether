@@ -123,6 +123,8 @@ export async function handleStartRecording() {
         console.error('Failed to start recording:', error);
         showNotification('Failed to access microphone: ' + error.message, 'error');
         updateRecordingStatus('error');
+        // Hide overlay if recording failed to start
+        await window.voxtether.hideOverlay();
     }
 }
 
@@ -163,10 +165,15 @@ async function processRecording() {
     if (state.audioChunks.length === 0) {
         console.log('No audio data recorded');
         updateRecordingStatus('ready');
+        // Hide overlay when no audio
+        await window.voxtether.hideOverlay();
         return;
     }
 
     updateRecordingStatus('transcribing');
+    // Show transcribing overlay (loading state)
+    await window.voxtether.showTranscribingOverlay();
+
     let tempPath = null;
     let audioBase64 = null;
 
@@ -234,6 +241,8 @@ async function processRecording() {
                 // Ignore cleanup errors
             }
         }
+        // Hide overlay when transcription is complete
+        await window.voxtether.hideOverlay();
     }
 
     state.audioChunks = [];

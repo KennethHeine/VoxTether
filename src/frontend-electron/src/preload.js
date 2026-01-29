@@ -28,6 +28,11 @@ contextBridge.exposeInMainWorld('voxtether', {
     stopRecordingManual: () => ipcRenderer.invoke('stop-recording-manual'),
     getRecordingState: () => ipcRenderer.invoke('get-recording-state'),
 
+    // Overlay state management
+    showTranscribingOverlay: () => ipcRenderer.invoke('show-transcribing-overlay'),
+    hideOverlay: () => ipcRenderer.invoke('hide-overlay'),
+    getOverlayState: () => ipcRenderer.invoke('get-overlay-state'),
+
     // Clipboard
     copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
 

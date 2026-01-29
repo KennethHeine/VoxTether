@@ -154,8 +154,11 @@ function createMainWindow() {
 // Recording Indicator Overlay (Feature 3)
 // ============================================================================
 
+// Overlay state tracking
+let currentOverlayState = 'hidden'; // 'hidden', 'recording', 'transcribing'
+
 /**
- * Create the recording indicator overlay window
+ * Create the recording indicator overlay window - a horizontal bar at the top of the screen
  */
 function createRecordingOverlay() {
     if (recordingOverlayWindow) {
@@ -167,18 +170,22 @@ function createRecordingOverlay() {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth } = primaryDisplay.workAreaSize;
 
-    // Create a small, always-on-top window
+    // Bar dimensions - centered at top of screen
+    const barWidth = 200;
+    const barHeight = 6;
+
+    // Create a small, always-on-top window for the bar
     recordingOverlayWindow = new BrowserWindow({
-        width: 60,
-        height: 60,
-        x: screenWidth - 80,  // Position in top-right corner
-        y: 20,
+        width: barWidth,
+        height: barHeight,
+        x: Math.round((screenWidth - barWidth) / 2),  // Center horizontally
+        y: 0,  // Top of screen
         frame: false,
         transparent: true,
         alwaysOnTop: true,
         skipTaskbar: true,
         resizable: false,
-        movable: true,
+        movable: false,
         focusable: false,
         show: false,
         webPreferences: {
@@ -187,38 +194,58 @@ function createRecordingOverlay() {
         }
     });
 
-    // Load inline HTML for the overlay
+    // Load inline HTML for the overlay bar
     const overlayHtml = `
         <!DOCTYPE html>
         <html>
         <head>
             <style>
-                body {
+                * {
                     margin: 0;
                     padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
                     background: transparent;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    height: 100vh;
-                    -webkit-app-region: drag;
+                    overflow: hidden;
+                    height: 6px;
                 }
-                .recording-dot {
-                    width: 40px;
-                    height: 40px;
+                .bar {
+                    width: 100%;
+                    height: 6px;
+                    border-radius: 0 0 3px 3px;
+                    position: relative;
+                    overflow: hidden;
+                }
+                /* Hidden state - no visual */
+                .bar.hidden {
+                    display: none;
+                }
+                /* Recording state - solid red with pulse */
+                .bar.recording {
                     background-color: #dc3232;
-                    border-radius: 50%;
-                    box-shadow: 0 0 15px rgba(220, 50, 50, 0.8);
-                    animation: pulse 1.5s ease-in-out infinite;
+                    box-shadow: 0 2px 8px rgba(220, 50, 50, 0.6);
+                    animation: pulse-recording 1.5s ease-in-out infinite;
                 }
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; transform: scale(1); }
-                    50% { opacity: 0.7; transform: scale(0.9); }
+                @keyframes pulse-recording {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.6; }
+                }
+                /* Transcribing state - animated gradient loading bar */
+                .bar.transcribing {
+                    background: linear-gradient(90deg, #0078d4, #00bcf2, #0078d4);
+                    background-size: 200% 100%;
+                    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.6);
+                    animation: loading-gradient 1.5s ease-in-out infinite;
+                }
+                @keyframes loading-gradient {
+                    0% { background-position: 100% 0; }
+                    100% { background-position: -100% 0; }
                 }
             </style>
         </head>
         <body>
-            <div class="recording-dot"></div>
+            <div class="bar hidden" id="overlay-bar"></div>
         </body>
         </html>
     `;
@@ -227,21 +254,56 @@ function createRecordingOverlay() {
 
     recordingOverlayWindow.on('closed', () => {
         recordingOverlayWindow = null;
+        currentOverlayState = 'hidden';
     });
 
     return recordingOverlayWindow;
 }
 
+// Valid overlay states for security validation
+const VALID_OVERLAY_STATES = ['recording', 'transcribing'];
+
+/**
+ * Update the overlay state (recording or transcribing)
+ * @param {'recording'|'transcribing'} state - The state to show
+ */
+function updateOverlayState(state) {
+    // Validate state to prevent XSS
+    if (!VALID_OVERLAY_STATES.includes(state)) {
+        console.warn(`Invalid overlay state: ${state}`);
+        return;
+    }
+
+    if (recordingOverlayWindow && !recordingOverlayWindow.isDestroyed()) {
+        recordingOverlayWindow.webContents.executeJavaScript(`
+            document.getElementById('overlay-bar').className = 'bar ${state}';
+        `).then(() => {
+            currentOverlayState = state;
+        }).catch(() => {
+            // Ignore errors if window is being destroyed
+        });
+    }
+}
+
 /**
  * Show the recording overlay
+ * @param {'recording'|'transcribing'} state - The state to show (default: 'recording')
  */
-function showRecordingOverlay() {
+function showRecordingOverlay(state = 'recording') {
     if (!settings.showRecordingIndicator) {
+        return;
+    }
+
+    // Validate state to prevent XSS
+    if (!VALID_OVERLAY_STATES.includes(state)) {
+        console.warn(`Invalid overlay state: ${state}`);
         return;
     }
 
     const overlay = createRecordingOverlay();
     if (overlay && !overlay.isDestroyed()) {
+        // Update state before showing to avoid brief flicker
+        updateOverlayState(state);
         overlay.showInactive();
     }
 }
@@ -252,7 +314,23 @@ function showRecordingOverlay() {
 function hideRecordingOverlay() {
     if (recordingOverlayWindow && !recordingOverlayWindow.isDestroyed()) {
         recordingOverlayWindow.hide();
+        currentOverlayState = 'hidden';
     }
+}
+
+/**
+ * Show transcribing overlay (loading state after recording)
+ */
+function showTranscribingOverlay() {
+    showRecordingOverlay('transcribing');
+}
+
+/**
+ * Get current overlay state
+ * @returns {'hidden'|'recording'|'transcribing'}
+ */
+function getOverlayState() {
+    return currentOverlayState;
 }
 
 /**
@@ -846,6 +924,21 @@ ipcMain.handle('stop-recording-manual', () => {
 
 ipcMain.handle('get-recording-state', () => {
     return { isRecording };
+});
+
+// Overlay state management for transcribing feedback
+ipcMain.handle('show-transcribing-overlay', () => {
+    showTranscribingOverlay();
+    return { success: true };
+});
+
+ipcMain.handle('hide-overlay', () => {
+    hideRecordingOverlay();
+    return { success: true };
+});
+
+ipcMain.handle('get-overlay-state', () => {
+    return { state: getOverlayState() };
 });
 
 // Backend communication
