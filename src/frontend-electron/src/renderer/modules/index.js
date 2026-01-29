@@ -98,7 +98,8 @@ import {
 import {
     checkForUpdates,
     showUpdateNotification,
-    showUpdateReadyNotification
+    showUpdateReadyNotification,
+    handleUpdateDownloadProgress
 } from './updater.js';
 
 // ============================================================================
@@ -274,6 +275,11 @@ function setupIPCListeners() {
     window.voxtether.onUpdateAvailable((info) => {
         console.log('Update available:', info.version);
         showUpdateNotification(info);
+    });
+
+    window.voxtether.onUpdateDownloadProgress((progress) => {
+        console.log('Update download progress:', progress.percent + '%');
+        handleUpdateDownloadProgress(progress);
     });
 
     window.voxtether.onUpdateDownloaded((info) => {
