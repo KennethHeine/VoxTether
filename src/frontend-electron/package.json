@@ -1,1 +1,78 @@
-{"name": "voxtether-electron","version": "2.0.0","description": "Push-to-talk dictation for Windows - Electron frontend","main": "src/main.js","scripts": {"start": "electron .","dev": "electron . --debug","build": "electron-builder --win --x64","pack": "electron-builder --dir","lint": "eslint src/","test": "playwright test","test:ui": "playwright test --ui","test:headed": "playwright test --headed"},"author": "Kenneth Heine","license": "MIT","keywords": ["voxtether","speech-to-text","dictation","whisper","push-to-talk","electron"],"repository": {"type": "git","url": "https://github.com/KennethHeine/VoxTether.git"},"devDependencies": {"@playwright/test": "^1.55.1","electron": "^40.0.0","electron-builder": "^26.5.0","eslint": "^9.18.0"},"dependencies": {"electron-updater": "^6.3.9","node-global-key-listener": "^0.3.0"},"build": {"appId": "com.voxtether.app","productName": "VoxTether","publish": null,"directories": {"output": "dist"},"files": ["src/**/*","assets/**/*","package.json"],"win": {"target": [{"target": "nsis","arch": ["x64"]},{"target": "portable","arch": ["x64"]}],"icon": "../../assets/icon.ico"},"nsis": {"oneClick": false,"perMachine": true,"allowToChangeInstallationDirectory": true,"installerIcon": "../../assets/icon.ico"}}}
+{
+  "name": "voxtether-electron",
+  "version": "2.0.0",
+  "description": "Push-to-talk dictation for Windows - Electron frontend",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --debug",
+    "build": "electron-builder --win --x64",
+    "pack": "electron-builder --dir",
+    "lint": "eslint src/",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed"
+  },
+  "author": "Kenneth Heine",
+  "license": "MIT",
+  "keywords": [
+    "voxtether",
+    "speech-to-text",
+    "dictation",
+    "whisper",
+    "push-to-talk",
+    "electron"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KennethHeine/VoxTether.git"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.1",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.5.0",
+    "eslint": "^9.18.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9",
+    "node-global-key-listener": "^0.3.0"
+  },
+  "build": {
+    "appId": "com.voxtether.app",
+    "productName": "VoxTether",
+    "publish": null,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "../../assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "../../assets/icon.ico",
+      "uninstallerIcon": "../../assets/icon.ico",
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable.${ext}"
+    }
+  }
+}
