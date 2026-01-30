@@ -51,7 +51,6 @@ export default [
                 process: "readonly",
                 __dirname: "readonly",
                 Buffer: "readonly",
-                setTimeout: "readonly",
                 ...browserGlobals
             }
         },

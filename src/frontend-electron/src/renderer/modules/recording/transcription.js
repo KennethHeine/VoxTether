@@ -134,7 +134,11 @@ async function convertToWav(blob) {
             }
         };
 
-        reader.onerror = reject;
+        reader.onerror = (event) => {
+            audioContext.close();
+            const error = event && event.target && event.target.error ? event.target.error : event;
+            reject(error);
+        };
         reader.readAsArrayBuffer(blob);
     });
 }
@@ -146,13 +150,8 @@ async function convertToWav(blob) {
  */
 async function saveTempAudio(uint8Array) {
     try {
-        // Convert Uint8Array to base64 for IPC transfer
-        let binary = '';
-        const len = uint8Array.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(uint8Array[i]);
-        }
-        const base64Audio = btoa(binary);
+        // Convert Uint8Array to base64 for IPC transfer using shared utility
+        const base64Audio = uint8ArrayToBase64(uint8Array);
 
         // Save using the binary file handler
         const result = await window.voxtether.saveAudioFile(base64Audio);

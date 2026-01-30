@@ -217,55 +217,70 @@ function registerIpcHandlers(dependencies) {
     // Transcription
     ipcMain.handle(IPC_TRANSCRIBE, async (event, audioPath, language) => {
         return new Promise((resolve, _reject) => {
-            // Create multipart form data
-            const boundary = `----WebKitFormBoundary${Date.now().toString(16)}`;
-            const audioData = fs.readFileSync(audioPath);
-            const audioFileName = path.basename(audioPath);
+            // Validate that the audioPath is within the expected temp directory
+            try {
+                const userDataPath = getUserDataPath();
+                const resolvedAudioPath = path.resolve(audioPath);
+                const allowedTempDir = path.resolve(path.join(userDataPath, 'temp'));
+                const relativePath = path.relative(allowedTempDir, resolvedAudioPath);
 
-            let body = '';
-            body += `--${boundary}\r\n`;
-            body += `Content-Disposition: form-data; name="file"; filename="${audioFileName}"\r\n`;
-            body += 'Content-Type: audio/wav\r\n\r\n';
-
-            const bodyEnd = `\r\n--${boundary}\r\n` +
-                `Content-Disposition: form-data; name="language"\r\n\r\n${language || 'auto'}\r\n` +
-                `--${boundary}--\r\n`;
-
-            const bodyBuffer = Buffer.concat([
-                Buffer.from(body),
-                audioData,
-                Buffer.from(bodyEnd)
-            ]);
-
-            const options = {
-                hostname: '127.0.0.1',
-                port: BACKEND_PORT,
-                path: '/api/transcribe',
-                method: 'POST',
-                headers: {
-                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                    'Content-Length': bodyBuffer.length
+                if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+                    resolve({ success: false, error: 'Invalid audio file path' });
+                    return;
                 }
-            };
 
-            const req = http.request(options, (res) => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                    try {
-                        resolve({ success: true, data: JSON.parse(data) });
-                    } catch {
-                        resolve({ success: false, error: 'Failed to parse response' });
+                // Create multipart form data
+                const boundary = `----WebKitFormBoundary${Date.now().toString(16)}`;
+                const audioData = fs.readFileSync(resolvedAudioPath);
+                const audioFileName = path.basename(resolvedAudioPath);
+
+                let body = '';
+                body += `--${boundary}\r\n`;
+                body += `Content-Disposition: form-data; name="file"; filename="${audioFileName}"\r\n`;
+                body += 'Content-Type: audio/wav\r\n\r\n';
+
+                const bodyEnd = `\r\n--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="language"\r\n\r\n${language || 'auto'}\r\n` +
+                    `--${boundary}--\r\n`;
+
+                const bodyBuffer = Buffer.concat([
+                    Buffer.from(body),
+                    audioData,
+                    Buffer.from(bodyEnd)
+                ]);
+
+                const options = {
+                    hostname: '127.0.0.1',
+                    port: BACKEND_PORT,
+                    path: '/api/transcribe',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                        'Content-Length': bodyBuffer.length
                     }
+                };
+
+                const req = http.request(options, (res) => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => {
+                        try {
+                            resolve({ success: true, data: JSON.parse(data) });
+                        } catch {
+                            resolve({ success: false, error: 'Failed to parse response' });
+                        }
+                    });
                 });
-            });
 
-            req.on('error', (error) => {
+                req.on('error', (error) => {
+                    resolve({ success: false, error: error.message });
+                });
+
+                req.write(bodyBuffer);
+                req.end();
+            } catch (error) {
                 resolve({ success: false, error: error.message });
-            });
-
-            req.write(bodyBuffer);
-            req.end();
+            }
         });
     });
 
@@ -355,8 +370,19 @@ function registerIpcHandlers(dependencies) {
 
     ipcMain.handle(IPC_DELETE_TEMP_FILE, async (event, filePath) => {
         try {
-            if (fs.existsSync(filePath) && filePath.includes('temp')) {
-                fs.unlinkSync(filePath);
+            if (filePath) {
+                const userDataPath = getUserDataPath();
+                const tempDir = path.join(userDataPath, 'temp');
+                const resolvedTempDir = path.resolve(tempDir);
+                const resolvedFilePath = path.resolve(filePath);
+
+                const relative = path.relative(resolvedTempDir, resolvedFilePath);
+                const isWithinTempDir =
+                    relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+
+                if (isWithinTempDir && fs.existsSync(resolvedFilePath)) {
+                    fs.unlinkSync(resolvedFilePath);
+                }
             }
             return { success: true };
         } catch (error) {
@@ -366,9 +392,32 @@ function registerIpcHandlers(dependencies) {
 
     ipcMain.handle(IPC_COPY_FILE, async (event, sourcePath, destFolder) => {
         try {
-            const fileName = path.basename(sourcePath);
-            const destPath = path.join(destFolder, fileName);
-            fs.copyFileSync(sourcePath, destPath);
+            // Validate paths
+            const normalizedSource = path.normalize(sourcePath);
+            const normalizedDest = path.normalize(destFolder);
+
+            // Ensure both paths are absolute and don't contain traversal
+            if (!path.isAbsolute(normalizedSource) || normalizedSource.includes('..')) {
+                return { success: false, error: 'Invalid source path' };
+            }
+
+            if (!path.isAbsolute(normalizedDest) || normalizedDest.includes('..')) {
+                return { success: false, error: 'Invalid destination folder path' };
+            }
+
+            // Verify destination folder exists
+            if (!fs.existsSync(normalizedDest)) {
+                return { success: false, error: 'Destination folder does not exist' };
+            }
+
+            // Verify source file exists
+            if (!fs.existsSync(normalizedSource)) {
+                return { success: false, error: 'Source file does not exist' };
+            }
+
+            const fileName = path.basename(normalizedSource);
+            const destPath = path.join(normalizedDest, fileName);
+            fs.copyFileSync(normalizedSource, destPath);
             return { success: true, destPath: destPath };
         } catch (error) {
             return { success: false, error: error.message };
