@@ -40,7 +40,7 @@ import {
     closePreviewModal,
     previewCopyOnly,
     previewInsert
-} from './recording.js';
+} from './recording/index.js';
 
 // Mic test
 import {
