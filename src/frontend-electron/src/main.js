@@ -10,6 +10,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, shell, cli
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const semver = require('semver');
 
 // Auto-updater (Feature 18)
 let autoUpdater = null;
@@ -1110,7 +1111,25 @@ ipcMain.handle('check-for-updates', async () => {
     }
     try {
         const result = await autoUpdater.checkForUpdates();
-        return { available: !!result, updateInfo: result?.updateInfo };
+
+        // Check if there's actually a newer version available
+        // result.updateInfo contains the remote version information
+        if (result && result.updateInfo) {
+            const currentVersion = app.getVersion();
+            const remoteVersion = result.updateInfo.version;
+
+            // Use semver to properly compare versions
+            // gt() returns true if remoteVersion > currentVersion
+            const isNewer = semver.gt(remoteVersion, currentVersion);
+
+            return {
+                available: isNewer,
+                updateInfo: result.updateInfo
+            };
+        }
+
+        // No update info returned - no updates available
+        return { available: false };
     } catch (error) {
         // Handle "no published versions" error - this means no releases exist yet
         // This is NOT a configuration error - user is on the latest version
