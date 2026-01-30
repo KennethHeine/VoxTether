@@ -104,6 +104,7 @@ jobs:
           See [Installation Guide](https://github.com/KennethHeine/VoxTether/blob/main/docs/INSTALLATION.md) for detailed setup instructions.
         files: |
           src/frontend-electron/dist/VoxTether-${{ steps.version.outputs.VERSION }}-Setup.exe
+          src/frontend-electron/dist/latest.yml
         generate_release_notes: true
         draft: false
         prerelease: false
