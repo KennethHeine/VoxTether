@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """VoxTether Backend CLI - Command line tool for managing the backend server."""
 
-import argparse
 import asyncio
 import sys
 from pathlib import Path
+
+import click
 
 # Add current directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import settings
-from services.model_manager import ModelManager, AVAILABLE_MODELS
+from constants import AVAILABLE_MODELS, APP_VERSION
+from services.model_manager import ModelManager
 
 
 def print_banner():
     """Print the VoxTether banner."""
-    print("""
+    click.echo("""
 ╔═══════════════════════════════════════════════════════════════╗
 ║                    VoxTether Backend CLI                      ║
 ║           Speech-to-Text Transcription Server                 ║
@@ -23,57 +25,69 @@ def print_banner():
 """)
 
 
-def cmd_list_models(args):
+@click.group()
+@click.version_option(version=APP_VERSION, prog_name="VoxTether Backend")
+def cli():
+    """VoxTether Backend CLI - Manage the speech-to-text server."""
+    pass
+
+
+@cli.command()
+def list():
     """List all available models and their download status."""
     manager = ModelManager(settings.models_path)
     models = manager.list_models()
     
-    print(f"\nModels directory: {settings.models_path}\n")
-    print("Available Models:")
-    print("-" * 80)
-    print(f"{'Name':<20} {'Size':<12} {'Downloaded':<12} {'Description'}")
-    print("-" * 80)
+    click.echo(f"\nModels directory: {settings.models_path}\n")
+    click.echo("Available Models:")
+    click.echo("-" * 80)
+    click.echo(f"{'Name':<20} {'Size':<12} {'Downloaded':<12} {'Description'}")
+    click.echo("-" * 80)
     
     for model in models:
         status = "✓ Yes" if model["downloaded"] else "✗ No"
         size = f"{model['size_mb']} MB"
-        print(f"{model['name']:<20} {size:<12} {status:<12} {model['description']}")
+        click.echo(f"{model['name']:<20} {size:<12} {status:<12} {model['description']}")
     
-    print("-" * 80)
-    print(f"\nTotal models: {len(models)}")
+    click.echo("-" * 80)
+    click.echo(f"\nTotal models: {len(models)}")
     downloaded = sum(1 for m in models if m["downloaded"])
-    print(f"Downloaded: {downloaded}")
+    click.echo(f"Downloaded: {downloaded}")
 
 
-def cmd_download_model(args):
-    """Download a model."""
-    model_name = args.model_name
+@cli.command()
+@click.argument("model_name")
+@click.option("--force", "-f", is_flag=True, help="Re-download even if already exists")
+def download(model_name: str, force: bool):
+    """Download a model.
     
+    MODEL_NAME: Name of the model to download (e.g., 'small', 'base')
+    """
     if model_name not in AVAILABLE_MODELS:
-        print(f"Error: Unknown model '{model_name}'")
-        print(f"Available models: {', '.join(AVAILABLE_MODELS.keys())}")
+        click.echo(f"Error: Unknown model '{model_name}'", err=True)
+        click.echo(f"Available models: {', '.join(AVAILABLE_MODELS.keys())}")
         sys.exit(1)
     
     manager = ModelManager(settings.models_path)
     
     if manager.is_model_downloaded(model_name):
-        if not args.force:
-            print(f"Model '{model_name}' is already downloaded.")
-            print("Use --force to re-download.")
+        if not force:
+            click.echo(f"Model '{model_name}' is already downloaded.")
+            click.echo("Use --force to re-download.")
             return
         else:
-            print(f"Re-downloading model '{model_name}'...")
+            click.echo(f"Re-downloading model '{model_name}'...")
             manager.delete_model(model_name)
     
     model_info = AVAILABLE_MODELS[model_name]
-    print(f"\nDownloading model: {model_name}")
-    print(f"  Display name: {model_info.get('display_name', model_name)}")
-    print(f"  Size: ~{model_info.get('size_mb', 'unknown')} MB")
-    print(f"  Repository: {model_info.get('repo_id', 'N/A')}")
-    print(f"  Target: {settings.models_path}/{model_name}")
-    print()
+    click.echo(f"\nDownloading model: {model_name}")
+    click.echo(f"  Display name: {model_info.get('display_name', model_name)}")
+    click.echo(f"  Size: ~{model_info.get('size_mb', 'unknown')} MB")
+    click.echo(f"  Repository: {model_info.get('repo_id', 'N/A')}")
+    click.echo(f"  Target: {settings.models_path}/{model_name}")
+    click.echo()
     
-    async def download():
+    async def download_model():
         last_progress = -1
         async for progress in manager.download_model_async(model_name):
             if progress.status == "downloading":
@@ -82,162 +96,133 @@ def cmd_download_model(args):
                     bar_width = 40
                     filled = int(bar_width * pct / 100)
                     bar = "█" * filled + "░" * (bar_width - filled)
-                    print(f"\r[{bar}] {pct:3}% ({progress.downloaded_mb:.1f}/{progress.total_mb:.1f} MB)", end="", flush=True)
+                    click.echo(
+                        f"\r[{bar}] {pct:3}% ({progress.downloaded_mb:.1f}/{progress.total_mb:.1f} MB)",
+                        nl=False,
+                    )
                     last_progress = pct
             elif progress.status == "complete":
-                print(f"\r[{'█' * 40}] 100%")
-                print(f"\n✓ Model '{model_name}' downloaded successfully!")
+                click.echo(f"\r[{'█' * 40}] 100%")
+                click.echo(f"\n✓ Model '{model_name}' downloaded successfully!")
             elif progress.status == "error":
-                print(f"\n✗ Download failed: {progress.error}")
+                click.echo(f"\n✗ Download failed: {progress.error}", err=True)
                 sys.exit(1)
     
-    asyncio.run(download())
+    asyncio.run(download_model())
 
 
-def cmd_delete_model(args):
-    """Delete a downloaded model."""
-    model_name = args.model_name
+@cli.command()
+@click.argument("model_name")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
+def delete(model_name: str, yes: bool):
+    """Delete a downloaded model.
+    
+    MODEL_NAME: Name of the model to delete
+    """
     manager = ModelManager(settings.models_path)
     
     if not manager.is_model_downloaded(model_name):
-        print(f"Model '{model_name}' is not downloaded.")
+        click.echo(f"Model '{model_name}' is not downloaded.", err=True)
         sys.exit(1)
     
-    if not args.yes:
-        confirm = input(f"Are you sure you want to delete model '{model_name}'? [y/N]: ")
-        if confirm.lower() != 'y':
-            print("Cancelled.")
+    if not yes:
+        if not click.confirm(f"Are you sure you want to delete model '{model_name}'?"):
+            click.echo("Cancelled.")
             return
     
     if manager.delete_model(model_name):
-        print(f"✓ Model '{model_name}' deleted successfully.")
+        click.echo(f"✓ Model '{model_name}' deleted successfully.")
     else:
-        print(f"✗ Failed to delete model '{model_name}'.")
+        click.echo(f"✗ Failed to delete model '{model_name}'.", err=True)
         sys.exit(1)
 
 
-def cmd_config_show(args):
+@cli.command()
+def config():
     """Show current configuration."""
-    print("\nCurrent Configuration:")
-    print("-" * 50)
-    print(f"Host:           {settings.host}")
-    print(f"Port:           {settings.port}")
-    print(f"Debug:          {settings.debug}")
-    print(f"Models path:    {settings.models_path}")
-    print(f"Default model:  {settings.default_model}")
-    print(f"Preload model:  {settings.preload_model}")
-    print(f"Device:         {settings.device}")
-    print(f"Compute type:   {settings.compute_type}")
-    print(f"Language:       {settings.default_language}")
-    print("-" * 50)
-    print("\nEnvironment variables (prefix: VOXTETHER_):")
-    print("  VOXTETHER_HOST, VOXTETHER_PORT, VOXTETHER_DEBUG")
-    print("  VOXTETHER_MODELS_PATH, VOXTETHER_DEFAULT_MODEL")
-    print("  VOXTETHER_PRELOAD_MODEL, VOXTETHER_DEVICE")
-    print("  VOXTETHER_COMPUTE_TYPE, VOXTETHER_DEFAULT_LANGUAGE")
+    click.echo("\nCurrent Configuration:")
+    click.echo("-" * 50)
+    click.echo(f"Host:           {settings.host}")
+    click.echo(f"Port:           {settings.port}")
+    click.echo(f"Debug:          {settings.debug}")
+    click.echo(f"Models path:    {settings.models_path}")
+    click.echo(f"Default model:  {settings.default_model}")
+    click.echo(f"Preload model:  {settings.preload_model}")
+    click.echo(f"Device:         {settings.device}")
+    click.echo(f"Compute type:   {settings.compute_type}")
+    click.echo(f"Language:       {settings.default_language}")
+    click.echo("-" * 50)
+    click.echo("\nEnvironment variables (prefix: VOXTETHER_):")
+    click.echo("  VOXTETHER_HOST, VOXTETHER_PORT, VOXTETHER_DEBUG")
+    click.echo("  VOXTETHER_MODELS_PATH, VOXTETHER_DEFAULT_MODEL")
+    click.echo("  VOXTETHER_PRELOAD_MODEL, VOXTETHER_DEVICE")
+    click.echo("  VOXTETHER_COMPUTE_TYPE, VOXTETHER_DEFAULT_LANGUAGE")
 
 
-def cmd_start_server(args):
+@cli.command()
+@click.option("--host", "-H", help="Host to bind to")
+@click.option("--port", "-p", type=int, help="Port to bind to")
+@click.option("--reload", "-r", is_flag=True, help="Enable auto-reload")
+@click.option("--debug", "-d", is_flag=True, help="Enable debug mode")
+def serve(host: str, port: int, reload: bool, debug: bool):
     """Start the backend server."""
     import uvicorn
     
-    host = args.host or settings.host
-    port = args.port or settings.port
+    host = host or settings.host
+    port = port or settings.port
     
-    print("\nStarting VoxTether backend server...")
-    print(f"  URL: http://{host}:{port}")
-    print(f"  API docs: http://{host}:{port}/docs")
-    print(f"  Models path: {settings.models_path}")
-    print()
+    click.echo("\nStarting VoxTether backend server...")
+    click.echo(f"  URL: http://{host}:{port}")
+    click.echo(f"  API docs: http://{host}:{port}/docs")
+    click.echo(f"  Models path: {settings.models_path}")
+    click.echo()
     
     uvicorn.run(
         "main:app",
         host=host,
         port=port,
-        reload=args.reload,
-        log_level="debug" if args.debug else "info",
+        reload=reload,
+        log_level="debug" if debug else "info",
     )
 
 
-def cmd_info(args):
+@cli.command()
+def info():
     """Show system and GPU information."""
-    print("\nSystem Information:")
-    print("-" * 50)
+    click.echo("\nSystem Information:")
+    click.echo("-" * 50)
     
     # Check for CUDA
     try:
         import torch
         cuda_available = torch.cuda.is_available()
-        print(f"PyTorch version: {torch.__version__}")
-        print(f"CUDA available:  {cuda_available}")
+        click.echo(f"PyTorch version: {torch.__version__}")
+        click.echo(f"CUDA available:  {cuda_available}")
         if cuda_available:
-            print(f"CUDA version:    {torch.version.cuda}")
-            print(f"GPU count:       {torch.cuda.device_count()}")
+            click.echo(f"CUDA version:    {torch.version.cuda}")
+            click.echo(f"GPU count:       {torch.cuda.device_count()}")
             for i in range(torch.cuda.device_count()):
-                print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+                click.echo(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
     except ImportError:
-        print("PyTorch: Not installed")
+        click.echo("PyTorch: Not installed")
     
     # Check for faster-whisper
     import importlib.util
     if importlib.util.find_spec("faster_whisper"):
-        print("\nfaster-whisper: Available")
+        click.echo("\nfaster-whisper: Available")
     else:
-        print("\nfaster-whisper: Not installed")
+        click.echo("\nfaster-whisper: Not installed")
     
-    print("-" * 50)
+    click.echo("-" * 50)
 
 
 def main():
     """Main entry point for CLI."""
-    parser = argparse.ArgumentParser(
-        prog="voxtether-cli",
-        description="VoxTether Backend CLI - Manage the speech-to-text server",
-    )
-    parser.add_argument("--version", action="version", version="VoxTether Backend 2.0.0")
-    
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
-    
-    # models list
-    list_parser = subparsers.add_parser("list", help="List available models")
-    list_parser.set_defaults(func=cmd_list_models)
-    
-    # models download
-    download_parser = subparsers.add_parser("download", help="Download a model")
-    download_parser.add_argument("model_name", help="Name of the model to download")
-    download_parser.add_argument("--force", "-f", action="store_true", help="Re-download even if already exists")
-    download_parser.set_defaults(func=cmd_download_model)
-    
-    # models delete
-    delete_parser = subparsers.add_parser("delete", help="Delete a downloaded model")
-    delete_parser.add_argument("model_name", help="Name of the model to delete")
-    delete_parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation")
-    delete_parser.set_defaults(func=cmd_delete_model)
-    
-    # config
-    config_parser = subparsers.add_parser("config", help="Show configuration")
-    config_parser.set_defaults(func=cmd_config_show)
-    
-    # serve
-    serve_parser = subparsers.add_parser("serve", help="Start the backend server")
-    serve_parser.add_argument("--host", "-H", help="Host to bind to")
-    serve_parser.add_argument("--port", "-p", type=int, help="Port to bind to")
-    serve_parser.add_argument("--reload", "-r", action="store_true", help="Enable auto-reload")
-    serve_parser.add_argument("--debug", "-d", action="store_true", help="Enable debug mode")
-    serve_parser.set_defaults(func=cmd_start_server)
-    
-    # info
-    info_parser = subparsers.add_parser("info", help="Show system information")
-    info_parser.set_defaults(func=cmd_info)
-    
-    args = parser.parse_args()
-    
-    if args.command is None:
+    # Print banner if no arguments provided
+    if len(sys.argv) == 1:
         print_banner()
-        parser.print_help()
-        sys.exit(0)
     
-    args.func(args)
+    cli()
 
 
 if __name__ == "__main__":
