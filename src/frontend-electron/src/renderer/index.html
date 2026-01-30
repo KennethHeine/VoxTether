@@ -55,17 +55,9 @@
             <div class="page active" id="page-general">
                 <h1>General Settings</h1>
                 
-                <div class="setting-group">
-                    <div class="setting-header">
-                        <h3>Window Toggle Hotkey</h3>
-                        <p class="setting-description">Press this key combination to show/hide the settings window</p>
-                    </div>
-                    <div class="setting-control">
-                        <input type="text" id="window-toggle-hotkey-input" class="text-input" readonly placeholder="Click to capture hotkey">
-                        <button class="btn btn-secondary" id="capture-window-toggle-hotkey-btn">Capture</button>
-                    </div>
-                </div>
-
+                <!-- Hotkeys Section -->
+                <h2 class="section-title">⌨️ Hotkeys</h2>
+                
                 <div class="setting-group">
                     <div class="setting-header">
                         <h3>Toggle Recording Hotkey</h3>
@@ -79,18 +71,17 @@
 
                 <div class="setting-group">
                     <div class="setting-header">
-                        <h3>Test Recording</h3>
-                        <p class="setting-description">Test recording without using the hotkey</p>
+                        <h3>Window Toggle Hotkey</h3>
+                        <p class="setting-description">Press this key combination to show/hide the settings window</p>
                     </div>
                     <div class="setting-control">
-                        <button class="btn btn-primary" id="start-test-recording-btn">🎤 Start Recording</button>
-                        <button class="btn btn-danger hidden" id="stop-test-recording-btn">⏹ Stop Recording</button>
-                        <span class="recording-status" id="recording-status"></span>
-                        <div class="recording-level-meter hidden" id="recording-level-meter">
-                            <div class="level-bar" id="recording-level-bar"></div>
-                        </div>
+                        <input type="text" id="window-toggle-hotkey-input" class="text-input" readonly placeholder="Click to capture hotkey">
+                        <button class="btn btn-secondary" id="capture-window-toggle-hotkey-btn">Capture</button>
                     </div>
                 </div>
+
+                <!-- Transcription Section -->
+                <h2 class="section-title">🎤 Transcription</h2>
 
                 <div class="setting-group">
                     <div class="setting-header">
@@ -131,6 +122,51 @@
 
                 <div class="setting-group">
                     <div class="setting-header">
+                        <h3>Show Transcription Preview</h3>
+                        <p class="setting-description">Show a preview dialog to edit transcription before inserting</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="transcription-preview-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Test Recording</h3>
+                        <p class="setting-description">Test recording without using the hotkey</p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn btn-primary" id="start-test-recording-btn">🎤 Start Recording</button>
+                        <button class="btn btn-danger hidden" id="stop-test-recording-btn">⏹ Stop Recording</button>
+                        <span class="recording-status" id="recording-status"></span>
+                        <div class="recording-level-meter hidden" id="recording-level-meter">
+                            <div class="level-bar" id="recording-level-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interface Section -->
+                <h2 class="section-title">🖥️ Interface</h2>
+
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <h3>Theme</h3>
+                        <p class="setting-description">Application color theme</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="theme-select" class="select-input">
+                            <option value="system">System</option>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
                         <h3>Show Notifications</h3>
                         <p class="setting-description">Display notifications after transcription</p>
                     </div>
@@ -155,18 +191,8 @@
                     </div>
                 </div>
 
-                <div class="setting-group">
-                    <div class="setting-header">
-                        <h3>Show Transcription Preview</h3>
-                        <p class="setting-description">Show a preview dialog to edit transcription before inserting</p>
-                    </div>
-                    <div class="setting-control">
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="transcription-preview-toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
+                <!-- Startup Section -->
+                <h2 class="section-title">🚀 Startup</h2>
 
                 <div class="setting-group">
                     <div class="setting-header">
@@ -194,24 +220,13 @@
                     </div>
                 </div>
 
-                <div class="setting-group">
-                    <div class="setting-header">
-                        <h3>Theme</h3>
-                        <p class="setting-description">Application color theme</p>
-                    </div>
-                    <div class="setting-control">
-                        <select id="theme-select" class="select-input">
-                            <option value="system">System</option>
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
-                        </select>
-                    </div>
-                </div>
+                <!-- Storage Section -->
+                <h2 class="section-title">💾 Storage</h2>
 
                 <div class="setting-group">
                     <div class="setting-header">
                         <h3>Recording Output Folder</h3>
-                        <p class="setting-description">Folder where recordings and transcripts will be saved. A new subfolder is created for each recording.</p>
+                        <p class="setting-description">Folder where recordings and transcripts will be saved</p>
                     </div>
                     <div class="setting-control">
                         <input type="text" id="recording-output-folder" class="text-input" readonly placeholder="Not set - recordings won't be saved">
@@ -223,7 +238,7 @@
                 <div class="setting-group">
                     <div class="setting-header">
                         <h3>Save Audio File</h3>
-                        <p class="setting-description">Save the audio recording (WAV) when recording (requires output folder)</p>
+                        <p class="setting-description">Save the audio recording (WAV) when recording</p>
                     </div>
                     <div class="setting-control">
                         <label class="toggle-switch">
@@ -236,7 +251,7 @@
                 <div class="setting-group">
                     <div class="setting-header">
                         <h3>Save Transcript File</h3>
-                        <p class="setting-description">Save the transcript (TXT) when recording (requires output folder)</p>
+                        <p class="setting-description">Save the transcript (TXT) when recording</p>
                     </div>
                     <div class="setting-control">
                         <label class="toggle-switch">
@@ -340,7 +355,7 @@
                 <div class="setting-group">
                     <div class="setting-header">
                         <h3>Active Model</h3>
-                        <p class="setting-description">Currently loaded model for transcription</p>
+                        <p class="setting-description">Select a downloaded model to use for transcription</p>
                     </div>
                     <div class="setting-control">
                         <select id="model-select" class="select-input">
@@ -350,10 +365,25 @@
                 </div>
 
                 <h2>Available Models</h2>
-                <p class="setting-description">Models are managed via the backend CLI. Run <code>python cli.py list</code> to see all models.</p>
+                <p class="setting-description">Download models to use them for transcription. Larger models are more accurate but slower.</p>
                 <div class="models-grid" id="models-grid">
                     <div class="model-card skeleton">
                         <div class="model-name">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Download Progress Container (shown during download) -->
+                <div class="download-progress hidden" id="download-progress-container">
+                    <div class="progress-header">
+                        <span class="progress-model-name" id="download-model-name">Downloading...</span>
+                        <span class="progress-percent" id="download-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="download-progress-bar"></div>
+                    </div>
+                    <div class="progress-details">
+                        <span id="download-size">0 MB / 0 MB</span>
+                        <span id="download-speed">0 MB/s</span>
                     </div>
                 </div>
             </div>

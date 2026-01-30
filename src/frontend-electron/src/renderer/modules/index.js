@@ -78,7 +78,8 @@ import {
 // Models
 import {
     loadModels,
-    checkDeviceInfo
+    checkDeviceInfo,
+    initializeDownloadListener
 } from './models.js';
 
 // About
@@ -391,6 +392,9 @@ async function initialize() {
 
     // Set up IPC event listeners
     setupIPCListeners();
+
+    // Set up model download progress listener
+    initializeDownloadListener();
 
     // Set up audio device change detection
     setupAudioDeviceDetection();

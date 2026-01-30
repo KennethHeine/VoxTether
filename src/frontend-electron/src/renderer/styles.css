@@ -223,6 +223,20 @@ h2 {
     color: var(--text-primary);
 }
 
+h2.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+h2.section-title:first-of-type {
+    margin-top: 0;
+}
+
 h3 {
     font-size: 15px;
     font-weight: 600;
@@ -602,6 +616,15 @@ h3 {
 .model-actions {
     display: flex;
     gap: 8px;
+}
+
+.model-card.not-downloaded {
+    opacity: 0.85;
+    border-style: dashed;
+}
+
+.model-card.not-downloaded:hover {
+    opacity: 1;
 }
 
 .model-card.skeleton {
