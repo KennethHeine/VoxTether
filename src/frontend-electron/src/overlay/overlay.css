@@ -1,0 +1,55 @@
+/**
+ * VoxTether Recording Overlay Styles
+ *
+ * Styles for the recording indicator bar displayed at the top of the screen.
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: transparent;
+    overflow: hidden;
+    height: 6px;
+}
+
+.bar {
+    width: 100%;
+    height: 6px;
+    border-radius: 0 0 3px 3px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hidden state - no visual */
+.bar.hidden {
+    display: none;
+}
+
+/* Recording state - solid red with pulse */
+.bar.recording {
+    background-color: #dc3232;
+    box-shadow: 0 2px 8px rgba(220, 50, 50, 0.6);
+    animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-recording {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Transcribing state - animated gradient loading bar */
+.bar.transcribing {
+    background: linear-gradient(90deg, #0078d4, #00bcf2, #0078d4);
+    background-size: 200% 100%;
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.6);
+    animation: loading-gradient 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-gradient {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
