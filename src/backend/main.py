@@ -1,7 +1,5 @@
 """VoxTether Backend - FastAPI server for speech-to-text transcription."""
 
-import os
-import sys
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path

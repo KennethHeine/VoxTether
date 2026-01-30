@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     compute_type: str = Field(default="auto", description="Compute type (auto, float16, int8, float32)")
     default_language: str = Field(default="auto", description="Default language for transcription")
     
+    model_config = {
+        "env_prefix": "VOXTETHER_",
+        "env_file": ".env",
+        "extra": "ignore",
+    }
+    
     @field_validator("port")
     @classmethod
     def validate_port(cls, v: int) -> int:
@@ -101,11 +107,6 @@ class Settings(BaseSettings):
         if v not in VALID_COMPUTE_TYPES:
             raise ValueError(f"Compute type must be one of: {', '.join(VALID_COMPUTE_TYPES)}")
         return v
-    
-    class Config:
-        env_prefix = "VOXTETHER_"
-        env_file = ".env"
-        extra = "ignore"
 
 
 # Global settings instance

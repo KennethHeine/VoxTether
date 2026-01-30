@@ -1,7 +1,6 @@
 """Pytest configuration and fixtures for VoxTether backend tests."""
 
 import pytest
-from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock
 
 

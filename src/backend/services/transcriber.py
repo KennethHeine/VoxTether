@@ -12,7 +12,6 @@ from typing import Optional
 
 from config import settings
 from constants import DEFAULT_BEAM_SIZE, DEFAULT_VAD_FILTER
-from exceptions import ModelNotLoadedError, TranscriptionError
 from protocols import TranscriptionResult
 
 logger = logging.getLogger(__name__)

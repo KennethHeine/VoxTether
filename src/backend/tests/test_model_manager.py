@@ -1,8 +1,7 @@
 """Tests for the ModelManager service."""
 
 import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import patch
 
 from services.model_manager import ModelManager
 from constants import AVAILABLE_MODELS
@@ -117,7 +116,7 @@ class TestModelManager:
         """Test successful model download."""
         manager = ModelManager(str(temp_models_dir))
         
-        with patch("services.model_manager.snapshot_download") as mock_download:
+        with patch("huggingface_hub.snapshot_download") as mock_download:
             # Mock successful download
             target_path = temp_models_dir / "small"
             mock_download.return_value = str(target_path)
@@ -139,7 +138,7 @@ class TestModelManager:
         """Test model download failure."""
         manager = ModelManager(str(temp_models_dir))
         
-        with patch("services.model_manager.snapshot_download") as mock_download:
+        with patch("huggingface_hub.snapshot_download") as mock_download:
             # Mock download failure
             mock_download.side_effect = Exception("Network error")
             
