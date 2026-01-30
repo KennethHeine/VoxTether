@@ -2,7 +2,7 @@
   "name": "voxtether-electron",
   "version": "2.0.0",
   "description": "Voice dictation for Windows - Electron frontend",
-  "main": "src/main.js",
+  "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --debug",
