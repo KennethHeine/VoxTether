@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 
 from config import settings
 from dependencies import get_transcriber
+from exceptions import ModelNotFoundError
 from schemas import ModelListResponse, ModelInfo, ModelActionResponse
 from services.model_manager import ModelManager
 from services.transcriber import TranscriberService
@@ -82,20 +83,19 @@ async def delete_model(model_name: str):
         
     Returns:
         Action response indicating success or failure.
+        
+    Raises:
+        ModelNotFoundError: If model is not found.
     """
-    try:
-        success = model_manager.delete_model(model_name)
-        return ModelActionResponse(
-            success=success,
-            model=model_name if success else None,
-            message=f"Model '{model_name}' deleted successfully" if success else "Model not found",
-        )
-    except Exception as e:
-        logger.error(f"Failed to delete model: {e}")
-        return ModelActionResponse(
-            success=False,
-            message=str(e),
-        )
+    success = model_manager.delete_model(model_name)
+    if not success:
+        raise ModelNotFoundError(model_name)
+    
+    return ModelActionResponse(
+        success=True,
+        model=model_name,
+        message=f"Model '{model_name}' deleted successfully",
+    )
 
 
 @router.post("/models/{model_name}/load", response_model=ModelActionResponse)
@@ -112,26 +112,23 @@ async def load_model(
     Returns:
         Action response indicating success or failure.
     """
-    try:
-        await transcriber.load_model(model_name)
-        return ModelActionResponse(
-            success=True,
-            model=model_name,
-            message=f"Model '{model_name}' loaded successfully",
-        )
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        return ModelActionResponse(
-            success=False,
-            message=str(e),
-        )
+    await transcriber.load_model(model_name)
+    return ModelActionResponse(
+        success=True,
+        model=model_name,
+        message=f"Model '{model_name}' loaded successfully",
+    )
 
 
 @router.post("/models/{model_name}/unload", response_model=ModelActionResponse)
-async def unload_model(transcriber: TranscriberService = Depends(get_transcriber)):
+async def unload_model(
+    model_name: str,
+    transcriber: TranscriberService = Depends(get_transcriber),
+):
     """Unload the current model.
     
     Args:
+        model_name: Name of the model (path parameter, currently unused).
         transcriber: Transcriber service from dependency injection.
         
     Returns:

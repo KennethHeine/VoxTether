@@ -44,9 +44,17 @@ class StructuredFormatter(logging.Formatter):
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
 
-        # Add any extra fields
-        if hasattr(record, "extra"):
-            log_data.update(record.extra)
+        # Add any extra fields from the record
+        # Standard LogRecord attributes to exclude
+        standard_attrs = {
+            'name', 'msg', 'args', 'created', 'filename', 'funcName', 'levelname',
+            'levelno', 'lineno', 'module', 'msecs', 'message', 'pathname', 'process',
+            'processName', 'relativeCreated', 'thread', 'threadName', 'exc_info',
+            'exc_text', 'stack_info', 'taskName'
+        }
+        for key, value in record.__dict__.items():
+            if key not in standard_attrs and not key.startswith('_'):
+                log_data[key] = value
 
         return json.dumps(log_data)
 
@@ -63,6 +71,9 @@ class ConsoleFormatter(logging.Formatter):
         Returns:
             Formatted log string.
         """
+        # Create a shallow copy to avoid mutating the original record
+        record = logging.makeLogRecord(record.__dict__)
+        
         request_id = request_id_var.get()
         if request_id:
             # Add request ID to the message

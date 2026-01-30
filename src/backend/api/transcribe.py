@@ -98,16 +98,12 @@ async def update_settings(
     Returns:
         Success response.
     """
-    try:
-        # Update device if changed
-        if settings.device != "auto" or settings.compute_type != "auto":
-            await transcriber.change_device(settings.device, settings.compute_type)
-        
-        # Load different model if specified
-        if settings.model:
-            await transcriber.load_model(settings.model)
-        
-        return {"success": True}
-    except Exception as e:
-        logger.error(f"Failed to update settings: {e}")
-        return {"success": False, "error": str(e)}
+    # Update device if changed
+    if settings.device != "auto" or settings.compute_type != "auto":
+        await transcriber.change_device(settings.device, settings.compute_type)
+    
+    # Load different model if specified
+    if settings.model:
+        await transcriber.load_model(settings.model)
+    
+    return {"success": True}

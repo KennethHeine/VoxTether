@@ -99,29 +99,27 @@ class TestTranscriberService:
             assert device in ("cpu", "cuda")
             assert compute_type in ("int8", "float16", "float32")
 
-    def test_get_model_path(self):
+    def test_get_model_path(self, tmp_path):
         """Test _get_model_path method."""
         transcriber = TranscriberService()
         
-        # Test with a simple scenario - model not found locally
+        # Test with a real temporary directory
         with patch("services.transcriber.settings") as mock_settings:
-            with patch("services.transcriber.Path") as mock_path:
-                mock_settings.models_path = "/fake/models"
-                
-                # Configure the mock to make all path checks fail
-                def mock_path_side_effect(path_str):
-                    m = MagicMock()
-                    m.exists.return_value = False
-                    # Support __truediv__ for path operations
-                    m.__truediv__ = lambda self, other: mock_path_side_effect(f"{path_str}/{other}")
-                    return m
-                
-                mock_path.side_effect = mock_path_side_effect
-                
-                # Should return the model name itself if not found locally
-                result = transcriber._get_model_path("small")
-                # When model is not found locally, it returns the model name for HuggingFace download
-                assert result == "small"
+            mock_settings.models_path = str(tmp_path)
+            
+            # Model doesn't exist yet
+            result = transcriber._get_model_path("small")
+            # When model is not found locally, it returns the model name for HuggingFace download
+            assert result == "small"
+            
+            # Create the model directory and test again
+            model_dir = tmp_path / "small"
+            model_dir.mkdir()
+            (model_dir / "model.bin").touch()
+            
+            result = transcriber._get_model_path("small")
+            # Now it should return the path
+            assert result == str(model_dir)
 
 
 @pytest.mark.asyncio
@@ -129,7 +127,7 @@ class TestTranscriberServiceIntegration:
     """Integration tests for TranscriberService (require mocking faster_whisper)."""
 
     @pytest.mark.asyncio
-    async def test_load_model_with_mock(self):
+    async def test_load_model_with_mock(self, tmp_path):
         """Test load_model with mocked WhisperModel."""
         transcriber = TranscriberService()
         
@@ -141,17 +139,12 @@ class TestTranscriberServiceIntegration:
             with patch("services.transcriber.settings") as mock_settings:
                 mock_settings.device = "cpu"
                 mock_settings.compute_type = "int8"
-                mock_settings.models_path = "/fake/models"
+                mock_settings.models_path = str(tmp_path)
                 mock_settings.default_model = "small"
                 
-                # Mock Path.exists to return False (model not found locally)
-                with patch("services.transcriber.Path") as mock_path_cls:
-                    mock_path_instance = MagicMock()
-                    mock_path_instance.exists.return_value = False
-                    mock_path_cls.return_value = mock_path_instance
-                    
-                    result = await transcriber.load_model("small")
-                    
-                    assert result is True
-                    assert transcriber._model_name == "small"
-                    assert transcriber.is_loaded()
+                # Model doesn't exist in temp directory, so it will use the model name
+                result = await transcriber.load_model("small")
+                
+                assert result is True
+                assert transcriber._model_name == "small"
+                assert transcriber.is_loaded()

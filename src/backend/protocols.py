@@ -1,18 +1,26 @@
 """Protocol definitions for VoxTether backend services."""
 
 from typing import Optional, Protocol, AsyncGenerator
-from dataclasses import dataclass
+
+from schemas import DownloadProgress
 
 
-@dataclass
 class TranscriptionResult:
     """Result of a transcription operation."""
 
-    text: str
-    success: bool
-    duration_seconds: float
-    language: Optional[str] = None
-    error: Optional[str] = None
+    def __init__(
+        self,
+        text: str,
+        success: bool,
+        duration_seconds: float,
+        language: Optional[str] = None,
+        error: Optional[str] = None,
+    ):
+        self.text = text
+        self.success = success
+        self.duration_seconds = duration_seconds
+        self.language = language
+        self.error = error
 
 
 class TranscriberProtocol(Protocol):
@@ -46,18 +54,6 @@ class TranscriberProtocol(Protocol):
     ) -> TranscriptionResult:
         """Transcribe an audio file."""
         ...
-
-
-@dataclass
-class DownloadProgress:
-    """Progress update for model download."""
-
-    status: str  # "downloading", "complete", "error"
-    progress: float = 0.0  # 0-100
-    downloaded_mb: float = 0.0
-    total_mb: float = 0.0
-    speed_mbps: float = 0.0
-    error: Optional[str] = None
 
 
 class ModelManagerProtocol(Protocol):

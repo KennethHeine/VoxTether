@@ -85,6 +85,7 @@ async def voxtether_exception_handler(request: Request, exc: VoxTetherError):
     return JSONResponse(
         status_code=exc.status_code,
         content={
+            "detail": exc.message,  # FastAPI standard field
             "error": exc.message,
             "status_code": exc.status_code,
         },

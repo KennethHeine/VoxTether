@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from constants import AVAILABLE_MODELS
-from exceptions import ModelNotFoundError, ModelDownloadError
+from exceptions import ModelNotFoundError
 from schemas import DownloadProgress
 
 logger = logging.getLogger(__name__)
@@ -157,7 +157,8 @@ class ModelManager:
             logger.error(f"Download failed: {e}")
             error_msg = str(e)
             yield DownloadProgress(status="error", error=error_msg)
-            raise ModelDownloadError(model_name, error_msg) from e
+            # Return instead of raising to avoid duplicate error messages
+            return
     
     def delete_model(self, model_name: str) -> bool:
         """Delete a downloaded model.
