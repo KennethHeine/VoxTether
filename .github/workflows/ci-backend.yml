@@ -89,6 +89,36 @@ jobs:
         }
       shell: pwsh
 
+    - name: Smoke test executable
+      run: |
+        Write-Host "Starting backend executable for smoke test..."
+        $process = Start-Process -FilePath "src/backend/dist/vox-backend.exe" -PassThru -WindowStyle Hidden
+        
+        # Wait for server to start
+        Start-Sleep -Seconds 10
+        
+        # Test health endpoint
+        try {
+          $response = Invoke-WebRequest -Uri "http://127.0.0.1:5678/api/health" -UseBasicParsing -TimeoutSec 10
+          if ($response.StatusCode -eq 200) {
+            Write-Host "Smoke test passed! Health endpoint returned 200 OK"
+            Write-Host "Response: $($response.Content)"
+          } else {
+            Write-Error "Health check failed with status: $($response.StatusCode)"
+            exit 1
+          }
+        } catch {
+          Write-Error "Failed to reach health endpoint: $_"
+          exit 1
+        } finally {
+          # Stop the process
+          if ($process -and !$process.HasExited) {
+            Stop-Process -Id $process.Id -Force
+            Write-Host "Backend process stopped"
+          }
+        }
+      shell: pwsh
+
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
