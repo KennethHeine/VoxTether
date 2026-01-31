@@ -145,7 +145,7 @@ jobs:
         if (Test-Path $stderrLog) { Get-Content $stderrLog }
         
         # Stop the process
-        if ($process -and !$process.HasExited) {
+        if ($process -and -not $process.HasExited) {
           Stop-Process -Id $process.Id -Force
           Write-Host "Backend process stopped"
         }
