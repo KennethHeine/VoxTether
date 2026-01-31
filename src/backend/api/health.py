@@ -1,9 +1,15 @@
 """Health check API endpoints."""
 
 import subprocess
+import time
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
+
+from constants import APP_VERSION
+from dependencies import get_transcriber_optional
+from schemas import HealthCheckResponse, DeviceInfo
+from services.transcriber import TranscriberService
 
 router = APIRouter()
 
@@ -57,21 +63,58 @@ def _get_device_info() -> dict:
     }
 
 
-@router.get("/health")
-async def health_check(request: Request):
-    """Health check endpoint."""
-    transcriber = getattr(request.app.state, "transcriber", None)
+@router.get("/health", response_model=HealthCheckResponse)
+async def health_check(
+    request: Request,
+    transcriber: Optional[TranscriberService] = Depends(get_transcriber_optional),
+):
+    """Enhanced health check endpoint with detailed status.
+    
+    Args:
+        request: FastAPI request object.
+        transcriber: Transcriber service (optional).
+        
+    Returns:
+        Detailed health check response.
+    """
     model_loaded = transcriber.is_loaded() if transcriber else False
+    current_model = transcriber.get_current_model() if transcriber else None
     current_device = transcriber.get_current_device() if transcriber else None
     
-    return {
-        "status": "ok",
-        "model_loaded": model_loaded,
-        "device": current_device,
+    # Calculate uptime
+    start_time = getattr(request.app.state, "start_time", time.time())
+    uptime_seconds = time.time() - start_time
+    
+    # Determine overall status
+    if transcriber and model_loaded:
+        status = "healthy"
+    elif transcriber:
+        status = "degraded"  # Transcriber exists but no model loaded
+    else:
+        status = "unhealthy"  # No transcriber
+    
+    # Component checks
+    checks = {
+        "transcriber": "healthy" if transcriber else "unhealthy",
+        "model": "loaded" if model_loaded else "not_loaded",
     }
+    
+    return HealthCheckResponse(
+        status=status,
+        version=APP_VERSION,
+        model_loaded=model_loaded,
+        model_name=current_model,
+        device=current_device,
+        uptime_seconds=uptime_seconds,
+        checks=checks,
+    )
 
 
-@router.get("/devices")
+@router.get("/devices", response_model=DeviceInfo)
 async def get_devices():
-    """Get information about available compute devices."""
-    return _get_device_info()
+    """Get information about available compute devices.
+    
+    Returns:
+        Device information.
+    """
+    return DeviceInfo(**_get_device_info())

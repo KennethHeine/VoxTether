@@ -6,67 +6,11 @@ import shutil
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from pydantic import BaseModel
+from constants import AVAILABLE_MODELS
+from exceptions import ModelNotFoundError
+from schemas import DownloadProgress
 
 logger = logging.getLogger(__name__)
-
-
-# Available Whisper models with their sizes
-AVAILABLE_MODELS = {
-    "tiny": {
-        "display_name": "Tiny",
-        "size_mb": 75,
-        "description": "Fastest, lowest accuracy. Good for quick notes.",
-        "repo_id": "Systran/faster-whisper-tiny",
-    },
-    "base": {
-        "display_name": "Base", 
-        "size_mb": 142,
-        "description": "Fast with reasonable accuracy.",
-        "repo_id": "Systran/faster-whisper-base",
-    },
-    "small": {
-        "display_name": "Small",
-        "size_mb": 466,
-        "description": "Good balance of speed and accuracy. Recommended for most users.",
-        "repo_id": "Systran/faster-whisper-small",
-    },
-    "medium": {
-        "display_name": "Medium",
-        "size_mb": 1500,
-        "description": "High accuracy, slower transcription.",
-        "repo_id": "Systran/faster-whisper-medium",
-    },
-    "large-v3": {
-        "display_name": "Large V3",
-        "size_mb": 3000,
-        "description": "Best accuracy, slowest. Requires significant GPU memory.",
-        "repo_id": "Systran/faster-whisper-large-v3",
-    },
-    "large-v3-turbo": {
-        "display_name": "Large V3 Turbo",
-        "size_mb": 1600,
-        "description": "Excellent accuracy with faster speed. Great GPU option.",
-        "repo_id": "deepdml/faster-whisper-large-v3-turbo-ct2",
-    },
-    "distil-large-v3": {
-        "display_name": "Distil Large V3",
-        "size_mb": 1100,
-        "description": "Distilled model with excellent speed/accuracy trade-off.",
-        "repo_id": "Systran/faster-distil-whisper-large-v3",
-    },
-}
-
-
-class DownloadProgress(BaseModel):
-    """Progress update for model download."""
-    
-    status: str  # "downloading", "complete", "error"
-    progress: float = 0.0  # 0-100
-    downloaded_mb: float = 0.0
-    total_mb: float = 0.0
-    speed_mbps: float = 0.0
-    error: Optional[str] = None
 
 
 class ModelManager:
@@ -145,10 +89,12 @@ class ModelManager:
             
         Yields:
             DownloadProgress updates.
+            
+        Raises:
+            ModelNotFoundError: If model name is not recognized.
         """
         if model_name not in AVAILABLE_MODELS:
-            yield DownloadProgress(status="error", error=f"Unknown model: {model_name}")
-            return
+            raise ModelNotFoundError(model_name)
         
         model_info = AVAILABLE_MODELS[model_name]
         repo_id = model_info["repo_id"]
@@ -209,7 +155,10 @@ class ModelManager:
             
         except Exception as e:
             logger.error(f"Download failed: {e}")
-            yield DownloadProgress(status="error", error=str(e))
+            error_msg = str(e)
+            yield DownloadProgress(status="error", error=error_msg)
+            # Return instead of raising to avoid duplicate error messages
+            return
     
     def delete_model(self, model_name: str) -> bool:
         """Delete a downloaded model.

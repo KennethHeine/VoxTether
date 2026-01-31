@@ -7,11 +7,12 @@ import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from config import settings
+from constants import DEFAULT_BEAM_SIZE, DEFAULT_VAD_FILTER
+from protocols import TranscriptionResult
 
 logger = logging.getLogger(__name__)
 
@@ -59,17 +60,6 @@ def _cleanup_executor():
     _executor.shutdown(wait=True, cancel_futures=True)
 
 atexit.register(_cleanup_executor)
-
-
-@dataclass
-class TranscriptionResult:
-    """Result of a transcription operation."""
-    
-    text: str
-    success: bool
-    duration_seconds: float
-    language: Optional[str] = None
-    error: Optional[str] = None
 
 
 class TranscriberService:
@@ -278,8 +268,8 @@ class TranscriberService:
                     str(audio_path),
                     language=language_arg,
                     task=task,
-                    beam_size=5,
-                    vad_filter=True,
+                    beam_size=DEFAULT_BEAM_SIZE,
+                    vad_filter=DEFAULT_VAD_FILTER,
                 )
                 
                 text_parts = []

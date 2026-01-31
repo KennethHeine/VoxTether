@@ -1,30 +1,33 @@
 """VoxTether Backend - FastAPI server for speech-to-text transcription."""
 
-import logging
-import os
-import sys
+import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from api import health, models, transcribe
 from config import settings
+from constants import APP_VERSION
+from exceptions import VoxTetherError
 from services.transcriber import TranscriberService
+from utils.logging import setup_logging, get_logger
 
-# Configure logging
-log_file = os.path.join(settings.logs_path, "backend.log")
-logging.basicConfig(
-    level=logging.DEBUG if settings.debug else logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler(log_file, encoding="utf-8"),
-        logging.StreamHandler(sys.stdout),
-    ],
+# Setup logging
+log_file = Path(settings.logs_path) / "backend.log"
+setup_logging(
+    log_file=log_file,
+    debug=settings.debug,
+    json_format=False,  # Can be made configurable
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
+# Track application start time for uptime calculation
+APP_START_TIME = time.time()
 
 
 @asynccontextmanager
@@ -33,6 +36,9 @@ async def lifespan(app: FastAPI):
     logger.info("Starting VoxTether backend...")
     logger.info(f"Host: {settings.host}:{settings.port}")
     logger.info(f"Models path: {settings.models_path}")
+    
+    # Store start time in app state
+    app.state.start_time = APP_START_TIME
     
     # Initialize the transcriber service
     transcriber = TranscriberService()
@@ -58,9 +64,33 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="VoxTether Backend",
     description="Speech-to-text transcription API using faster-whisper",
-    version="1.0.0",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
+
+
+# Exception handlers
+@app.exception_handler(VoxTetherError)
+async def voxtether_exception_handler(request: Request, exc: VoxTetherError):
+    """Handle VoxTether custom exceptions.
+    
+    Args:
+        request: FastAPI request object.
+        exc: VoxTether exception.
+        
+    Returns:
+        JSON error response.
+    """
+    logger.error(f"VoxTether error: {exc.message}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.message,  # FastAPI standard field
+            "error": exc.message,
+            "status_code": exc.status_code,
+        },
+    )
+
 
 # Add CORS middleware (localhost only)
 # Note: Electron apps make direct HTTP requests, but we restrict CORS for browser access
