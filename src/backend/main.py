@@ -1,5 +1,6 @@
 """VoxTether Backend - FastAPI server for speech-to-text transcription."""
 
+import sys
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -111,15 +112,27 @@ app.include_router(models.router, prefix="/api", tags=["Models"])
 def main():
     """Run the backend server."""
     logger.info(f"Starting server on {settings.host}:{settings.port}")
-    # Pass app object directly for PyInstaller compatibility
-    # reload must be False when passing app object (not a string)
-    uvicorn.run(
-        app,
-        host=settings.host,
-        port=settings.port,
-        reload=False,
-        log_level="debug" if settings.debug else "info",
-    )
+    
+    # Check if running as PyInstaller bundle
+    is_frozen = getattr(sys, 'frozen', False)
+    
+    if is_frozen:
+        # PyInstaller bundle: must pass app object directly, reload not supported
+        uvicorn.run(
+            app,
+            host=settings.host,
+            port=settings.port,
+            log_level="debug" if settings.debug else "info",
+        )
+    else:
+        # Normal Python: use string reference to support reload in debug mode
+        uvicorn.run(
+            "main:app",
+            host=settings.host,
+            port=settings.port,
+            reload=settings.debug,
+            log_level="debug" if settings.debug else "info",
+        )
 
 
 if __name__ == "__main__":
