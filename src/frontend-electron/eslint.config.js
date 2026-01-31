@@ -41,7 +41,7 @@ export default [
     js.configs.recommended,
     // CommonJS files (main process and preload)
     {
-        files: ["src/main.js", "src/preload.js"],
+        files: ["src/main.js", "src/main/**/*.js", "src/preload.js"],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: "commonjs",
