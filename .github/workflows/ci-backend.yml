@@ -92,30 +92,67 @@ jobs:
     - name: Smoke test executable
       run: |
         Write-Host "Starting backend executable for smoke test..."
-        $process = Start-Process -FilePath "src/backend/dist/vox-backend.exe" -PassThru -WindowStyle Hidden
         
-        # Wait for server to start
-        Start-Sleep -Seconds 10
+        # Create log files to capture output
+        $stdoutLog = "src/backend/dist/stdout.log"
+        $stderrLog = "src/backend/dist/stderr.log"
         
-        # Test health endpoint
-        try {
-          $response = Invoke-WebRequest -Uri "http://127.0.0.1:5678/api/health" -UseBasicParsing -TimeoutSec 10
-          if ($response.StatusCode -eq 200) {
-            Write-Host "Smoke test passed! Health endpoint returned 200 OK"
-            Write-Host "Response: $($response.Content)"
-          } else {
-            Write-Error "Health check failed with status: $($response.StatusCode)"
+        # Start process with output redirection and disable model preloading
+        $env:VOXTETHER_PRELOAD_MODEL = "false"
+        $process = Start-Process -FilePath "src/backend/dist/vox-backend.exe" `
+          -RedirectStandardOutput $stdoutLog `
+          -RedirectStandardError $stderrLog `
+          -PassThru
+        
+        Write-Host "Process started with PID: $($process.Id)"
+        
+        # Retry loop to wait for server to be ready (up to 30 seconds)
+        $maxAttempts = 15
+        $attempt = 0
+        $success = $false
+        
+        while ($attempt -lt $maxAttempts -and -not $success) {
+          $attempt++
+          Start-Sleep -Seconds 2
+          
+          # Check if process is still running
+          if ($process.HasExited) {
+            Write-Host "Process exited with code: $($process.ExitCode)"
+            Write-Host "=== STDOUT ==="
+            if (Test-Path $stdoutLog) { Get-Content $stdoutLog }
+            Write-Host "=== STDERR ==="
+            if (Test-Path $stderrLog) { Get-Content $stderrLog }
+            Write-Error "Backend process exited unexpectedly!"
             exit 1
           }
-        } catch {
-          Write-Error "Failed to reach health endpoint: $_"
-          exit 1
-        } finally {
-          # Stop the process
-          if ($process -and !$process.HasExited) {
-            Stop-Process -Id $process.Id -Force
-            Write-Host "Backend process stopped"
+          
+          try {
+            $response = Invoke-WebRequest -Uri "http://127.0.0.1:5678/api/health" -UseBasicParsing -TimeoutSec 5
+            if ($response.StatusCode -eq 200) {
+              $success = $true
+              Write-Host "Smoke test passed on attempt $attempt! Health endpoint returned 200 OK"
+              Write-Host "Response: $($response.Content)"
+            }
+          } catch {
+            Write-Host "Attempt $attempt/$maxAttempts - Server not ready yet..."
           }
+        }
+        
+        # Show logs for debugging
+        Write-Host "=== STDOUT ==="
+        if (Test-Path $stdoutLog) { Get-Content $stdoutLog }
+        Write-Host "=== STDERR ==="
+        if (Test-Path $stderrLog) { Get-Content $stderrLog }
+        
+        # Stop the process
+        if ($process -and !$process.HasExited) {
+          Stop-Process -Id $process.Id -Force
+          Write-Host "Backend process stopped"
+        }
+        
+        if (-not $success) {
+          Write-Error "Smoke test failed after $maxAttempts attempts!"
+          exit 1
         }
       shell: pwsh
 
