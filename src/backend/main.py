@@ -111,11 +111,12 @@ app.include_router(models.router, prefix="/api", tags=["Models"])
 def main():
     """Run the backend server."""
     logger.info(f"Starting server on {settings.host}:{settings.port}")
+    # Pass app object directly for PyInstaller compatibility
+    # reload=False is required when passing app object (not a string)
     uvicorn.run(
-        "main:app",
+        app,
         host=settings.host,
         port=settings.port,
-        reload=settings.debug,
         log_level="debug" if settings.debug else "info",
     )
 
