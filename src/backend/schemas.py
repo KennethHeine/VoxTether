@@ -46,6 +46,15 @@ class ModelActionResponse(BaseModel):
 # ============================================================================
 
 
+class WordInfo(BaseModel):
+    """Information about a single word with timestamp."""
+
+    word: str = Field(..., description="The word text")
+    start: float = Field(..., description="Start time in seconds")
+    end: float = Field(..., description="End time in seconds")
+    probability: float = Field(..., description="Confidence probability (0-1)")
+
+
 class TranscriptionResponse(BaseModel):
     """Response model for transcription."""
 
@@ -54,6 +63,7 @@ class TranscriptionResponse(BaseModel):
     duration: float
     success: bool
     error: Optional[str] = None
+    words: Optional[List[WordInfo]] = Field(None, description="Word-level timestamps if requested")
 
 
 class TranscriptionSettings(BaseModel):

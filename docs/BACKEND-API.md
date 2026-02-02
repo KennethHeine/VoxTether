@@ -29,15 +29,23 @@ Check if the backend is running and get system information.
 **Response:**
 ```json
 {
-  "status": "ok",
-  "version": "1.0.0",
-  "cuda_available": true,
-  "device": "cuda",
-  "compute_type": "float16",
+  "status": "healthy",
+  "version": "2.0.0",
   "model_loaded": true,
-  "current_model": "small"
+  "model_name": "small",
+  "device": "cuda",
+  "uptime_seconds": 123.45,
+  "checks": {
+    "transcriber": "healthy",
+    "model": "loaded"
+  }
 }
 ```
+
+**Status Values:**
+- `healthy`: Backend running, model loaded
+- `degraded`: Backend running, no model loaded
+- `unhealthy`: Backend not ready
 
 ---
 
@@ -115,10 +123,14 @@ Transcribe an audio file.
 
 **Request:**
 - Content-Type: `multipart/form-data`
-- Body: Audio file (WAV, MP3, FLAC, etc.)
+- Body: Audio file (WAV, MP3, FLAC, OGG, M4A, WebM)
 
-**Query Parameters:**
+**Form Parameters:**
+- `file` (required): Audio file to transcribe
 - `language` (optional): Language code (e.g., "en", "de", "auto"). Default: "auto"
+- `translate` (optional): Translate to English. Default: false
+- `initial_prompt` (optional): Prompt to guide transcription (e.g., domain-specific terms)
+- `word_timestamps` (optional): Return word-level timestamps. Default: false
 
 **Response:**
 ```json
@@ -126,20 +138,41 @@ Transcribe an audio file.
   "text": "Hello, this is a test transcription.",
   "language": "en",
   "duration": 3.5,
-  "segments": [
-    {
-      "start": 0.0,
-      "end": 3.5,
-      "text": "Hello, this is a test transcription."
-    }
+  "success": true,
+  "error": null,
+  "words": null
+}
+```
+
+**Response with word_timestamps=true:**
+```json
+{
+  "text": "Hello, this is a test.",
+  "language": "en",
+  "duration": 3.5,
+  "success": true,
+  "error": null,
+  "words": [
+    {"word": "Hello,", "start": 0.0, "end": 0.5, "probability": 0.95},
+    {"word": "this", "start": 0.6, "end": 0.8, "probability": 0.98},
+    {"word": "is", "start": 0.9, "end": 1.0, "probability": 0.97},
+    {"word": "a", "start": 1.1, "end": 1.2, "probability": 0.99},
+    {"word": "test.", "start": 1.3, "end": 1.8, "probability": 0.96}
   ]
 }
 ```
 
+**Error Responses:**
+- `400 Bad Request`: Invalid file type
+- `413 Request Entity Too Large`: File exceeds size limit (default: 50 MB)
+- `503 Service Unavailable`: No model loaded
+
 **Example with curl:**
 ```bash
-curl -X POST "http://127.0.0.1:5678/api/transcribe?language=auto" \
-  -F "file=@recording.wav"
+curl -X POST "http://127.0.0.1:5678/api/transcribe" \
+  -F "file=@recording.wav" \
+  -F "language=auto" \
+  -F "initial_prompt=VoxTether, transcription, API"
 ```
 
 ---
