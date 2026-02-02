@@ -108,6 +108,9 @@ async def transcribe_audio(
             words=result.words,
         )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions to be handled by FastAPI
+        raise
     except Exception as e:
         logger.error(f"Transcription failed: {e}")
         return TranscriptionResponse(
