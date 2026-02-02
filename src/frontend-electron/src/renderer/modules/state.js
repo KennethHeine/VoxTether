@@ -106,7 +106,7 @@ function notify(key, value) {
 
 // Settings
 export function getSettings() {
-    return state.settings;
+    return { ...state.settings };
 }
 
 export function setSettings(newSettings) {
@@ -134,6 +134,9 @@ export function getCapturingHotkeyType() {
 }
 
 // Recording state
+// NOTE: Returns direct reference because recording state contains live objects
+// (MediaRecorder, Stream, AudioContext) that cannot be shallow-copied.
+// Use setRecordingState() for all modifications to ensure proper notifications.
 export function getRecordingState() {
     return state.recording;
 }
@@ -148,6 +151,9 @@ export function isRecording() {
 }
 
 // Mic test state
+// NOTE: Returns direct reference because mic test state contains live objects
+// (Stream, AudioContext, AnalyserNode) that cannot be shallow-copied.
+// Use setMicTestState() for all modifications.
 export function getMicTestState() {
     return state.micTest;
 }
@@ -158,7 +164,7 @@ export function setMicTestState(updates) {
 
 // History
 export function getHistoryItems() {
-    return state.historyItems;
+    return [...state.historyItems];
 }
 
 export function setHistoryItems(items) {
@@ -187,7 +193,7 @@ export function clearHistoryItems() {
 
 // Statistics
 export function getStatistics() {
-    return state.statistics;
+    return { ...state.statistics };
 }
 
 export function setStatistics(stats) {

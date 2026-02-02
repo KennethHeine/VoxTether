@@ -21,6 +21,9 @@ export {
     previewInsert
 } from './preview.js';
 
+// Lock to prevent race conditions during recording state transitions
+let isTransitioning = false;
+
 /**
  * Start test recording (triggered by the test button in settings)
  */
@@ -77,8 +80,16 @@ export function updateTestRecordingUI(isRecording) {
  * Handle start recording event from main process (hotkey triggered)
  */
 export async function handleStartRecording() {
+    // Prevent race condition with concurrent start/stop calls
+    if (isTransitioning) {
+        console.log('Recording state transition in progress, ignoring start');
+        return;
+    }
+
     const state = getRecordingState();
     if (state.isRecording) return;
+
+    isTransitioning = true;
 
     try {
         // Get selected microphone device from audio settings
@@ -119,6 +130,8 @@ export async function handleStartRecording() {
         updateRecordingStatus('error');
         // Hide overlay if recording failed to start
         await window.voxtether.hideOverlay();
+    } finally {
+        isTransitioning = false;
     }
 }
 
@@ -126,23 +139,35 @@ export async function handleStartRecording() {
  * Handle stop recording event from main process (hotkey released)
  */
 export async function handleStopRecording() {
+    // Prevent race condition with concurrent start/stop calls
+    if (isTransitioning) {
+        console.log('Recording state transition in progress, ignoring stop');
+        return;
+    }
+
     const state = getRecordingState();
     if (!state.isRecording) return;
 
-    state.isRecording = false;
-    setRecordingState(state);
+    isTransitioning = true;
 
-    // Stop audio level monitoring
-    stopRecordingLevelMonitor();
+    try {
+        state.isRecording = false;
+        setRecordingState(state);
 
-    if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
-        state.mediaRecorder.stop();
+        // Stop audio level monitoring
+        stopRecordingLevelMonitor();
+
+        if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+            state.mediaRecorder.stop();
+        }
+
+        // Stop all tracks
+        if (state.stream) {
+            state.stream.getTracks().forEach(track => track.stop());
+        }
+
+        console.log('Recording stopped');
+    } finally {
+        isTransitioning = false;
     }
-
-    // Stop all tracks
-    if (state.stream) {
-        state.stream.getTracks().forEach(track => track.stop());
-    }
-
-    console.log('Recording stopped');
 }

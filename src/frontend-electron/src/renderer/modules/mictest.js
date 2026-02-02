@@ -5,6 +5,16 @@
  */
 
 import { getMicTestState, setMicTestState } from './state.js';
+import {
+    MIC_TEST_FFT_SIZE,
+    AUDIO_SMOOTHING_TIME_CONSTANT,
+    AUDIO_LEVEL_NORMALIZATION,
+    RMS_SCALE_FACTOR,
+    PEAK_DECAY_RATE,
+    WAVEFORM_COLORS,
+    WAVEFORM_LINE_WIDTH,
+    CENTER_LINE_WIDTH
+} from './audio-constants.js';
 
 /**
  * Check if mic test is currently running
@@ -101,8 +111,8 @@ export async function startMicTest() {
         // Create audio context and analyser
         state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         state.analyser = state.audioContext.createAnalyser();
-        state.analyser.fftSize = 2048;
-        state.analyser.smoothingTimeConstant = 0.8;
+        state.analyser.fftSize = MIC_TEST_FFT_SIZE;
+        state.analyser.smoothingTimeConstant = AUDIO_SMOOTHING_TIME_CONSTANT;
 
         const source = state.audioContext.createMediaStreamSource(state.stream);
         source.connect(state.analyser);
@@ -219,17 +229,17 @@ function animateMicTest() {
     // Calculate RMS level
     let sum = 0;
     for (let i = 0; i < state.audioData.length; i++) {
-        const value = (state.audioData[i] - 128) / 128;
+        const value = (state.audioData[i] - AUDIO_LEVEL_NORMALIZATION) / AUDIO_LEVEL_NORMALIZATION;
         sum += value * value;
     }
     const rms = Math.sqrt(sum / state.audioData.length);
-    const level = Math.min(1, rms * 3); // Scale for visibility
+    const level = Math.min(1, rms * RMS_SCALE_FACTOR); // Scale for visibility
 
     // Update peak level with decay
     if (level > state.peakLevel) {
         state.peakLevel = level;
     } else {
-        state.peakLevel = Math.max(level, state.peakLevel * 0.98);
+        state.peakLevel = Math.max(level, state.peakLevel * PEAK_DECAY_RATE);
     }
 
     // Update volume bar using cached elements
@@ -259,34 +269,32 @@ function drawWaveform() {
     const width = canvas.width;
     const height = canvas.height;
 
-    // Get theme colors
+    // Get theme colors from constants
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const bgColor = isDark ? '#202020' : '#f9f9f9';
-    const lineColor = isDark ? '#4682B4' : '#0078d4';
-    const centerLineColor = isDark ? '#404040' : '#e0e0e0';
+    const colors = isDark ? WAVEFORM_COLORS.dark : WAVEFORM_COLORS.light;
 
     // Clear canvas
-    canvasCtx.fillStyle = bgColor;
+    canvasCtx.fillStyle = colors.background;
     canvasCtx.fillRect(0, 0, width, height);
 
     // Draw center line
     canvasCtx.beginPath();
-    canvasCtx.strokeStyle = centerLineColor;
-    canvasCtx.lineWidth = 1;
+    canvasCtx.strokeStyle = colors.centerLine;
+    canvasCtx.lineWidth = CENTER_LINE_WIDTH;
     canvasCtx.moveTo(0, height / 2);
     canvasCtx.lineTo(width, height / 2);
     canvasCtx.stroke();
 
     // Draw waveform
     canvasCtx.beginPath();
-    canvasCtx.strokeStyle = lineColor;
-    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = colors.line;
+    canvasCtx.lineWidth = WAVEFORM_LINE_WIDTH;
 
     const sliceWidth = width / state.audioData.length;
     let x = 0;
 
     for (let i = 0; i < state.audioData.length; i++) {
-        const v = state.audioData[i] / 128.0;
+        const v = state.audioData[i] / (AUDIO_LEVEL_NORMALIZATION * 1.0);
         const y = (v * height) / 2;
 
         if (i === 0) {

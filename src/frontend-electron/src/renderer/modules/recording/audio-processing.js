@@ -5,6 +5,12 @@
  */
 
 import { getRecordingState, setRecordingState } from '../state.js';
+import {
+    RECORDING_FFT_SIZE,
+    AUDIO_SMOOTHING_TIME_CONSTANT,
+    AUDIO_LEVEL_NORMALIZATION,
+    MAX_LEVEL_PERCENT
+} from '../audio-constants.js';
 
 /**
  * Set up audio level monitoring during recording
@@ -17,8 +23,8 @@ export function setupRecordingLevelMonitor() {
         // Create audio context and analyser
         state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         state.analyser = state.audioContext.createAnalyser();
-        state.analyser.fftSize = 256;
-        state.analyser.smoothingTimeConstant = 0.8;
+        state.analyser.fftSize = RECORDING_FFT_SIZE;
+        state.analyser.smoothingTimeConstant = AUDIO_SMOOTHING_TIME_CONSTANT;
 
         const source = state.audioContext.createMediaStreamSource(state.stream);
         source.connect(state.analyser);
@@ -96,7 +102,7 @@ function animateRecordingLevel() {
         sum += state.audioData[i];
     }
     const average = sum / state.audioData.length;
-    const level = Math.min(100, (average / 128) * 100);
+    const level = Math.min(MAX_LEVEL_PERCENT, (average / AUDIO_LEVEL_NORMALIZATION) * MAX_LEVEL_PERCENT);
 
     // Update level bar
     const levelBar = document.getElementById('recording-level-bar');
