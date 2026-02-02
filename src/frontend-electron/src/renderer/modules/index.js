@@ -88,9 +88,8 @@ import {
     initializeAboutListeners
 } from './about.js';
 
-// Audio device detection
+// Audio device refresh
 import {
-    setupAudioDeviceDetection,
     refreshAudioDevices
 } from './audio.js';
 
@@ -395,9 +394,6 @@ async function initialize() {
 
     // Set up model download progress listener
     initializeDownloadListener();
-
-    // Set up audio device change detection
-    setupAudioDeviceDetection();
 
     // Set up theme listener
     setupThemeListener();
