@@ -23,6 +23,8 @@ export {
 
 // Lock to prevent race conditions during recording state transitions
 let isTransitioning = false;
+// Flag to track if a stop was requested during a start transition
+let pendingStop = false;
 
 /**
  * Start test recording (triggered by the test button in settings)
@@ -90,6 +92,7 @@ export async function handleStartRecording() {
     if (state.isRecording) return;
 
     isTransitioning = true;
+    pendingStop = false; // Clear any previous pending stop
 
     try {
         // Get selected microphone device from audio settings
@@ -132,6 +135,12 @@ export async function handleStartRecording() {
         await window.voxtether.hideOverlay();
     } finally {
         isTransitioning = false;
+
+        // Process pending stop if one was queued during start
+        if (pendingStop) {
+            pendingStop = false;
+            await handleStopRecording();
+        }
     }
 }
 
@@ -139,9 +148,10 @@ export async function handleStartRecording() {
  * Handle stop recording event from main process (hotkey released)
  */
 export async function handleStopRecording() {
-    // Prevent race condition with concurrent start/stop calls
+    // If a transition is in progress, queue this stop to be processed after
     if (isTransitioning) {
-        console.log('Recording state transition in progress, ignoring stop');
+        console.log('Recording state transition in progress, queuing stop');
+        pendingStop = true;
         return;
     }
 

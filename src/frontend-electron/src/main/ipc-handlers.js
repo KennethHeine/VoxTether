@@ -352,8 +352,8 @@ function registerIpcHandlers(dependencies) {
 
         const normalizedPath = path.normalize(pathToOpen);
 
-        // Ensure it's an absolute path and doesn't contain traversal
-        if (!path.isAbsolute(normalizedPath) || normalizedPath.includes('..')) {
+        // Ensure it's an absolute path; traversal is enforced via allowlisted roots below
+        if (!path.isAbsolute(normalizedPath)) {
             return { success: false, error: 'Invalid path' };
         }
 

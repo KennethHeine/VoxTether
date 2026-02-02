@@ -145,5 +145,5 @@ export const VALID_MODEL_NAMES = [
 
 export const ALLOWED_EXTERNAL_URL_PATTERNS = [
     /^https:\/\/github\.com\/kennethsolberg\//i,
-    /^https:\/\/github\.com\/[^/]+\/voxtether/i
+    /^https:\/\/github\.com\/[^/]+\/voxtether(?:\/|$)/i
 ];
