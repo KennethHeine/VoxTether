@@ -86,6 +86,56 @@ VoxTether/
 - Use type hints where appropriate
 - Use ruff for linting
 
+## Dependency Management
+
+### Frontend (npm)
+
+**Important**: Always keep `package-lock.json` in sync with `package.json` to prevent CI/CD failures.
+
+When updating frontend dependencies in `src/frontend-electron/`:
+
+1. **Never modify `package-lock.json` manually**
+2. **Always use npm commands to update dependencies**:
+   ```bash
+   cd src/frontend-electron
+   
+   # Install new dependencies
+   npm install <package-name>
+   
+   # Update existing dependencies
+   npm update
+   
+   # Update specific package
+   npm install <package-name>@latest
+   ```
+
+3. **After updating `package.json`**, regenerate the lock file:
+   ```bash
+   npm install
+   ```
+
+4. **Always commit both files together**:
+   ```bash
+   git add package.json package-lock.json
+   git commit -m "Update frontend dependencies"
+   ```
+
+**CI/CD Note**: The workflows use `npm ci` which requires exact sync between `package.json` and `package-lock.json`. If these files are out of sync, the build will fail.
+
+### Backend (pip)
+
+When updating Python dependencies in `src/backend/`:
+
+1. Update `requirements.txt` with the new dependency
+2. Install in your virtual environment:
+   ```bash
+   cd src/backend
+   .\venv\Scripts\Activate.ps1  # Windows
+   pip install -r requirements.txt
+   ```
+
+3. For development dependencies, update `requirements-dev.txt` in the project root
+
 ## Testing
 
 - Backend: Run backend server and test with curl or frontend
