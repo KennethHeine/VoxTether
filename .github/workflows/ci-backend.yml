@@ -49,3 +49,116 @@ jobs:
         sleep 5
         curl -f http://127.0.0.1:5678/api/health || echo "Health check failed"
       continue-on-error: true
+
+  build-backend:
+    name: Build Backend Executable
+    runs-on: windows-latest
+    needs: test-backend
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+        cache-dependency-path: 'src/backend/requirements.txt'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r src/backend/requirements.txt
+        pip install pyinstaller
+      shell: pwsh
+
+    - name: Build backend executable
+      run: |
+        cd src/backend
+        pyinstaller --onefile --name vox-backend main.py
+      shell: pwsh
+
+    - name: Verify executable exists
+      run: |
+        if (Test-Path "src/backend/dist/vox-backend.exe") {
+          Write-Host "Backend executable built successfully!"
+          Get-Item "src/backend/dist/vox-backend.exe" | Format-List Name, Length, LastWriteTime
+        } else {
+          Write-Error "Backend executable not found!"
+          exit 1
+        }
+      shell: pwsh
+
+    - name: Smoke test executable
+      run: |
+        Write-Host "Starting backend executable for smoke test..."
+        
+        # Create log files to capture output
+        $stdoutLog = "src/backend/dist/stdout.log"
+        $stderrLog = "src/backend/dist/stderr.log"
+        
+        # Start process with output redirection and disable model preloading
+        $env:VOXTETHER_PRELOAD_MODEL = "false"
+        $process = Start-Process -FilePath "src/backend/dist/vox-backend.exe" `
+          -RedirectStandardOutput $stdoutLog `
+          -RedirectStandardError $stderrLog `
+          -PassThru
+        
+        Write-Host "Process started with PID: $($process.Id)"
+        
+        # Retry loop to wait for server to be ready (up to 30 seconds)
+        $maxAttempts = 15
+        $attempt = 0
+        $success = $false
+        
+        while ($attempt -lt $maxAttempts -and -not $success) {
+          $attempt++
+          Start-Sleep -Seconds 2
+          
+          # Check if process is still running
+          if ($process.HasExited) {
+            Write-Host "Process exited with code: $($process.ExitCode)"
+            Write-Host "=== STDOUT ==="
+            if (Test-Path $stdoutLog) { Get-Content $stdoutLog }
+            Write-Host "=== STDERR ==="
+            if (Test-Path $stderrLog) { Get-Content $stderrLog }
+            Write-Error "Backend process exited unexpectedly!"
+            exit 1
+          }
+          
+          try {
+            $response = Invoke-WebRequest -Uri "http://127.0.0.1:5678/api/health" -UseBasicParsing -TimeoutSec 5
+            if ($response.StatusCode -eq 200) {
+              $success = $true
+              Write-Host "Smoke test passed on attempt $attempt! Health endpoint returned 200 OK"
+              Write-Host "Response: $($response.Content)"
+            }
+          } catch {
+            Write-Host "Attempt $attempt/$maxAttempts - Server not ready yet..."
+          }
+        }
+        
+        # Show logs for debugging
+        Write-Host "=== STDOUT ==="
+        if (Test-Path $stdoutLog) { Get-Content $stdoutLog }
+        Write-Host "=== STDERR ==="
+        if (Test-Path $stderrLog) { Get-Content $stderrLog }
+        
+        # Stop the process
+        if ($process -and -not $process.HasExited) {
+          Stop-Process -Id $process.Id -Force
+          Write-Host "Backend process stopped"
+        }
+        
+        if (-not $success) {
+          Write-Error "Smoke test failed after $maxAttempts attempts!"
+          exit 1
+        }
+      shell: pwsh
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vox-backend-exe
+        path: src/backend/dist/vox-backend.exe
+        retention-days: 7
