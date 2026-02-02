@@ -60,7 +60,7 @@ async def transcribe_audio(
     if not transcriber.is_loaded():
         raise ModelNotLoadedError()
     
-    # Validate file extension
+    # Validate file extension (allow files without extension for flexibility)
     if file.filename:
         ext = Path(file.filename).suffix.lower()
         if ext and ext not in ALLOWED_AUDIO_EXTENSIONS:

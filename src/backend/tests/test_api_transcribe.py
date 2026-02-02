@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from config import settings
 from main import app
 
 
@@ -112,7 +113,6 @@ def test_transcribe_valid_extensions(client, mock_transcriber, sample_audio_file
 def test_transcribe_file_too_large(client, mock_transcriber, tmp_path, monkeypatch):
     """Test transcription rejects files that are too large."""
     # Temporarily set a very small limit
-    from config import settings
     monkeypatch.setattr(settings, "max_upload_size_mb", 1)  # 1 MB limit
     
     # Create a file larger than 1 MB

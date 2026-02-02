@@ -62,7 +62,9 @@ def _get_executor() -> ThreadPoolExecutor:
     global _executor
     if _executor is None:
         _executor = ThreadPoolExecutor(max_workers=settings.max_workers)
-        atexit.register(lambda: _executor.shutdown(wait=True, cancel_futures=True))
+        # Store reference to avoid capturing a potentially None variable
+        executor_ref = _executor
+        atexit.register(lambda: executor_ref.shutdown(wait=True, cancel_futures=True))
     return _executor
 
 
