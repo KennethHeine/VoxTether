@@ -8,11 +8,12 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from config import settings
 from constants import DEFAULT_BEAM_SIZE, DEFAULT_VAD_FILTER
 from protocols import TranscriptionResult
+from schemas import WordInfo
 
 logger = logging.getLogger(__name__)
 
@@ -52,14 +53,19 @@ def _setup_cuda_dll_paths() -> None:
 # Setup CUDA DLL paths before any CUDA imports
 _setup_cuda_dll_paths()
 
-# Thread pool for blocking operations
-_executor = ThreadPoolExecutor(max_workers=2)
+# Thread pool for blocking operations (lazy initialization)
+_executor: Optional[ThreadPoolExecutor] = None
 
-# Register cleanup at shutdown
-def _cleanup_executor():
-    _executor.shutdown(wait=True, cancel_futures=True)
 
-atexit.register(_cleanup_executor)
+def _get_executor() -> ThreadPoolExecutor:
+    """Get the thread pool executor, creating it if needed."""
+    global _executor
+    if _executor is None:
+        _executor = ThreadPoolExecutor(max_workers=settings.max_workers)
+        # Store reference to avoid capturing a potentially None variable
+        executor_ref = _executor
+        atexit.register(lambda: executor_ref.shutdown(wait=True, cancel_futures=True))
+    return _executor
 
 
 class TranscriberService:
@@ -71,6 +77,9 @@ class TranscriberService:
         self._model_name: Optional[str] = None
         self._device: Optional[str] = None
         self._compute_type: Optional[str] = None
+        # Override settings for device switching
+        self._device_override: Optional[str] = None
+        self._compute_type_override: Optional[str] = None
     
     def _resolve_device(self) -> tuple[str, str]:
         """Resolve the device and compute type to use.
@@ -78,8 +87,9 @@ class TranscriberService:
         Returns:
             Tuple of (device, compute_type).
         """
-        device = settings.device
-        compute_type = settings.compute_type
+        # Use overrides first, then settings
+        device = self._device_override or settings.device
+        compute_type = self._compute_type_override or settings.compute_type
         
         if device == "auto":
             # Try to detect CUDA availability
@@ -210,7 +220,7 @@ class TranscriberService:
                 return False
         
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(_executor, _load)
+        return await loop.run_in_executor(_get_executor(), _load)
     
     def unload_model(self) -> None:
         """Unload the current model."""
@@ -218,6 +228,8 @@ class TranscriberService:
         self._model_name = None
         self._device = None
         self._compute_type = None
+        self._device_override = None
+        self._compute_type_override = None
         logger.info("Model unloaded")
     
     def is_loaded(self) -> bool:
@@ -237,6 +249,8 @@ class TranscriberService:
         audio_path: str,
         language: str = "auto",
         task: str = "transcribe",
+        initial_prompt: Optional[str] = None,
+        word_timestamps: bool = False,
     ) -> TranscriptionResult:
         """Transcribe an audio file.
         
@@ -244,6 +258,8 @@ class TranscriberService:
             audio_path: Path to the audio file.
             language: Language code or 'auto'.
             task: 'transcribe' or 'translate'.
+            initial_prompt: Optional prompt to guide transcription.
+            word_timestamps: Whether to return word-level timestamps.
             
         Returns:
             TranscriptionResult with the text.
@@ -270,11 +286,23 @@ class TranscriberService:
                     task=task,
                     beam_size=DEFAULT_BEAM_SIZE,
                     vad_filter=DEFAULT_VAD_FILTER,
+                    initial_prompt=initial_prompt,
+                    word_timestamps=word_timestamps,
                 )
                 
                 text_parts = []
+                words: List[WordInfo] = []
                 for segment in segments:
                     text_parts.append(segment.text)
+                    # Extract word-level timestamps if requested
+                    if word_timestamps and hasattr(segment, 'words') and segment.words:
+                        for word in segment.words:
+                            words.append(WordInfo(
+                                word=word.word,
+                                start=word.start,
+                                end=word.end,
+                                probability=word.probability,
+                            ))
                 
                 text = "".join(text_parts).strip()
                 duration = time.time() - start_time
@@ -286,6 +314,7 @@ class TranscriberService:
                     success=True,
                     duration_seconds=duration,
                     language=info.language,
+                    words=words if word_timestamps and words else None,
                 )
                 
             except Exception as e:
@@ -298,25 +327,29 @@ class TranscriberService:
                 )
         
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(_executor, _transcribe)
+        return await loop.run_in_executor(_get_executor(), _transcribe)
     
     async def change_device(self, device: str, compute_type: str = "auto") -> bool:
         """Change the compute device.
         
         Args:
-            device: Device to use ('cuda' or 'cpu').
-            compute_type: Compute type to use.
+            device: Device to use ('cuda', 'cpu', or 'auto').
+            compute_type: Compute type to use ('float16', 'int8', 'float32', or 'auto').
             
         Returns:
             True if successful.
         """
         try:
-            # We can't modify pydantic settings directly, so we'll just reload
-            current_model = self._model_name
-            self.unload_model()
+            # Store overrides (None for "auto" to use settings defaults)
+            self._device_override = device if device != "auto" else None
+            self._compute_type_override = compute_type if compute_type != "auto" else None
             
-            # Temporarily override for this load
+            current_model = self._model_name
             if current_model:
+                # Unload and reload with new device settings
+                self._model = None
+                self._device = None
+                self._compute_type = None
                 return await self.load_model(current_model)
             return True
             

@@ -40,15 +40,13 @@ jobs:
       run: |
         pip install ruff
         ruff check src/backend/
-      continue-on-error: true
 
     - name: Test backend starts correctly
       run: |
         cd src/backend
         timeout 10 python -m uvicorn main:app --host 127.0.0.1 --port 5678 &
         sleep 5
-        curl -f http://127.0.0.1:5678/api/health || echo "Health check failed"
-      continue-on-error: true
+        curl -f http://127.0.0.1:5678/api/health || exit 1
 
   build-backend:
     name: Build Backend Executable

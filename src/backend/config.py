@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     device: str = Field(default="auto", description="Device to use (auto, cuda, cpu)")
     compute_type: str = Field(default="auto", description="Compute type (auto, float16, int8, float32)")
     default_language: str = Field(default="auto", description="Default language for transcription")
+    max_workers: int = Field(default=2, description="Max worker threads for transcription")
+    max_upload_size_mb: int = Field(default=50, description="Maximum upload size in MB")
     
     model_config = {
         "env_prefix": "VOXTETHER_",

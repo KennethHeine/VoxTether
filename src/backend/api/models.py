@@ -3,7 +3,7 @@
 import json
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from config import settings
@@ -128,14 +128,25 @@ async def unload_model(
     """Unload the current model.
     
     Args:
-        model_name: Name of the model (path parameter, currently unused).
+        model_name: Name of the model to unload.
         transcriber: Transcriber service from dependency injection.
         
     Returns:
         Action response indicating success.
+        
+    Raises:
+        HTTPException: If the specified model is not the currently loaded model.
     """
+    current = transcriber.get_current_model()
+    if current and current != model_name:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot unload '{model_name}': currently loaded model is '{current}'"
+        )
+    
     transcriber.unload_model()
     return ModelActionResponse(
         success=True,
-        message="Model unloaded successfully",
+        model=model_name,
+        message=f"Model '{model_name}' unloaded successfully",
     )

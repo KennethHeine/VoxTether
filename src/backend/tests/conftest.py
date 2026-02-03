@@ -33,8 +33,14 @@ def mock_transcriber():
     transcriber.load_model = AsyncMock(return_value=True)
     transcriber.unload_model = MagicMock()
     
-    # Mock transcribe method
-    async def mock_transcribe(audio_path, language="auto", task="transcribe"):
+    # Mock transcribe method with new parameters
+    async def mock_transcribe(
+        audio_path,
+        language="auto",
+        task="transcribe",
+        initial_prompt=None,
+        word_timestamps=False,
+    ):
         from protocols import TranscriptionResult
         return TranscriptionResult(
             text="Test transcription",
@@ -65,8 +71,18 @@ def mock_model_manager(temp_models_dir):
     # Mock the download method
     async def mock_download(model_name):
         from schemas import DownloadProgress
-        yield DownloadProgress(status="downloading", progress=50.0)
-        yield DownloadProgress(status="complete", progress=100.0)
+        yield DownloadProgress(
+            status="downloading",
+            progress=50.0,
+            downloaded_mb=50.0,
+            total_mb=100.0,
+        )
+        yield DownloadProgress(
+            status="complete",
+            progress=100.0,
+            downloaded_mb=100.0,
+            total_mb=100.0,
+        )
     
     manager.download_model_async = mock_download
     

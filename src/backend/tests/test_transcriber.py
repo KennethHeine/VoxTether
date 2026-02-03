@@ -141,6 +141,7 @@ class TestTranscriberServiceIntegration:
                 mock_settings.compute_type = "int8"
                 mock_settings.models_path = str(tmp_path)
                 mock_settings.default_model = "small"
+                mock_settings.max_workers = 2
                 
                 # Model doesn't exist in temp directory, so it will use the model name
                 result = await transcriber.load_model("small")

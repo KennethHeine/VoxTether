@@ -1,8 +1,8 @@
 """Protocol definitions for VoxTether backend services."""
 
-from typing import Optional, Protocol, AsyncGenerator
+from typing import Optional, Protocol, AsyncGenerator, List
 
-from schemas import DownloadProgress
+from schemas import DownloadProgress, WordInfo
 
 
 class TranscriptionResult:
@@ -15,12 +15,14 @@ class TranscriptionResult:
         duration_seconds: float,
         language: Optional[str] = None,
         error: Optional[str] = None,
+        words: Optional[List[WordInfo]] = None,
     ):
         self.text = text
         self.success = success
         self.duration_seconds = duration_seconds
         self.language = language
         self.error = error
+        self.words = words
 
 
 class TranscriberProtocol(Protocol):
@@ -51,6 +53,8 @@ class TranscriberProtocol(Protocol):
         audio_path: str,
         language: str = "auto",
         task: str = "transcribe",
+        initial_prompt: Optional[str] = None,
+        word_timestamps: bool = False,
     ) -> TranscriptionResult:
         """Transcribe an audio file."""
         ...
