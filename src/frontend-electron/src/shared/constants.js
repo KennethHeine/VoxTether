@@ -124,3 +124,26 @@ export const VALID_OVERLAY_STATES = [
     OVERLAY_STATE_RECORDING,
     OVERLAY_STATE_TRANSCRIBING
 ];
+
+// ============================================================================
+// Valid Model Names
+// ============================================================================
+
+export const VALID_MODEL_NAMES = [
+    'tiny',
+    'base',
+    'small',
+    'medium',
+    'large-v3',
+    'large-v3-turbo',
+    'distil-large-v3'
+];
+
+// ============================================================================
+// Allowed External URLs (whitelist for security)
+// ============================================================================
+
+export const ALLOWED_EXTERNAL_URL_PATTERNS = [
+    /^https:\/\/github\.com\/kennethsolberg\//i,
+    /^https:\/\/github\.com\/[^/]+\/voxtether(?:\/|$)/i
+];

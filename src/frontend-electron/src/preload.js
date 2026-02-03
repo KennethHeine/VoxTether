@@ -54,23 +54,36 @@ contextBridge.exposeInMainWorld('voxtether', {
     getAppInfo: () => ipcRenderer.invoke('get-app-info'),
 
     // Events from main process
+    // Each listener function returns a cleanup function to remove the listener
     onDownloadProgress: (callback) => {
-        ipcRenderer.on('download-progress', (event, data) => callback(data));
+        const handler = (event, data) => callback(data);
+        ipcRenderer.on('download-progress', handler);
+        return () => ipcRenderer.removeListener('download-progress', handler);
     },
     onTestMicrophone: (callback) => {
-        ipcRenderer.on('test-microphone', () => callback());
+        const handler = () => callback();
+        ipcRenderer.on('test-microphone', handler);
+        return () => ipcRenderer.removeListener('test-microphone', handler);
     },
     onRecordingStateChanged: (callback) => {
-        ipcRenderer.on('recording-state-changed', (event, isRecording) => callback(isRecording));
+        const handler = (event, isRecording) => callback(isRecording);
+        ipcRenderer.on('recording-state-changed', handler);
+        return () => ipcRenderer.removeListener('recording-state-changed', handler);
     },
     onStatusChanged: (callback) => {
-        ipcRenderer.on('status-changed', (event, status) => callback(status));
+        const handler = (event, status) => callback(status);
+        ipcRenderer.on('status-changed', handler);
+        return () => ipcRenderer.removeListener('status-changed', handler);
     },
     onStartRecording: (callback) => {
-        ipcRenderer.on('start-recording', () => callback());
+        const handler = () => callback();
+        ipcRenderer.on('start-recording', handler);
+        return () => ipcRenderer.removeListener('start-recording', handler);
     },
     onStopRecording: (callback) => {
-        ipcRenderer.on('stop-recording', () => callback());
+        const handler = () => callback();
+        ipcRenderer.on('stop-recording', handler);
+        return () => ipcRenderer.removeListener('stop-recording', handler);
     },
 
     // Auto-updater (Feature 18)
@@ -78,16 +91,22 @@ contextBridge.exposeInMainWorld('voxtether', {
     downloadUpdate: () => ipcRenderer.invoke('download-update'),
     installUpdate: () => ipcRenderer.invoke('install-update'),
     onUpdateAvailable: (callback) => {
-        ipcRenderer.on('update-available', (event, info) => callback(info));
+        const handler = (event, info) => callback(info);
+        ipcRenderer.on('update-available', handler);
+        return () => ipcRenderer.removeListener('update-available', handler);
     },
     onUpdateDownloadProgress: (callback) => {
-        ipcRenderer.on('update-download-progress', (event, progress) => callback(progress));
+        const handler = (event, progress) => callback(progress);
+        ipcRenderer.on('update-download-progress', handler);
+        return () => ipcRenderer.removeListener('update-download-progress', handler);
     },
     onUpdateDownloaded: (callback) => {
-        ipcRenderer.on('update-downloaded', (event, info) => callback(info));
+        const handler = (event, info) => callback(info);
+        ipcRenderer.on('update-downloaded', handler);
+        return () => ipcRenderer.removeListener('update-downloaded', handler);
     },
 
-    // Remove listeners
+    // Remove listeners (kept for backwards compatibility)
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);
     }

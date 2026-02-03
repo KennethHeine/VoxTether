@@ -42,8 +42,37 @@ const {
     IPC_INSTALL_UPDATE,
     BACKEND_URL,
     BACKEND_PORT,
-    EVENT_DOWNLOAD_PROGRESS
+    EVENT_DOWNLOAD_PROGRESS,
+    VALID_MODEL_NAMES,
+    ALLOWED_EXTERNAL_URL_PATTERNS
 } = require('../shared/constants.js');
+
+/**
+ * Validate model name against allowed list
+ * @param {string} modelName - The model name to validate
+ * @returns {boolean} True if valid, false otherwise
+ */
+function isValidModelName(modelName) {
+    return typeof modelName === 'string' && VALID_MODEL_NAMES.includes(modelName);
+}
+
+/**
+ * Validate URL against allowed patterns
+ * @param {string} url - The URL to validate
+ * @returns {boolean} True if valid, false otherwise
+ */
+function isAllowedExternalUrl(url) {
+    if (typeof url !== 'string') return false;
+    try {
+        const parsed = new URL(url);
+        // Only allow https
+        if (parsed.protocol !== 'https:') return false;
+        // Check against allowed patterns
+        return ALLOWED_EXTERNAL_URL_PATTERNS.some(pattern => pattern.test(url));
+    } catch {
+        return false;
+    }
+}
 
 /**
  * Register all IPC handlers
@@ -155,6 +184,11 @@ function registerIpcHandlers(dependencies) {
     });
 
     ipcMain.handle(IPC_DOWNLOAD_MODEL, async (event, modelName) => {
+        // Validate model name
+        if (!isValidModelName(modelName)) {
+            return { success: false, error: 'Invalid model name' };
+        }
+
         const mainWindow = getMainWindow();
         // For model download, we use SSE which requires special handling
         // Forward progress to renderer
@@ -197,6 +231,11 @@ function registerIpcHandlers(dependencies) {
     });
 
     ipcMain.handle(IPC_LOAD_MODEL, async (event, modelName) => {
+        // Validate model name
+        if (!isValidModelName(modelName)) {
+            return { success: false, error: 'Invalid model name' };
+        }
+
         try {
             await backendRequest('POST', `/api/models/${modelName}/load`);
             return { success: true };
@@ -206,6 +245,11 @@ function registerIpcHandlers(dependencies) {
     });
 
     ipcMain.handle(IPC_DELETE_MODEL, async (event, modelName) => {
+        // Validate model name
+        if (!isValidModelName(modelName)) {
+            return { success: false, error: 'Invalid model name' };
+        }
+
         try {
             await backendRequest('DELETE', `/api/models/${modelName}`);
             return { success: true };
@@ -215,6 +259,9 @@ function registerIpcHandlers(dependencies) {
     });
 
     // Transcription
+    // Timeout for transcription requests (5 minutes - transcription can take time for large files)
+    const TRANSCRIPTION_TIMEOUT_MS = 5 * 60 * 1000;
+
     ipcMain.handle(IPC_TRANSCRIBE, async (event, audioPath, language) => {
         return new Promise((resolve, _reject) => {
             // Validate that the audioPath is within the expected temp directory
@@ -254,6 +301,7 @@ function registerIpcHandlers(dependencies) {
                     port: BACKEND_PORT,
                     path: '/api/transcribe',
                     method: 'POST',
+                    timeout: TRANSCRIPTION_TIMEOUT_MS,
                     headers: {
                         'Content-Type': `multipart/form-data; boundary=${boundary}`,
                         'Content-Length': bodyBuffer.length
@@ -270,6 +318,11 @@ function registerIpcHandlers(dependencies) {
                             resolve({ success: false, error: 'Failed to parse response' });
                         }
                     });
+                });
+
+                req.on('timeout', () => {
+                    req.destroy();
+                    resolve({ success: false, error: 'Transcription request timed out' });
                 });
 
                 req.on('error', (error) => {
@@ -291,12 +344,53 @@ function registerIpcHandlers(dependencies) {
     });
 
     // Shell
-    ipcMain.handle(IPC_OPEN_PATH, (event, pathToOpen) => {
-        shell.openPath(pathToOpen);
+    ipcMain.handle(IPC_OPEN_PATH, async (event, pathToOpen) => {
+        // Validate path - must be a string and absolute path
+        if (typeof pathToOpen !== 'string') {
+            return { success: false, error: 'Invalid path' };
+        }
+
+        const normalizedPath = path.normalize(pathToOpen);
+
+        // Ensure it's an absolute path; traversal is enforced via allowlisted roots below
+        if (!path.isAbsolute(normalizedPath)) {
+            return { success: false, error: 'Invalid path' };
+        }
+
+        // Only allow opening paths within user data, models, or logs directories
+        const userDataPath = getUserDataPath();
+        const modelsPath = getModelsPath();
+        const logsPath = getLogsPath();
+
+        const isAllowed = [userDataPath, modelsPath, logsPath].some(allowedPath => {
+            const relative = path.relative(allowedPath, normalizedPath);
+            return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+        }) || [userDataPath, modelsPath, logsPath].includes(normalizedPath);
+
+        if (!isAllowed) {
+            return { success: false, error: 'Path not allowed' };
+        }
+
+        try {
+            await shell.openPath(normalizedPath);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
     });
 
-    ipcMain.handle(IPC_OPEN_EXTERNAL, (event, url) => {
-        shell.openExternal(url);
+    ipcMain.handle(IPC_OPEN_EXTERNAL, async (event, url) => {
+        // Validate URL against whitelist
+        if (!isAllowedExternalUrl(url)) {
+            return { success: false, error: 'URL not allowed' };
+        }
+
+        try {
+            await shell.openExternal(url);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
     });
 
     // File dialogs
@@ -334,7 +428,7 @@ function registerIpcHandlers(dependencies) {
 
     ipcMain.handle(IPC_SAVE_TRANSCRIPT, async (event, filePath, content) => {
         try {
-            fs.writeFileSync(filePath, content, 'utf8');
+            await fs.promises.writeFile(filePath, content, 'utf8');
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
@@ -346,8 +440,10 @@ function registerIpcHandlers(dependencies) {
             const userDataPath = getUserDataPath();
             // audioData is a base64 encoded string or array of bytes
             const tempDir = path.join(userDataPath, 'temp');
-            if (!fs.existsSync(tempDir)) {
-                fs.mkdirSync(tempDir, { recursive: true });
+            try {
+                await fs.promises.access(tempDir);
+            } catch {
+                await fs.promises.mkdir(tempDir, { recursive: true });
             }
 
             const timestamp = Date.now();
@@ -361,7 +457,7 @@ function registerIpcHandlers(dependencies) {
                 buffer = Buffer.from(audioData);
             }
 
-            fs.writeFileSync(tempPath, buffer);
+            await fs.promises.writeFile(tempPath, buffer);
             return { success: true, filePath: tempPath };
         } catch (error) {
             return { success: false, error: error.message };
@@ -380,8 +476,13 @@ function registerIpcHandlers(dependencies) {
                 const isWithinTempDir =
                     relative && !relative.startsWith('..') && !path.isAbsolute(relative);
 
-                if (isWithinTempDir && fs.existsSync(resolvedFilePath)) {
-                    fs.unlinkSync(resolvedFilePath);
+                if (isWithinTempDir) {
+                    try {
+                        await fs.promises.access(resolvedFilePath);
+                        await fs.promises.unlink(resolvedFilePath);
+                    } catch {
+                        // File doesn't exist, ignore
+                    }
                 }
             }
             return { success: true };
@@ -406,18 +507,22 @@ function registerIpcHandlers(dependencies) {
             }
 
             // Verify destination folder exists
-            if (!fs.existsSync(normalizedDest)) {
+            try {
+                await fs.promises.access(normalizedDest);
+            } catch {
                 return { success: false, error: 'Destination folder does not exist' };
             }
 
             // Verify source file exists
-            if (!fs.existsSync(normalizedSource)) {
+            try {
+                await fs.promises.access(normalizedSource);
+            } catch {
                 return { success: false, error: 'Source file does not exist' };
             }
 
             const fileName = path.basename(normalizedSource);
             const destPath = path.join(normalizedDest, fileName);
-            fs.copyFileSync(normalizedSource, destPath);
+            await fs.promises.copyFile(normalizedSource, destPath);
             return { success: true, destPath: destPath };
         } catch (error) {
             return { success: false, error: error.message };

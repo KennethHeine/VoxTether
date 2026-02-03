@@ -297,11 +297,16 @@ function setupThemeListener() {
 // Backend Health Monitoring
 // ============================================================================
 
-// Health check interval in milliseconds (check every 5 seconds)
-const HEALTH_CHECK_INTERVAL = 5000;
+// Health check configuration
+const HEALTH_CHECK_BASE_INTERVAL = 5000;  // Start with 5 seconds
+const HEALTH_CHECK_MAX_INTERVAL = 60000;  // Max 60 seconds between checks
+const HEALTH_CHECK_BACKOFF_MULTIPLIER = 1.5;  // Increase by 50% on each failure
 
-// Store interval ID for cleanup
-let healthCheckIntervalId = null;
+// Store interval/timeout ID for cleanup
+let healthCheckTimeoutId = null;
+
+// Track current interval (for exponential backoff)
+let currentHealthCheckInterval = HEALTH_CHECK_BASE_INTERVAL;
 
 // Track if backend is currently available
 let isBackendAvailable = false;
@@ -315,6 +320,8 @@ async function checkBackendHealth() {
         const result = await window.voxtether.backendHealth();
         if (result.success) {
             isBackendAvailable = true;
+            // Reset interval on success
+            currentHealthCheckInterval = HEALTH_CHECK_BASE_INTERVAL;
             // Only update to ready if we're not recording or processing
             const currentState = await window.voxtether.getRecordingState();
             if (!currentState.isRecording) {
@@ -323,35 +330,62 @@ async function checkBackendHealth() {
             return true;
         } else {
             isBackendAvailable = false;
+            // Apply exponential backoff on failure
+            currentHealthCheckInterval = Math.min(
+                currentHealthCheckInterval * HEALTH_CHECK_BACKOFF_MULTIPLIER,
+                HEALTH_CHECK_MAX_INTERVAL
+            );
             updateStatus('Backend Offline', 'error');
             return false;
         }
     } catch (error) {
         console.error('Backend health check failed:', error);
         isBackendAvailable = false;
+        // Apply exponential backoff on failure
+        currentHealthCheckInterval = Math.min(
+            currentHealthCheckInterval * HEALTH_CHECK_BACKOFF_MULTIPLIER,
+            HEALTH_CHECK_MAX_INTERVAL
+        );
         updateStatus('Backend Offline', 'error');
         return false;
     }
 }
 
 /**
- * Start periodic backend health monitoring
+ * Schedule the next health check with current interval
  */
-function startHealthMonitoring() {
-    // Clear any existing interval
-    if (healthCheckIntervalId) {
-        clearInterval(healthCheckIntervalId);
+function scheduleNextHealthCheck() {
+    if (healthCheckTimeoutId) {
+        clearTimeout(healthCheckTimeoutId);
     }
 
-    // Set up periodic health check
-    healthCheckIntervalId = setInterval(checkBackendHealth, HEALTH_CHECK_INTERVAL);
+    healthCheckTimeoutId = setTimeout(async () => {
+        await checkBackendHealth();
+        scheduleNextHealthCheck();
+    }, currentHealthCheckInterval);
+}
+
+/**
+ * Start periodic backend health monitoring with exponential backoff
+ */
+function startHealthMonitoring() {
+    // Clear any existing timeout
+    if (healthCheckTimeoutId) {
+        clearTimeout(healthCheckTimeoutId);
+    }
+
+    // Reset interval
+    currentHealthCheckInterval = HEALTH_CHECK_BASE_INTERVAL;
+
+    // Schedule first check
+    scheduleNextHealthCheck();
 }
 
 // Note: _stopHealthMonitoring is available for cleanup but not currently used
 function _stopHealthMonitoring() {
-    if (healthCheckIntervalId) {
-        clearInterval(healthCheckIntervalId);
-        healthCheckIntervalId = null;
+    if (healthCheckTimeoutId) {
+        clearTimeout(healthCheckTimeoutId);
+        healthCheckTimeoutId = null;
     }
 }
 
