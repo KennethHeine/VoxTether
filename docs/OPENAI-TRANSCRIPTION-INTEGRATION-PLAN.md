@@ -585,41 +585,43 @@ class OpenAITranscriberService:
             audio_file = Path(audio_path)
             
             async with httpx.AsyncClient(timeout=60.0) as client:
-                files = {
-                    "file": (audio_file.name, open(audio_path, "rb"), "audio/wav"),
-                }
-                data = {
-                    "model": self._model,
-                    "response_format": "verbose_json",
-                }
-                
-                if language != "auto":
-                    data["language"] = language
-                
-                response = await client.post(
-                    OPENAI_API_URL,
-                    files=files,
-                    data=data,
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                
-                if response.status_code != 200:
-                    error_data = response.json()
-                    return TranscriptionResult(
-                        text="",
-                        success=False,
-                        duration_seconds=0,
-                        error=error_data.get("error", {}).get("message", f"API error: {response.status_code}"),
+                # Open file with context manager to ensure proper cleanup
+                with open(audio_path, "rb") as f:
+                    files = {
+                        "file": (audio_file.name, f, "audio/wav"),
+                    }
+                    data = {
+                        "model": self._model,
+                        "response_format": "verbose_json",
+                    }
+                    
+                    if language != "auto":
+                        data["language"] = language
+                    
+                    response = await client.post(
+                        OPENAI_API_URL,
+                        files=files,
+                        data=data,
+                        headers={"Authorization": f"Bearer {self._api_key}"},
                     )
-                
-                result = response.json()
-                
-                return TranscriptionResult(
-                    text=result.get("text", ""),
-                    success=True,
-                    duration_seconds=result.get("duration", 0),
-                    language=result.get("language"),
-                )
+                    
+                    if response.status_code != 200:
+                        error_data = response.json()
+                        return TranscriptionResult(
+                            text="",
+                            success=False,
+                            duration_seconds=0,
+                            error=error_data.get("error", {}).get("message", f"API error: {response.status_code}"),
+                        )
+                    
+                    result = response.json()
+                    
+                    return TranscriptionResult(
+                        text=result.get("text", ""),
+                        success=True,
+                        duration_seconds=result.get("duration", 0),
+                        language=result.get("language"),
+                    )
                 
         except Exception as e:
             logger.error(f"OpenAI transcription failed: {e}")
