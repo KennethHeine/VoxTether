@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerImage": {
+      "value": "voxtethercr.azurecr.io/voxtether-backend:latest"
+    },
+    "environmentName": {
+      "value": "voxtether-prod-env"
+    },
+    "containerAppName": {
+      "value": "voxtether-backend"
+    },
+    "defaultModel": {
+      "value": "small"
+    },
+    "minReplicas": {
+      "value": 0
+    },
+    "maxReplicas": {
+      "value": 3
+    },
+    "acrName": {
+      "value": "voxtethercr"
+    }
+  }
+}

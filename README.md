@@ -74,6 +74,22 @@ python -m uvicorn main:app --host 0.0.0.0 --port 5678
 2. Configure the backend server address in Settings
 3. Start using push-to-talk!
 
+### Cloud Deployment (Azure)
+
+Deploy the backend to Azure with GPU support for pay-per-use pricing:
+
+```bash
+cd infra
+./deploy.sh dev  # or prod
+```
+
+Features:
+- **Scale-to-zero** - No costs when idle
+- **Pay-per-second** - Only pay when transcribing (~$0.45/hour for T4 GPU)
+- **Automatic scaling** - Handles burst requests
+
+> 📖 **See [Azure GPU Deployment Guide](docs/AZURE-GPU-DEPLOYMENT.md) for detailed instructions and cost optimization.**
+
 ### GPU Acceleration (Optional)
 
 For GPU acceleration with NVIDIA GPUs (on the server):

@@ -1,0 +1,69 @@
+# VoxTether Backend - Docker Compose for Azure GPU Testing
+# 
+# This file is for local testing of the Azure GPU deployment configuration.
+# Requires: Docker with NVIDIA Container Toolkit installed
+#
+# Usage:
+#   docker compose -f docker-compose.azure.yml up --build
+#
+# Prerequisites:
+#   - NVIDIA GPU with CUDA support
+#   - nvidia-container-toolkit installed
+#   - Docker configured for GPU support
+
+version: '3.8'
+
+services:
+  voxtether-backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile.azure
+    container_name: voxtether-gpu
+    ports:
+      - "5678:5678"
+    environment:
+      # Device configuration
+      - VOXTETHER_DEVICE=cuda
+      - VOXTETHER_COMPUTE_TYPE=float16
+      
+      # Model configuration
+      - VOXTETHER_DEFAULT_MODEL=small
+      - VOXTETHER_PRELOAD_MODEL=true
+      
+      # Server configuration
+      - VOXTETHER_HOST=0.0.0.0
+      - VOXTETHER_PORT=5678
+      - VOXTETHER_DEBUG=false
+      
+      # Language (auto-detect or specify: en, es, fr, de, etc.)
+      - VOXTETHER_DEFAULT_LANGUAGE=auto
+    
+    volumes:
+      # Persist models between container restarts
+      - voxtether-models:/app/models
+      # Persist logs
+      - voxtether-logs:/app/logs
+    
+    # GPU configuration - requires nvidia-container-toolkit
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+volumes:
+  voxtether-models:
+    driver: local
+  voxtether-logs:
+    driver: local
