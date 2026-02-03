@@ -93,7 +93,7 @@ export const BACKEND_URL = `http://${BACKEND_HOST}:${BACKEND_PORT}`;
 export const DEFAULT_SETTINGS = {
     windowToggleHotkey: 'Ctrl+Shift+V',
     toggleRecordingHotkey: 'Ctrl+Shift+R',
-    modelName: 'small',
+    modelName: 'large-v3-turbo',
     language: 'auto',
     outputMode: 'ClipboardAndPaste',
     showNotifications: true,
