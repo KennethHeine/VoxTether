@@ -182,11 +182,11 @@ interface ErrorResponse {
 
 ## Available Models
 
-| Model | Description | Best For |
-|-------|-------------|----------|
-| `whisper-1` | Original Whisper model (Jan 2023 snapshot) | General transcription, cost-effective |
-| `gpt-4o-transcribe` | Higher quality transcription | High accuracy requirements |
-| `gpt-4o-mini-transcribe` | Faster, lightweight model | Quick transcriptions |
+| Model | Price | Description | Best For |
+|-------|-------|-------------|----------|
+| `whisper-1` | $0.006/min | Original Whisper model (Jan 2023 snapshot) | General transcription, cost-effective |
+| `gpt-4o-transcribe` | $0.006/min | Higher quality transcription | High accuracy requirements |
+| `gpt-4o-mini-transcribe` | $0.003/min | Faster, lightweight model | Quick transcriptions |
 
 ## Limitations
 

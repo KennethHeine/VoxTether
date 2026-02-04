@@ -39,15 +39,15 @@ The backend provides complete lifecycle management for Whisper models.
 
 **Supported Models:**
 
-| Model | Size | Best For |
-|-------|------|----------|
-| `tiny` | ~75 MB | Quick notes, testing |
-| `base` | ~142 MB | General use |
-| `small` | ~466 MB | Recommended for most users |
-| `medium` | ~1.5 GB | High accuracy |
-| `large-v3` | ~3 GB | Best accuracy |
-| `large-v3-turbo` | ~1.6 GB | Best speed/accuracy balance |
-| `distil-large-v3` | ~1.1 GB | Fast high-quality transcription |
+| Model | Size | Price | Best For |
+|-------|------|-------|----------|
+| `tiny` | ~75 MB | Free (local) | Quick notes, testing |
+| `base` | ~142 MB | Free (local) | General use |
+| `small` | ~466 MB | Free (local) | Recommended for most users |
+| `medium` | ~1.5 GB | Free (local) | High accuracy |
+| `large-v3` | ~3 GB | Free (local) | Best accuracy |
+| `large-v3-turbo` | ~1.6 GB | Free (local) | Best speed/accuracy balance |
+| `distil-large-v3` | ~1.1 GB | Free (local) | Fast high-quality transcription |
 
 ---
 

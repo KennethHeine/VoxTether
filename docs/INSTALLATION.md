@@ -79,15 +79,15 @@ On first launch, VoxTether will:
 
 ### Recommended Models
 
-| Model | Size | Quality | Speed | Best For |
-|-------|------|---------|-------|----------|
-| tiny | ~75 MB | Basic | Very Fast | Quick notes, testing |
-| base | ~142 MB | Good | Fast | General use |
-| **small** | ~466 MB | Better | Moderate | **Recommended for most users** |
-| medium | ~1.5 GB | Great | Slow | When accuracy matters |
-| large-v3 | ~3 GB | Best | Very Slow | Maximum accuracy |
-| large-v3-turbo | ~1.6 GB | Excellent | Fast | Best speed/accuracy balance |
-| distil-large-v3 | ~1.1 GB | Excellent | Fast | Fast high-quality transcription |
+| Model | Size | Price | Quality | Speed | Best For |
+|-------|------|-------|---------|-------|----------|
+| tiny | ~75 MB | Free (local) | Basic | Very Fast | Quick notes, testing |
+| base | ~142 MB | Free (local) | Good | Fast | General use |
+| **small** | ~466 MB | Free (local) | Better | Moderate | **Recommended for most users** |
+| medium | ~1.5 GB | Free (local) | Great | Slow | When accuracy matters |
+| large-v3 | ~3 GB | Free (local) | Best | Very Slow | Maximum accuracy |
+| large-v3-turbo | ~1.6 GB | Free (local) | Excellent | Fast | Best speed/accuracy balance |
+| distil-large-v3 | ~1.1 GB | Free (local) | Excellent | Fast | Fast high-quality transcription |
 
 ---
 
