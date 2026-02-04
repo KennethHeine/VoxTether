@@ -44,6 +44,8 @@ jobs:
     - name: Test backend starts correctly
       run: |
         cd src/backend
+        # Disable model preloading to speed up startup for CI tests
+        export VOXTETHER_PRELOAD_MODEL=false
         timeout 10 python -m uvicorn main:app --host 127.0.0.1 --port 5678 &
         sleep 5
         curl -f http://127.0.0.1:5678/api/health || exit 1

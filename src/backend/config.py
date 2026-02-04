@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     
     # Model settings
     models_path: str = Field(default_factory=get_default_models_path, description="Path to models directory")
-    default_model: str = Field(default="small", description="Default model to use")
+    default_model: str = Field(default="large-v3-turbo", description="Default model to use")
     preload_model: bool = Field(default=True, description="Preload the default model on startup")
     
     # Transcription settings

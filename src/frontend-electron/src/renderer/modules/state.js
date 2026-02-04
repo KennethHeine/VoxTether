@@ -7,13 +7,7 @@
 
 // Model information (static data)
 export const MODEL_INFO = {
-    tiny: { name: 'tiny', displayName: 'Tiny', sizeMb: 75, description: 'Quick notes, low-resource systems' },
-    base: { name: 'base', displayName: 'Base', sizeMb: 142, description: 'General use' },
-    small: { name: 'small', displayName: 'Small', sizeMb: 466, description: 'Recommended for most users' },
-    medium: { name: 'medium', displayName: 'Medium', sizeMb: 1500, description: 'When accuracy is important' },
-    'large-v3': { name: 'large-v3', displayName: 'Large v3', sizeMb: 3000, description: 'When accuracy is critical' },
-    'large-v3-turbo': { name: 'large-v3-turbo', displayName: 'Large v3 Turbo', sizeMb: 1600, description: 'Best balance of speed and accuracy' },
-    'distil-large-v3': { name: 'distil-large-v3', displayName: 'Distil Large v3', sizeMb: 1100, description: 'Fast high-quality transcription' }
+    'large-v3-turbo': { name: 'large-v3-turbo', displayName: 'Large v3 Turbo', sizeMb: 1600, description: 'Excellent accuracy with faster speed' }
 };
 
 // History constants
