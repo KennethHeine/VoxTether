@@ -1300,6 +1300,64 @@ h3 {
     color: var(--accent-color);
 }
 
+/* OpenAI Settings Styles */
+.openai-settings-container {
+    margin-bottom: 12px;
+}
+
+.openai-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-medium);
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.openai-notice .notice-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.openai-notice .notice-text {
+    line-height: 1.5;
+}
+
+.external-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.external-link:hover {
+    text-decoration: underline;
+}
+
+.test-status {
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: var(--radius-small);
+}
+
+.test-status.success {
+    color: var(--success-color);
+    background-color: rgba(16, 124, 16, 0.1);
+}
+
+.test-status.error {
+    color: var(--error-color);
+    background-color: rgba(209, 52, 56, 0.1);
+}
+
+.test-status.testing {
+    color: var(--text-secondary);
+    background-color: var(--bg-tertiary);
+}
+
 /* Responsive adjustments */
 @media (max-width: 700px) {
     .sidebar {

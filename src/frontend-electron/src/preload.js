@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('voxtether', {
     deleteModel: (modelName) => ipcRenderer.invoke('delete-model', modelName),
     transcribe: (audioPath, language) => ipcRenderer.invoke('transcribe', audioPath, language),
 
+    // OpenAI API
+    testOpenAIConnection: (apiKey) => ipcRenderer.invoke('test-openai-connection', apiKey),
+
     // Recording control
     startRecordingManual: () => ipcRenderer.invoke('start-recording-manual'),
     stopRecordingManual: () => ipcRenderer.invoke('stop-recording-manual'),

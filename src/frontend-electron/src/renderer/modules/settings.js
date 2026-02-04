@@ -75,6 +75,20 @@ export function applySettingsToUI() {
 
     const audioDeviceSelect = document.getElementById('audio-device-select');
     if (audioDeviceSelect) audioDeviceSelect.value = String(settings.audioDeviceId || -1);
+
+    // Transcription Provider settings
+    const transcriptionProviderSelect = document.getElementById('transcription-provider-select');
+    if (transcriptionProviderSelect) {
+        transcriptionProviderSelect.value = settings.transcriptionProvider || 'local';
+        // Show/hide OpenAI settings based on provider
+        updateOpenAISettingsVisibility(settings.transcriptionProvider || 'local');
+    }
+
+    const openaiApiKeyInput = document.getElementById('openai-api-key-input');
+    if (openaiApiKeyInput) openaiApiKeyInput.value = settings.openaiApiKey || '';
+
+    const openaiModelSelect = document.getElementById('openai-model-select');
+    if (openaiModelSelect) openaiModelSelect.value = settings.openaiModel || 'whisper-1';
 }
 
 /**
@@ -140,7 +154,11 @@ export async function saveGeneralSettings() {
         theme: getElementValue('theme-select', 'system'),
         recordingOutputFolder: getElementValue('recording-output-folder', ''),
         saveRecordingAudio: getElementChecked('save-recording-audio-toggle', false),
-        saveRecordingTranscript: getElementChecked('save-recording-transcript-toggle', false)
+        saveRecordingTranscript: getElementChecked('save-recording-transcript-toggle', false),
+        // Transcription Provider settings
+        transcriptionProvider: getElementValue('transcription-provider-select', 'local'),
+        openaiApiKey: getElementValue('openai-api-key-input', ''),
+        openaiModel: getElementValue('openai-model-select', 'whisper-1')
     };
 
     await saveSettings(newSettings);
@@ -179,4 +197,110 @@ export async function selectRecordingFolder() {
 export function clearRecordingFolder() {
     const el = document.getElementById('recording-output-folder');
     if (el) el.value = '';
+}
+
+/**
+ * Update OpenAI settings visibility based on provider selection
+ * @param {string} provider - The selected provider ('local' or 'openai')
+ */
+export function updateOpenAISettingsVisibility(provider) {
+    const openaiSettings = document.getElementById('openai-settings');
+    if (openaiSettings) {
+        openaiSettings.classList.toggle('hidden', provider !== 'openai');
+    }
+}
+
+/**
+ * Toggle API key visibility
+ */
+export function toggleApiKeyVisibility() {
+    const apiKeyInput = document.getElementById('openai-api-key-input');
+    const toggleBtn = document.getElementById('toggle-api-key-visibility');
+
+    if (apiKeyInput && toggleBtn) {
+        if (apiKeyInput.type === 'password') {
+            apiKeyInput.type = 'text';
+            toggleBtn.textContent = 'Hide';
+        } else {
+            apiKeyInput.type = 'password';
+            toggleBtn.textContent = 'Show';
+        }
+    }
+}
+
+/**
+ * Test OpenAI API connection
+ */
+export async function testOpenAIConnection() {
+    const apiKeyInput = document.getElementById('openai-api-key-input');
+    const statusEl = document.getElementById('openai-test-status');
+
+    if (!apiKeyInput || !statusEl) return;
+
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) {
+        statusEl.textContent = 'Please enter an API key';
+        statusEl.className = 'test-status error';
+        return;
+    }
+
+    // Show testing state
+    statusEl.textContent = 'Testing...';
+    statusEl.className = 'test-status testing';
+
+    try {
+        const result = await window.voxtether.testOpenAIConnection(apiKey);
+        if (result.success) {
+            statusEl.textContent = '✓ Connection successful';
+            statusEl.className = 'test-status success';
+        } else {
+            statusEl.textContent = `✗ ${result.error || 'Connection failed'}`;
+            statusEl.className = 'test-status error';
+        }
+    } catch (error) {
+        statusEl.textContent = `✗ ${error.message || 'Connection failed'}`;
+        statusEl.className = 'test-status error';
+    }
+}
+
+/**
+ * Initialize OpenAI settings event handlers
+ */
+export function initializeOpenAISettings() {
+    // Provider selection change handler
+    const providerSelect = document.getElementById('transcription-provider-select');
+    if (providerSelect) {
+        providerSelect.addEventListener('change', (e) => {
+            updateOpenAISettingsVisibility(e.target.value);
+        });
+    }
+
+    // API key visibility toggle
+    const toggleVisibilityBtn = document.getElementById('toggle-api-key-visibility');
+    if (toggleVisibilityBtn) {
+        toggleVisibilityBtn.addEventListener('click', toggleApiKeyVisibility);
+    }
+
+    // Test connection button
+    const testBtn = document.getElementById('test-openai-btn');
+    if (testBtn) {
+        testBtn.addEventListener('click', testOpenAIConnection);
+    }
+
+    // External links
+    const platformLink = document.getElementById('openai-platform-link');
+    if (platformLink) {
+        platformLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.voxtether.openExternal('https://platform.openai.com/api-keys');
+        });
+    }
+
+    const pricingLink = document.getElementById('openai-pricing-link');
+    if (pricingLink) {
+        pricingLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.voxtether.openExternal('https://openai.com/api/pricing/');
+        });
+    }
 }

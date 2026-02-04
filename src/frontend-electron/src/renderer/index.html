@@ -85,6 +85,62 @@
 
                 <div class="setting-group">
                     <div class="setting-header">
+                        <h3>Transcription Provider</h3>
+                        <p class="setting-description">Choose between local backend (free, offline) or OpenAI API (paid, cloud-based)</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="transcription-provider-select" class="select-input">
+                            <option value="local">Local Backend (faster-whisper)</option>
+                            <option value="openai">OpenAI API (Cloud)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="openai-settings" class="openai-settings-container hidden">
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>OpenAI API Key</h3>
+                            <p class="setting-description">Enter your OpenAI API key. Get one from <a href="#" id="openai-platform-link" class="external-link">platform.openai.com</a></p>
+                        </div>
+                        <div class="setting-control">
+                            <input type="password" id="openai-api-key-input" class="text-input" placeholder="sk-...">
+                            <button class="btn btn-secondary" id="toggle-api-key-visibility">Show</button>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>OpenAI Model</h3>
+                            <p class="setting-description">Select the OpenAI transcription model to use</p>
+                        </div>
+                        <div class="setting-control">
+                            <select id="openai-model-select" class="select-input">
+                                <option value="whisper-1">Whisper-1 (Standard)</option>
+                                <option value="gpt-4o-transcribe">GPT-4o Transcribe (Higher Quality)</option>
+                                <option value="gpt-4o-mini-transcribe">GPT-4o Mini Transcribe (Faster)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Test Connection</h3>
+                            <p class="setting-description">Verify your API key is valid</p>
+                        </div>
+                        <div class="setting-control">
+                            <button class="btn btn-secondary" id="test-openai-btn">🔗 Test OpenAI Connection</button>
+                            <span id="openai-test-status" class="test-status"></span>
+                        </div>
+                    </div>
+
+                    <div class="openai-notice">
+                        <span class="notice-icon">ℹ️</span>
+                        <span class="notice-text">When using OpenAI, audio is sent to OpenAI's servers for transcription. Standard <a href="#" id="openai-pricing-link" class="external-link">API pricing</a> applies.</span>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-header">
                         <h3>Language</h3>
                         <p class="setting-description">Language for speech recognition</p>
                     </div>
