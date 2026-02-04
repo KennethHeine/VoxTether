@@ -71,11 +71,11 @@ POST https://api.openai.com/v1/audio/transcriptions
 
 ### Available Models
 
-| Model | Description | Best For |
-|-------|-------------|----------|
-| `whisper-1` | Original Whisper model snapshot | General transcription |
-| `gpt-4o-transcribe` | Higher quality transcription | High accuracy needs |
-| `gpt-4o-mini-transcribe` | Faster, lightweight | Quick transcriptions |
+| Model | Price | Description | Best For |
+|-------|-------|-------------|----------|
+| `whisper-1` | $0.006/min | Original Whisper model snapshot | General transcription |
+| `gpt-4o-transcribe` | $0.006/min | Higher quality transcription | High accuracy needs |
+| `gpt-4o-mini-transcribe` | $0.003/min | Faster, lightweight | Quick transcriptions |
 
 ### Request Format
 
@@ -910,15 +910,16 @@ function migrateSettings(settings) {
 
 ### Pricing (as of 2024)
 
-| Model | Cost per Minute |
-|-------|-----------------|
-| `whisper-1` | ~$0.006/minute |
-| `gpt-4o-transcribe` | Higher (check OpenAI pricing) |
+| Model | Cost per Minute | Cost per Hour |
+|-------|-----------------|---------------|
+| `whisper-1` | $0.006/minute | $0.36/hour |
+| `gpt-4o-transcribe` | $0.006/minute | $0.36/hour |
+| `gpt-4o-mini-transcribe` | $0.003/minute | $0.18/hour |
 
 ### Usage Estimate
 
-| Usage Pattern | Minutes/Month | Estimated Cost |
-|---------------|---------------|----------------|
+| Usage Pattern | Minutes/Month | Estimated Cost (whisper-1) |
+|---------------|---------------|----------------------------|
 | Light (5 min/day) | 150 | ~$0.90 |
 | Moderate (15 min/day) | 450 | ~$2.70 |
 | Heavy (30 min/day) | 900 | ~$5.40 |
