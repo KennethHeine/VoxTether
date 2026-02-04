@@ -11,6 +11,14 @@ const http = require('http');
 const https = require('https');
 
 /**
+ * Generate a unique boundary string for multipart form data
+ * @returns {string} A unique boundary string
+ */
+function generateBoundary() {
+    return `----WebKitFormBoundary${Date.now().toString(16)}`;
+}
+
+/**
  * Transcribe using local backend
  * @param {string} audioPath - Path to audio file
  * @param {string} language - Language code (e.g., 'en', 'auto')
@@ -19,7 +27,7 @@ const https = require('https');
  */
 async function transcribeLocal(audioPath, language, backendPort) {
     return new Promise((resolve) => {
-        const boundary = `----WebKitFormBoundary${Date.now().toString(16)}`;
+        const boundary = generateBoundary();
         const audioData = fs.readFileSync(audioPath);
         const audioFileName = path.basename(audioPath);
 
@@ -87,7 +95,7 @@ async function transcribeOpenAI(audioPath, language, apiKey, model = 'whisper-1'
 
         const audioData = fs.readFileSync(audioPath);
         const audioFileName = path.basename(audioPath);
-        const boundary = `----WebKitFormBoundary${Date.now().toString(16)}`;
+        const boundary = generateBoundary();
 
         // Build multipart form data
         let body = '';

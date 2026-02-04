@@ -867,8 +867,8 @@ ipcMain.handle('transcribe', async (event, audioPath, language) => {
     const provider = settings.transcriptionProvider || 'local';
 
     return await transcribe(audioPath, {
-        provider: provider,
-        language: language,
+        provider,
+        language,
         backendPort: BACKEND_PORT,
         openaiApiKey: settings.openaiApiKey || '',
         openaiModel: settings.openaiModel || 'whisper-1'
