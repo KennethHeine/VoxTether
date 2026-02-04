@@ -231,8 +231,10 @@ VoxTether/
 │   └── CHANGELOG.md                 # Version history
 │
 ├── .github/workflows/
-│   ├── ci.yml                       # CI pipeline
-│   └── release.yml                  # Release pipeline
+│   ├── ci-backend.yml               # Backend CI pipeline
+│   ├── ci-frontend.yml              # Frontend CI pipeline
+│   ├── release-backend.yml          # Backend release
+│   └── release-frontend.yml         # Frontend release
 │
 └── README.md
 ```
@@ -296,18 +298,19 @@ async function startBackend() {
 
 ```json
 {
-  "Hotkey": "Ctrl+Shift+Space",
-  "ModelName": "small",
-  "Language": "auto",
-  "OutputMode": "ClipboardAndPaste",
-  "ShowNotifications": true,
-  "ShowRecordingIndicator": true,
-  "AudioDeviceId": -1,
-  "ClipboardDelayMs": 50,
-  "BackendPort": 5678,
-  "StartMinimized": true,
-  "StartWithWindows": false,
-  "Theme": "System"
+  "windowToggleHotkey": "Ctrl+Shift+V",
+  "toggleRecordingHotkey": "Ctrl+Shift+R",
+  "modelName": "small",
+  "language": "auto",
+  "outputMode": "ClipboardAndPaste",
+  "showNotifications": true,
+  "showRecordingIndicator": true,
+  "audioDeviceId": -1,
+  "clipboardDelayMs": 50,
+  "backendPort": 5678,
+  "startMinimized": true,
+  "startWithWindows": false,
+  "theme": "system"
 }
 ```
 
