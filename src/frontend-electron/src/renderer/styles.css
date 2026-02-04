@@ -1358,6 +1358,49 @@ h3 {
     background-color: var(--bg-tertiary);
 }
 
+/* Backend Info Cards */
+.backend-info-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-large);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-light);
+}
+
+.backend-info-card.openai {
+    border-left: 4px solid var(--accent-color);
+}
+
+.backend-info-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.backend-icon {
+    font-size: 24px;
+}
+
+.backend-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.backend-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.backend-features li {
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
 /* Responsive adjustments */
 @media (max-width: 700px) {
     .sidebar {

@@ -80,8 +80,8 @@ export function applySettingsToUI() {
     const transcriptionProviderSelect = document.getElementById('transcription-provider-select');
     if (transcriptionProviderSelect) {
         transcriptionProviderSelect.value = settings.transcriptionProvider || 'local';
-        // Show/hide OpenAI settings based on provider
-        updateOpenAISettingsVisibility(settings.transcriptionProvider || 'local');
+        // Show/hide backend settings based on provider
+        updateBackendSettingsVisibility(settings.transcriptionProvider || 'local');
     }
 
     const openaiApiKeyInput = document.getElementById('openai-api-key-input');
@@ -200,11 +200,16 @@ export function clearRecordingFolder() {
 }
 
 /**
- * Update OpenAI settings visibility based on provider selection
+ * Update backend settings visibility based on provider selection
  * @param {string} provider - The selected provider ('local' or 'openai')
  */
-export function updateOpenAISettingsVisibility(provider) {
-    const openaiSettings = document.getElementById('openai-settings');
+export function updateBackendSettingsVisibility(provider) {
+    const localSettings = document.getElementById('local-backend-settings');
+    const openaiSettings = document.getElementById('openai-backend-settings');
+
+    if (localSettings) {
+        localSettings.classList.toggle('hidden', provider !== 'local');
+    }
     if (openaiSettings) {
         openaiSettings.classList.toggle('hidden', provider !== 'openai');
     }
@@ -271,7 +276,7 @@ export function initializeOpenAISettings() {
     const providerSelect = document.getElementById('transcription-provider-select');
     if (providerSelect) {
         providerSelect.addEventListener('change', (e) => {
-            updateOpenAISettingsVisibility(e.target.value);
+            updateBackendSettingsVisibility(e.target.value);
         });
     }
 
@@ -302,5 +307,11 @@ export function initializeOpenAISettings() {
             e.preventDefault();
             window.voxtether.openExternal('https://openai.com/api/pricing/');
         });
+    }
+
+    // Save backend settings button
+    const saveBackendBtn = document.getElementById('save-backend-btn');
+    if (saveBackendBtn) {
+        saveBackendBtn.addEventListener('click', saveGeneralSettings);
     }
 }
