@@ -54,7 +54,8 @@ function createMainWindow(settings) {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, '..', 'preload.js')
+            preload: path.join(__dirname, '..', 'preload.js'),
+            backgroundThrottling: false  // Ensure IPC works when window is hidden
         }
     });
 
