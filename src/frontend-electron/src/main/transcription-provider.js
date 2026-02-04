@@ -35,9 +35,9 @@ function generateBoundary() {
  * @returns {string} Sanitized filename
  */
 function sanitizeFilename(filename) {
-    // Remove or replace characters that could break headers
+    // Remove or replace characters that could break headers or enable traversal
     return filename
-        .replace(/["\r\n\\]/g, '_')  // Remove quotes, CRLF, backslashes
+        .replace(/["\r\n\\/]/g, '_')  // Remove quotes, CRLF, backslashes, forward slashes
         .replace(/[^\x20-\x7E]/g, '_');  // Remove non-ASCII characters
 }
 
@@ -126,7 +126,7 @@ async function transcribeOpenAI(audioPath, language, apiKey, model = 'whisper-1'
         const stats = fs.statSync(audioPath);
         const fileSizeMB = stats.size / (1024 * 1024);
         if (fileSizeMB > OPENAI_MAX_FILE_SIZE_MB) {
-            resolve({ success: false, error: `Audio file exceeds OpenAI's ${OPENAI_MAX_FILE_SIZE_MB}MB limit` });
+            resolve({ success: false, error: `Audio file size (${fileSizeMB.toFixed(2)}MB) exceeds OpenAI's ${OPENAI_MAX_FILE_SIZE_MB}MB limit` });
             return;
         }
 
