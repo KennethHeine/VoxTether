@@ -25,6 +25,7 @@ const {
     IPC_LOAD_MODEL,
     IPC_DELETE_MODEL,
     IPC_TRANSCRIBE,
+    IPC_TEST_OPENAI_CONNECTION,
     IPC_COPY_TO_CLIPBOARD,
     IPC_OPEN_PATH,
     IPC_OPEN_EXTERNAL,
@@ -46,6 +47,7 @@ const {
     VALID_MODEL_NAMES,
     ALLOWED_EXTERNAL_URL_PATTERNS
 } = require('../shared/constants.js');
+const { testOpenAIConnection, transcribe: transcribeWithProvider } = require('./transcription-provider.js');
 
 /**
  * Validate model name against allowed list
@@ -259,82 +261,38 @@ function registerIpcHandlers(dependencies) {
     });
 
     // Transcription
-    // Timeout for transcription requests (5 minutes - transcription can take time for large files)
-    const TRANSCRIPTION_TIMEOUT_MS = 5 * 60 * 1000;
-
     ipcMain.handle(IPC_TRANSCRIBE, async (event, audioPath, language) => {
-        return new Promise((resolve, _reject) => {
+        try {
             // Validate that the audioPath is within the expected temp directory
-            try {
-                const userDataPath = getUserDataPath();
-                const resolvedAudioPath = path.resolve(audioPath);
-                const allowedTempDir = path.resolve(path.join(userDataPath, 'temp'));
-                const relativePath = path.relative(allowedTempDir, resolvedAudioPath);
+            const userDataPath = getUserDataPath();
+            const resolvedAudioPath = path.resolve(audioPath);
+            const allowedTempDir = path.resolve(path.join(userDataPath, 'temp'));
+            const relativePath = path.relative(allowedTempDir, resolvedAudioPath);
 
-                if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-                    resolve({ success: false, error: 'Invalid audio file path' });
-                    return;
-                }
-
-                // Create multipart form data
-                const boundary = `----WebKitFormBoundary${Date.now().toString(16)}`;
-                const audioData = fs.readFileSync(resolvedAudioPath);
-                const audioFileName = path.basename(resolvedAudioPath);
-
-                let body = '';
-                body += `--${boundary}\r\n`;
-                body += `Content-Disposition: form-data; name="file"; filename="${audioFileName}"\r\n`;
-                body += 'Content-Type: audio/wav\r\n\r\n';
-
-                const bodyEnd = `\r\n--${boundary}\r\n` +
-                    `Content-Disposition: form-data; name="language"\r\n\r\n${language || 'auto'}\r\n` +
-                    `--${boundary}--\r\n`;
-
-                const bodyBuffer = Buffer.concat([
-                    Buffer.from(body),
-                    audioData,
-                    Buffer.from(bodyEnd)
-                ]);
-
-                const options = {
-                    hostname: '127.0.0.1',
-                    port: BACKEND_PORT,
-                    path: '/api/transcribe',
-                    method: 'POST',
-                    timeout: TRANSCRIPTION_TIMEOUT_MS,
-                    headers: {
-                        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                        'Content-Length': bodyBuffer.length
-                    }
-                };
-
-                const req = http.request(options, (res) => {
-                    let data = '';
-                    res.on('data', chunk => data += chunk);
-                    res.on('end', () => {
-                        try {
-                            resolve({ success: true, data: JSON.parse(data) });
-                        } catch {
-                            resolve({ success: false, error: 'Failed to parse response' });
-                        }
-                    });
-                });
-
-                req.on('timeout', () => {
-                    req.destroy();
-                    resolve({ success: false, error: 'Transcription request timed out' });
-                });
-
-                req.on('error', (error) => {
-                    resolve({ success: false, error: error.message });
-                });
-
-                req.write(bodyBuffer);
-                req.end();
-            } catch (error) {
-                resolve({ success: false, error: error.message });
+            if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+                return { success: false, error: 'Invalid audio file path' };
             }
-        });
+
+            // Get current settings to determine provider
+            const settings = getSettings();
+            const provider = settings.transcriptionProvider || 'local';
+
+            // Use the transcription provider abstraction
+            return await transcribeWithProvider(resolvedAudioPath, {
+                provider,
+                language,
+                backendPort: BACKEND_PORT,
+                openaiApiKey: settings.openaiApiKey || '',
+                openaiModel: settings.openaiModel || 'whisper-1'
+            });
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    // Test OpenAI Connection
+    ipcMain.handle(IPC_TEST_OPENAI_CONNECTION, async (event, apiKey) => {
+        return await testOpenAIConnection(apiKey);
     });
 
     // Clipboard

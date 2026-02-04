@@ -21,6 +21,7 @@ export const IPC_DOWNLOAD_MODEL = 'download-model';
 export const IPC_LOAD_MODEL = 'load-model';
 export const IPC_DELETE_MODEL = 'delete-model';
 export const IPC_TRANSCRIBE = 'transcribe';
+export const IPC_TEST_OPENAI_CONNECTION = 'test-openai-connection';
 
 // Recording control
 export const IPC_START_RECORDING_MANUAL = 'start-recording-manual';
@@ -109,7 +110,11 @@ export const DEFAULT_SETTINGS = {
     recordingOutputFolder: '',
     saveRecordingAudio: false,
     saveRecordingTranscript: false,
-    showTranscriptionPreview: false
+    showTranscriptionPreview: false,
+    // Transcription Provider Settings
+    transcriptionProvider: 'local',  // 'local' or 'openai'
+    openaiApiKey: '',                 // OpenAI API key
+    openaiModel: 'whisper-1'          // OpenAI model to use
 };
 
 // ============================================================================
@@ -145,5 +150,7 @@ export const VALID_MODEL_NAMES = [
 
 export const ALLOWED_EXTERNAL_URL_PATTERNS = [
     /^https:\/\/github\.com\/kennethsolberg\//i,
-    /^https:\/\/github\.com\/[^/]+\/voxtether(?:\/|$)/i
+    /^https:\/\/github\.com\/[^/]+\/voxtether(?:\/|$)/i,
+    /^https:\/\/platform\.openai\.com\//i,
+    /^https:\/\/openai\.com\//i
 ];

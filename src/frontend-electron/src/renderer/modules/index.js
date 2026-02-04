@@ -20,7 +20,8 @@ import {
     saveGeneralSettings,
     saveAudioSettings,
     selectRecordingFolder,
-    clearRecordingFolder
+    clearRecordingFolder,
+    initializeOpenAISettings
 } from './settings.js';
 
 // Hotkey capture
@@ -221,6 +222,9 @@ function initializeEventListeners() {
 
     // Global keyboard listener for hotkey capture
     document.addEventListener('keydown', handleHotkeyCapture);
+
+    // Initialize OpenAI settings event handlers
+    initializeOpenAISettings();
 }
 
 /**

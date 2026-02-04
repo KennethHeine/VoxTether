@@ -12,6 +12,9 @@ const fs = require('fs');
 const http = require('http');
 const semver = require('semver');
 
+// Transcription provider abstraction
+const { transcribe, testOpenAIConnection } = require('./main/transcription-provider');
+
 // Auto-updater (Feature 18)
 let autoUpdater = null;
 try {
@@ -65,7 +68,11 @@ const defaultSettings = {
     recordingOutputFolder: '',
     saveRecordingAudio: false,
     saveRecordingTranscript: false,
-    showTranscriptionPreview: false
+    showTranscriptionPreview: false,
+    // Transcription Provider Settings
+    transcriptionProvider: 'local',  // 'local' or 'openai'
+    openaiApiKey: '',                 // OpenAI API key
+    openaiModel: 'whisper-1'          // OpenAI model to use
 };
 
 /**
@@ -857,57 +864,20 @@ ipcMain.handle('delete-model', async (event, modelName) => {
 
 // Transcription
 ipcMain.handle('transcribe', async (event, audioPath, language) => {
-    return new Promise((resolve, _reject) => {
-        // Create multipart form data
-        const boundary = `----WebKitFormBoundary${Date.now().toString(16)}`;
-        const audioData = fs.readFileSync(audioPath);
-        const audioFileName = path.basename(audioPath);
+    const provider = settings.transcriptionProvider || 'local';
 
-        let body = '';
-        body += `--${boundary}\r\n`;
-        body += `Content-Disposition: form-data; name="file"; filename="${audioFileName}"\r\n`;
-        body += 'Content-Type: audio/wav\r\n\r\n';
-
-        const bodyEnd = `\r\n--${boundary}\r\n` +
-            `Content-Disposition: form-data; name="language"\r\n\r\n${language || 'auto'}\r\n` +
-            `--${boundary}--\r\n`;
-
-        const bodyBuffer = Buffer.concat([
-            Buffer.from(body),
-            audioData,
-            Buffer.from(bodyEnd)
-        ]);
-
-        const options = {
-            hostname: '127.0.0.1',
-            port: BACKEND_PORT,
-            path: '/api/transcribe',
-            method: 'POST',
-            headers: {
-                'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                'Content-Length': bodyBuffer.length
-            }
-        };
-
-        const req = http.request(options, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    resolve({ success: true, data: JSON.parse(data) });
-                } catch {
-                    resolve({ success: false, error: 'Failed to parse response' });
-                }
-            });
-        });
-
-        req.on('error', (error) => {
-            resolve({ success: false, error: error.message });
-        });
-
-        req.write(bodyBuffer);
-        req.end();
+    return await transcribe(audioPath, {
+        provider,
+        language,
+        backendPort: BACKEND_PORT,
+        openaiApiKey: settings.openaiApiKey || '',
+        openaiModel: settings.openaiModel || 'whisper-1'
     });
+});
+
+// Test OpenAI Connection
+ipcMain.handle('test-openai-connection', async (event, apiKey) => {
+    return await testOpenAIConnection(apiKey);
 });
 
 // Clipboard

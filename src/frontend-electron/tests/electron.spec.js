@@ -117,17 +117,17 @@ test.describe('VoxTether Electron App', () => {
   });
 
   test('should navigate to Models page when clicked', async () => {
-    // Click on Models navigation item
+    // Click on Backend navigation item (formerly Models)
     const modelsNav = window.locator('[data-page="models"]');
     await modelsNav.click();
     
-    // Verify Models page is now visible
+    // Verify Backend page is now visible
     const modelsPage = window.locator('#page-models');
     await expect(modelsPage).toHaveClass(/active/);
     
-    // Check for Models header
+    // Check for Backend header
     const header = window.locator('#page-models h1');
-    await expect(header).toHaveText('Speech Recognition Models');
+    await expect(header).toHaveText('Transcription Backend');
   });
 
   test('should navigate to About page when clicked', async () => {
@@ -277,8 +277,8 @@ test.describe('VoxTether Electron App', () => {
     await expect(appVersion).toBeVisible();
   });
 
-  test('should have model selection on Models page', async () => {
-    // Navigate to Models page
+  test('should have model selection on Backend page', async () => {
+    // Navigate to Backend page (formerly Models)
     const modelsNav = window.locator('[data-page="models"]');
     await modelsNav.click();
     
@@ -287,8 +287,8 @@ test.describe('VoxTether Electron App', () => {
     await expect(modelSelect).toBeVisible();
   });
 
-  test('should display device info on Models page', async () => {
-    // Navigate to Models page
+  test('should display device info on Backend page', async () => {
+    // Navigate to Backend page (formerly Models)
     const modelsNav = window.locator('[data-page="models"]');
     await modelsNav.click();
 

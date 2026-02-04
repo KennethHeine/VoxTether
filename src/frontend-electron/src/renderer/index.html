@@ -25,8 +25,8 @@
                     <span class="nav-text">Audio</span>
                 </li>
                 <li class="nav-item" data-page="models">
-                    <span class="nav-icon">🧠</span>
-                    <span class="nav-text">Models</span>
+                    <span class="nav-icon">🔌</span>
+                    <span class="nav-text">Backend</span>
                 </li>
                 <li class="nav-item" data-page="transcribe">
                     <span class="nav-icon">📝</span>
@@ -331,49 +331,144 @@
                 </div>
             </div>
 
-            <!-- Models Page -->
+            <!-- Backend Page (formerly Models) -->
             <div class="page" id="page-models">
-                <h1>Speech Recognition Models</h1>
+                <h1>Transcription Backend</h1>
 
-                <div class="device-info" id="device-info">
-                    <div class="device-status">
-                        <span class="device-icon">💻</span>
-                        <span class="device-text">Checking device...</span>
-                    </div>
-                </div>
-
+                <!-- Provider Selection -->
                 <div class="setting-group">
                     <div class="setting-header">
-                        <h3>Active Model</h3>
-                        <p class="setting-description">Select a downloaded model to use for transcription</p>
+                        <h3>Transcription Provider</h3>
+                        <p class="setting-description">Choose between local backend (free, offline) or OpenAI API (paid, cloud-based)</p>
                     </div>
                     <div class="setting-control">
-                        <select id="model-select" class="select-input">
-                            <option value="">Loading models...</option>
+                        <select id="transcription-provider-select" class="select-input">
+                            <option value="local">Local Backend (faster-whisper)</option>
+                            <option value="openai">OpenAI API (Cloud)</option>
                         </select>
                     </div>
                 </div>
 
-                <h2>Available Models</h2>
-                <p class="setting-description">Download models to use them for transcription. Larger models are more accurate but slower.</p>
-                <div class="models-grid" id="models-grid">
-                    <div class="model-card skeleton">
-                        <div class="model-name">Loading...</div>
+                <!-- Local Backend Settings -->
+                <div id="local-backend-settings">
+                    <h2 class="section-title">🖥️ Local Backend (faster-whisper)</h2>
+
+                    <div class="backend-info-card">
+                        <div class="backend-info-header">
+                            <span class="backend-icon">✅</span>
+                            <span class="backend-title">Offline Transcription</span>
+                        </div>
+                        <ul class="backend-features">
+                            <li>✅ Fully offline - no internet required</li>
+                            <li>✅ Free - no API costs</li>
+                            <li>✅ Private - audio stays on your device</li>
+                            <li>✅ GPU acceleration with CUDA</li>
+                        </ul>
+                    </div>
+
+                    <div class="device-info" id="device-info">
+                        <div class="device-status">
+                            <span class="device-icon">💻</span>
+                            <span class="device-text">Checking device...</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Active Model</h3>
+                            <p class="setting-description">Select a downloaded model to use for transcription</p>
+                        </div>
+                        <div class="setting-control">
+                            <select id="model-select" class="select-input">
+                                <option value="">Loading models...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h2>Available Models</h2>
+                    <p class="setting-description">Download models to use them for transcription. Larger models are more accurate but slower.</p>
+                    <div class="models-grid" id="models-grid">
+                        <div class="model-card skeleton">
+                            <div class="model-name">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Download Progress Container (shown during download) -->
+                    <div class="download-progress hidden" id="download-progress-container">
+                        <div class="progress-header">
+                            <span class="progress-model-name" id="download-model-name">Downloading...</span>
+                            <span class="progress-percent" id="download-percent">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="download-progress-bar"></div>
+                        </div>
+                        <div class="progress-details">
+                            <span id="download-size">0 MB / 0 MB</span>
+                            <span id="download-speed">0 MB/s</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Download Progress Container (shown during download) -->
-                <div class="download-progress hidden" id="download-progress-container">
-                    <div class="progress-header">
-                        <span class="progress-model-name" id="download-model-name">Downloading...</span>
-                        <span class="progress-percent" id="download-percent">0%</span>
+                <!-- OpenAI Backend Settings -->
+                <div id="openai-backend-settings" class="hidden">
+                    <h2 class="section-title">☁️ OpenAI API (Cloud)</h2>
+
+                    <div class="backend-info-card openai">
+                        <div class="backend-info-header">
+                            <span class="backend-icon">☁️</span>
+                            <span class="backend-title">Cloud Transcription</span>
+                        </div>
+                        <ul class="backend-features">
+                            <li>☁️ Cloud-based - requires internet</li>
+                            <li>💰 Pay-per-use API pricing</li>
+                            <li>🚀 No local setup required</li>
+                            <li>🎯 High accuracy transcription</li>
+                        </ul>
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="download-progress-bar"></div>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>OpenAI API Key</h3>
+                            <p class="setting-description">Enter your OpenAI API key. Get one from <a href="https://platform.openai.com/api-keys" id="openai-platform-link" class="external-link" target="_blank" rel="noopener noreferrer">platform.openai.com</a></p>
+                        </div>
+                        <div class="setting-control">
+                            <input type="password" id="openai-api-key-input" class="text-input" placeholder="sk-..." autocomplete="off" spellcheck="false">
+                            <button class="btn btn-secondary" id="toggle-api-key-visibility" aria-label="Toggle API key visibility">Show</button>
+                        </div>
                     </div>
-                    <div class="progress-details">
-                        <span id="download-size">0 MB / 0 MB</span>
-                        <span id="download-speed">0 MB/s</span>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>OpenAI Model</h3>
+                            <p class="setting-description">Select the OpenAI transcription model to use</p>
+                        </div>
+                        <div class="setting-control">
+                            <select id="openai-model-select" class="select-input">
+                                <option value="whisper-1">Whisper-1 (Standard)</option>
+                                <option value="gpt-4o-transcribe">GPT-4o Transcribe (Higher Quality)</option>
+                                <option value="gpt-4o-mini-transcribe">GPT-4o Mini Transcribe (Faster)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Test Connection</h3>
+                            <p class="setting-description">Verify your API key is valid</p>
+                        </div>
+                        <div class="setting-control">
+                            <button class="btn btn-secondary" id="test-openai-btn">🔗 Test OpenAI Connection</button>
+                            <span id="openai-test-status" class="test-status"></span>
+                        </div>
+                    </div>
+
+                    <div class="openai-notice">
+                        <span class="notice-icon">ℹ️</span>
+                        <span class="notice-text">When using OpenAI, audio is sent to OpenAI's servers for transcription. Standard <a href="https://openai.com/api/pricing/" id="openai-pricing-link" class="external-link" target="_blank" rel="noopener noreferrer">API pricing</a> applies.</span>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" id="save-backend-btn">Save Settings</button>
                     </div>
                 </div>
             </div>
