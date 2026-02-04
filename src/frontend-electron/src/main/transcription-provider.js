@@ -9,13 +9,36 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const https = require('https');
+const crypto = require('crypto');
+
+// OpenAI file size limit (25 MB)
+const OPENAI_MAX_FILE_SIZE_MB = 25;
+
+// Request timeout (60 seconds)
+const REQUEST_TIMEOUT_MS = 60000;
 
 /**
  * Generate a unique boundary string for multipart form data
+ * Uses both timestamp and cryptographic randomness for uniqueness
  * @returns {string} A unique boundary string
  */
 function generateBoundary() {
-    return `----WebKitFormBoundary${Date.now().toString(16)}`;
+    const timestamp = Date.now().toString(16);
+    const random = crypto.randomBytes(16).toString('hex');
+    return `----WebKitFormBoundary${timestamp}${random}`;
+}
+
+/**
+ * Sanitize filename for use in Content-Disposition header
+ * Removes potentially dangerous characters that could break multipart boundaries
+ * @param {string} filename - The original filename
+ * @returns {string} Sanitized filename
+ */
+function sanitizeFilename(filename) {
+    // Remove or replace characters that could break headers
+    return filename
+        .replace(/["\r\n\\]/g, '_')  // Remove quotes, CRLF, backslashes
+        .replace(/[^\x20-\x7E]/g, '_');  // Remove non-ASCII characters
 }
 
 /**
@@ -29,7 +52,7 @@ async function transcribeLocal(audioPath, language, backendPort) {
     return new Promise((resolve) => {
         const boundary = generateBoundary();
         const audioData = fs.readFileSync(audioPath);
-        const audioFileName = path.basename(audioPath);
+        const audioFileName = sanitizeFilename(path.basename(audioPath));
 
         let body = '';
         body += `--${boundary}\r\n`;
@@ -51,6 +74,7 @@ async function transcribeLocal(audioPath, language, backendPort) {
             port: backendPort,
             path: '/api/transcribe',
             method: 'POST',
+            timeout: REQUEST_TIMEOUT_MS,
             headers: {
                 'Content-Type': `multipart/form-data; boundary=${boundary}`,
                 'Content-Length': bodyBuffer.length
@@ -67,6 +91,11 @@ async function transcribeLocal(audioPath, language, backendPort) {
                     resolve({ success: false, error: 'Failed to parse response' });
                 }
             });
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            resolve({ success: false, error: 'Transcription request timed out' });
         });
 
         req.on('error', (error) => {
@@ -93,8 +122,16 @@ async function transcribeOpenAI(audioPath, language, apiKey, model = 'whisper-1'
             return;
         }
 
+        // Enforce OpenAI's 25 MB audio file size limit before uploading
+        const stats = fs.statSync(audioPath);
+        const fileSizeMB = stats.size / (1024 * 1024);
+        if (fileSizeMB > OPENAI_MAX_FILE_SIZE_MB) {
+            resolve({ success: false, error: `Audio file exceeds OpenAI's ${OPENAI_MAX_FILE_SIZE_MB}MB limit` });
+            return;
+        }
+
         const audioData = fs.readFileSync(audioPath);
-        const audioFileName = path.basename(audioPath);
+        const audioFileName = sanitizeFilename(path.basename(audioPath));
         const boundary = generateBoundary();
 
         // Build multipart form data
@@ -125,6 +162,7 @@ async function transcribeOpenAI(audioPath, language, apiKey, model = 'whisper-1'
             hostname: 'api.openai.com',
             path: '/v1/audio/transcriptions',
             method: 'POST',
+            timeout: REQUEST_TIMEOUT_MS,
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': `multipart/form-data; boundary=${boundary}`,
@@ -147,12 +185,18 @@ async function transcribeOpenAI(audioPath, language, apiKey, model = 'whisper-1'
                         return;
                     }
 
+                    // Validate required fields in response
+                    if (!result.text) {
+                        resolve({ success: false, error: 'Invalid response: missing text field' });
+                        return;
+                    }
+
                     resolve({
                         success: true,
                         data: {
                             text: result.text,
-                            language: result.language,
-                            duration: result.duration,
+                            language: result.language || 'unknown',
+                            duration: result.duration || 0,
                             success: true
                         }
                     });
@@ -160,6 +204,11 @@ async function transcribeOpenAI(audioPath, language, apiKey, model = 'whisper-1'
                     resolve({ success: false, error: 'Failed to parse OpenAI response' });
                 }
             });
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            resolve({ success: false, error: 'OpenAI request timed out' });
         });
 
         req.on('error', (error) => {
@@ -188,6 +237,7 @@ async function testOpenAIConnection(apiKey) {
             hostname: 'api.openai.com',
             path: '/v1/models',
             method: 'GET',
+            timeout: 30000, // 30 second timeout for connection test
             headers: {
                 'Authorization': `Bearer ${apiKey}`
             }
@@ -211,6 +261,11 @@ async function testOpenAIConnection(apiKey) {
                     }
                 }
             });
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            resolve({ success: false, error: 'Connection test timed out' });
         });
 
         req.on('error', (error) => {
