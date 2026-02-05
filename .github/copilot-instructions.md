@@ -129,7 +129,7 @@ VoxTether/
 ### Frontend (Electron)
 | Component | File | Purpose |
 |-----------|------|---------|
-| **main.js** | `src/frontend-electron/src/main.js` | Electron main process |
+| **main/index.js** | `src/frontend-electron/src/main/index.js` | Electron main process entry point |
 | **preload.js** | `src/frontend-electron/src/preload.js` | Secure IPC bridge |
 | **renderer/** | `src/frontend-electron/src/renderer/` | UI components |
 | **tests/** | `src/frontend-electron/tests/` | Playwright E2E tests |
