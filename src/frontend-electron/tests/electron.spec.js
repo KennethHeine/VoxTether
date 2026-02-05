@@ -10,8 +10,8 @@
 const { test, expect, _electron: electron } = require('@playwright/test');
 const path = require('path');
 
-// Path to the Electron main script
-const electronMain = path.join(__dirname, '..', 'src', 'main.js');
+// Path to the Electron main script (modular entry point as defined in package.json)
+const electronMain = path.join(__dirname, '..', 'src', 'main', 'index.js');
 
 /**
  * Common Electron launch options

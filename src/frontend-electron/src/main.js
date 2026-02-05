@@ -1,5 +1,9 @@
 /**
- * VoxTether Electron - Main Process
+ * VoxTether Electron - Main Process (Legacy Monolithic Entry Point)
+ *
+ * @deprecated This file is maintained for backward compatibility only.
+ * The official entry point is src/main/index.js (as defined in package.json).
+ * New development should use the modular structure in src/main/ directory.
  *
  * Entry point for the Electron application. Manages the main window,
  * system tray, and global hotkeys. Connects to a separate Python backend
