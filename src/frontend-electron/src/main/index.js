@@ -4,8 +4,30 @@
  * Orchestrates all main process modules and manages application lifecycle.
  */
 
+// Enable headless mode automatically in CI or when no DISPLAY is available.
+// This prevents Electron from failing to start in environments without an X server
+// (e.g., headless CI runners used by Playwright tests).
+const isHeadlessEnv = !!process.env.CI || !process.env.DISPLAY || process.env.ELECTRON_HEADLESS === '1';
+if (isHeadlessEnv) {
+    // Disable sandbox to avoid chrome-sandbox requirement in CI containers
+    process.env.ELECTRON_DISABLE_SANDBOX = '1';
+    process.env.CHROME_DEVEL_SANDBOX = '0';
+}
+
 const { app, BrowserWindow, Menu } = require('electron');
 const fs = require('fs');
+
+const isHeadless = isHeadlessEnv;
+if (isHeadless) {
+    app.commandLine.appendSwitch('headless');
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('no-sandbox');
+    app.commandLine.appendSwitch('disable-setuid-sandbox');
+    // Ensure Electron does not attempt to use X11 when headless
+    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
+    app.commandLine.appendSwitch('ozone-platform', 'headless');
+    app.disableHardwareAcceleration();
+}
 
 // Import modules
 const { loadSettings, saveSettings, getSettings, updateSettings, getModelsPath, getLogsPath, getUserDataPath } = require('./settings-manager.js');

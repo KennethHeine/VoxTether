@@ -9,9 +9,9 @@
     "build": "electron-builder --win --x64",
     "pack": "electron-builder --dir",
     "lint": "eslint src/",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed"
+    "test": "xvfb-run -a playwright test",
+    "test:ui": "xvfb-run -a playwright test --ui",
+    "test:headed": "xvfb-run -a playwright test --headed"
   },
   "author": "Kenneth Heine",
   "license": "MIT",

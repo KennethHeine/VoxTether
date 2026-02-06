@@ -26,6 +26,12 @@ const electronLaunchOptions = {
     '--disable-gpu',
   ],
   timeout: 30000,
+  env: {
+    ...process.env,
+    ELECTRON_DISABLE_SANDBOX: '1',
+    CHROME_DEVEL_SANDBOX: '0',
+    ELECTRON_HEADLESS: '1'
+  }
 };
 
 /**

@@ -10,6 +10,7 @@ const fs = require('fs');
 
 let mainWindow = null;
 const isDebug = process.argv.includes('--debug');
+const isHeadless = !!process.env.CI || !process.env.DISPLAY || process.env.ELECTRON_HEADLESS === '1';
 
 /**
  * Get the path to the application icon
@@ -43,14 +44,14 @@ function getIconPath() {
  * @returns {BrowserWindow} The created window
  */
 function createMainWindow(settings) {
-    mainWindow = new BrowserWindow({
+    const windowOptions = {
         width: 800,
         height: 600,
         minWidth: 600,
         minHeight: 400,
         title: 'VoxTether Settings',
         icon: getIconPath(),
-        show: !settings.startMinimized,
+        show: !isHeadless && !settings.startMinimized,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -59,9 +60,12 @@ function createMainWindow(settings) {
             // are processed immediately even when window is hidden. This is essential for the
             // hotkey-triggered recording feature to work when settings window is minimized.
             // Trade-off: Slightly higher CPU/battery usage when window is hidden.
-            backgroundThrottling: false
+            backgroundThrottling: false,
+            offscreen: isHeadless
         }
-    });
+    };
+
+    mainWindow = new BrowserWindow(windowOptions);
 
     mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
