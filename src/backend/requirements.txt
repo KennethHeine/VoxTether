@@ -18,6 +18,6 @@ huggingface-hub>=1.3.7
 # CLI
 click>=8.3.1
 
-# CUDA support (out comment if should only run cpu)
+# CUDA support (uncomment if should only run GPU)
 nvidia-cublas-cu12
 nvidia-cudnn-cu12

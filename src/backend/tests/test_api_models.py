@@ -107,8 +107,35 @@ def test_unload_model_no_model_loaded(client, mock_transcriber):
     assert data["success"] is True
 
 
-def test_delete_model_not_found(client):
-    """Test deleting a model that doesn't exist."""
+def test_delete_model_invalid_name(client):
+    """Test deleting a model with an invalid name."""
     response = client.delete("/api/models/nonexistent")
     
+    assert response.status_code == 400
+    data = response.json()
+    assert "Unknown model" in data["detail"]
+
+
+def test_delete_model_not_downloaded(client):
+    """Test deleting a valid model that isn't downloaded."""
+    response = client.delete("/api/models/small")
+    
     assert response.status_code == 404
+
+
+def test_load_model_invalid_name(client, mock_transcriber):
+    """Test loading a model with an invalid name."""
+    response = client.post("/api/models/nonexistent/load")
+    
+    assert response.status_code == 400
+    data = response.json()
+    assert "Unknown model" in data["detail"]
+
+
+def test_unload_model_invalid_name(client, mock_transcriber):
+    """Test unloading a model with an invalid name."""
+    response = client.post("/api/models/nonexistent/unload")
+    
+    assert response.status_code == 400
+    data = response.json()
+    assert "Unknown model" in data["detail"]

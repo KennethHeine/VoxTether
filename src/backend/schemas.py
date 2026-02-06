@@ -1,7 +1,9 @@
 """Pydantic schemas for API request/response models."""
 
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from constants import VALID_DEVICES, VALID_COMPUTE_TYPES
 
 
 # ============================================================================
@@ -73,6 +75,22 @@ class TranscriptionSettings(BaseModel):
     compute_type: str = "auto"
     language: str = "auto"
     model: Optional[str] = None
+
+    @field_validator("device")
+    @classmethod
+    def validate_device(cls, v: str) -> str:
+        """Validate device type."""
+        if v not in VALID_DEVICES:
+            raise ValueError(f"Device must be one of: {', '.join(VALID_DEVICES)}")
+        return v
+
+    @field_validator("compute_type")
+    @classmethod
+    def validate_compute_type(cls, v: str) -> str:
+        """Validate compute type."""
+        if v not in VALID_COMPUTE_TYPES:
+            raise ValueError(f"Compute type must be one of: {', '.join(VALID_COMPUTE_TYPES)}")
+        return v
 
 
 # ============================================================================

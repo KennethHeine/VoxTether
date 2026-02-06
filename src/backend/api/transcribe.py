@@ -113,11 +113,9 @@ async def transcribe_audio(
         raise
     except Exception as e:
         logger.error(f"Transcription failed: {e}")
-        return TranscriptionResponse(
-            text="",
-            duration=0,
-            success=False,
-            error=str(e),
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transcription failed: {e}",
         )
     finally:
         # Clean up temp file

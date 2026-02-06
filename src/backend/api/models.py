@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from config import settings
+from constants import AVAILABLE_MODELS
 from dependencies import get_transcriber
 from exceptions import ModelNotFoundError
 from schemas import ModelListResponse, ModelInfo, ModelActionResponse
@@ -19,6 +20,22 @@ router = APIRouter()
 
 # Initialize model manager
 model_manager = ModelManager(settings.models_path)
+
+
+def _validate_model_name(model_name: str) -> None:
+    """Validate that a model name is recognized.
+    
+    Args:
+        model_name: Model name to validate.
+        
+    Raises:
+        HTTPException: If model name is not in AVAILABLE_MODELS.
+    """
+    if model_name not in AVAILABLE_MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown model '{model_name}'. Available models: {', '.join(sorted(AVAILABLE_MODELS.keys()))}"
+        )
 
 
 @router.get("/models", response_model=ModelListResponse)
@@ -53,6 +70,7 @@ async def list_models(transcriber: TranscriberService = Depends(get_transcriber)
 @router.post("/models/{model_name}/download")
 async def download_model(model_name: str):
     """Download a model with progress updates via Server-Sent Events."""
+    _validate_model_name(model_name)
     
     async def generate_progress():
         """Generate SSE progress updates."""
@@ -85,8 +103,10 @@ async def delete_model(model_name: str):
         Action response indicating success or failure.
         
     Raises:
+        HTTPException: If model name is invalid.
         ModelNotFoundError: If model is not found.
     """
+    _validate_model_name(model_name)
     success = model_manager.delete_model(model_name)
     if not success:
         raise ModelNotFoundError(model_name)
@@ -111,7 +131,11 @@ async def load_model(
         
     Returns:
         Action response indicating success or failure.
+        
+    Raises:
+        HTTPException: If model name is invalid.
     """
+    _validate_model_name(model_name)
     await transcriber.load_model(model_name)
     return ModelActionResponse(
         success=True,
@@ -135,8 +159,9 @@ async def unload_model(
         Action response indicating success.
         
     Raises:
-        HTTPException: If the specified model is not the currently loaded model.
+        HTTPException: If model name is invalid or not the currently loaded model.
     """
+    _validate_model_name(model_name)
     current = transcriber.get_current_model()
     if current and current != model_name:
         raise HTTPException(

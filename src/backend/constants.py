@@ -12,6 +12,36 @@ TEMP_AUDIO_SUFFIX = ".wav"
 
 # Available Whisper models with their metadata
 AVAILABLE_MODELS: Dict[str, Dict[str, Any]] = {
+    "tiny": {
+        "display_name": "Tiny",
+        "size_mb": 75,
+        "description": "Fastest model, lowest accuracy. Good for testing.",
+        "repo_id": "Systran/faster-whisper-tiny",
+    },
+    "base": {
+        "display_name": "Base",
+        "size_mb": 142,
+        "description": "Fast with basic accuracy. Good for quick dictation.",
+        "repo_id": "Systran/faster-whisper-base",
+    },
+    "small": {
+        "display_name": "Small",
+        "size_mb": 466,
+        "description": "Good balance of speed and accuracy.",
+        "repo_id": "Systran/faster-whisper-small",
+    },
+    "medium": {
+        "display_name": "Medium",
+        "size_mb": 1460,
+        "description": "High accuracy, moderate speed. Good for most use cases.",
+        "repo_id": "Systran/faster-whisper-medium",
+    },
+    "large-v3": {
+        "display_name": "Large V3",
+        "size_mb": 3100,
+        "description": "Highest accuracy. Requires significant resources.",
+        "repo_id": "Systran/faster-whisper-large-v3",
+    },
     "large-v3-turbo": {
         "display_name": "Large V3 Turbo",
         "size_mb": 1600,
