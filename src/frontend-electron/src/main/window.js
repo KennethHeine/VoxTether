@@ -54,7 +54,12 @@ function createMainWindow(settings) {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, '..', 'preload.js')
+            preload: path.join(__dirname, '..', 'preload.js'),
+            // IMPORTANT: Disable background throttling to ensure IPC events (like start-recording)
+            // are processed immediately even when window is hidden. This is essential for the
+            // hotkey-triggered recording feature to work when settings window is minimized.
+            // Trade-off: Slightly higher CPU/battery usage when window is hidden.
+            backgroundThrottling: false
         }
     });
 

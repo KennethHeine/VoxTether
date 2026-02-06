@@ -484,7 +484,7 @@ Create a new file in `src/frontend-electron/tests/` with `.spec.js` extension:
 const { test, expect, _electron: electron } = require('@playwright/test');
 const path = require('path');
 
-const electronMain = path.join(__dirname, '..', 'src', 'main.js');
+const electronMain = path.join(__dirname, '..', 'src', 'main', 'index.js');
 
 const electronLaunchOptions = {
   args: [electronMain, '--no-sandbox', '--disable-gpu'],

@@ -467,7 +467,7 @@ Content-Type: application/json
 The frontend sends audio to the backend using multipart form data:
 
 ```javascript
-// From src/frontend-electron/src/main.js - Transcription IPC handler
+// From src/frontend-electron/src/main/ipc-handlers.js - Transcription IPC handler
 ipcMain.handle('transcribe', async (event, audioPath, language) => {
     return new Promise((resolve, _reject) => {
         // Create multipart form data boundary
