@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from config import settings
 from dependencies import get_transcriber
 from exceptions import ModelNotFoundError
-from schemas import ModelListResponse, ModelInfo, ModelActionResponse
+from schemas import ModelActionResponse, ModelInfo, ModelListResponse
 from services.model_manager import ModelManager
 from services.transcriber import TranscriberService
 
@@ -32,7 +32,7 @@ async def list_models(transcriber: TranscriberService = Depends(get_transcriber)
         List of available models with download status.
     """
     current_model = transcriber.get_current_model()
-    
+
     models = model_manager.list_models()
     return ModelListResponse(
         models=[
@@ -53,7 +53,7 @@ async def list_models(transcriber: TranscriberService = Depends(get_transcriber)
 @router.post("/models/{model_name}/download")
 async def download_model(model_name: str):
     """Download a model with progress updates via Server-Sent Events."""
-    
+
     async def generate_progress():
         """Generate SSE progress updates."""
         try:
@@ -63,7 +63,7 @@ async def download_model(model_name: str):
             logger.error(f"Download failed: {e}")
             error_response = json.dumps({"status": "error", "error": str(e)})
             yield f"data: {error_response}\n\n"
-    
+
     return StreamingResponse(
         generate_progress(),
         media_type="text/event-stream",
@@ -90,7 +90,7 @@ async def delete_model(model_name: str):
     success = model_manager.delete_model(model_name)
     if not success:
         raise ModelNotFoundError(model_name)
-    
+
     return ModelActionResponse(
         success=True,
         model=model_name,
@@ -143,7 +143,7 @@ async def unload_model(
             status_code=400,
             detail=f"Cannot unload '{model_name}': currently loaded model is '{current}'"
         )
-    
+
     transcriber.unload_model()
     return ModelActionResponse(
         success=True,

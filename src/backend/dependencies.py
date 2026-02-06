@@ -1,10 +1,10 @@
 """FastAPI dependency injection functions."""
 
-from typing import Optional
-from fastapi import Request, HTTPException
 
-from services.transcriber import TranscriberService
+from fastapi import HTTPException, Request
+
 from exceptions import ModelNotLoadedError
+from services.transcriber import TranscriberService
 
 
 def get_transcriber(request: Request) -> TranscriberService:
@@ -25,7 +25,7 @@ def get_transcriber(request: Request) -> TranscriberService:
     return transcriber
 
 
-def get_transcriber_optional(request: Request) -> Optional[TranscriberService]:
+def get_transcriber_optional(request: Request) -> TranscriberService | None:
     """Get the transcriber service from app state (optional).
 
     Args:

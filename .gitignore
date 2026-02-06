@@ -35,11 +35,18 @@ htmlcov/
 # Type checking
 .mypy_cache/
 .ruff_cache/
+.pytest_cache/
 
 # Logs
 [Ll]og/
 [Ll]ogs/
 *.log
+
+# Secrets
+*.pem
+*.key
+.env
+.env.local
 
 # Test results
 TestResult.xml

@@ -3,8 +3,9 @@
 import asyncio
 import logging
 import shutil
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any
 
 from constants import AVAILABLE_MODELS
 from exceptions import ModelNotFoundError
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class ModelManager:
     """Manages Whisper model downloads and storage."""
-    
+
     def __init__(self, models_path: str):
         """Initialize the model manager.
         
@@ -24,19 +25,19 @@ class ModelManager:
         """
         self.models_path = Path(models_path)
         self.models_path.mkdir(parents=True, exist_ok=True)
-    
-    def list_models(self) -> List[Dict[str, Any]]:
+
+    def list_models(self) -> list[dict[str, Any]]:
         """List all available models with download status.
         
         Returns:
             List of model information dictionaries.
         """
         models = []
-        
+
         for name, info in AVAILABLE_MODELS.items():
             model_path = self._get_model_path(name)
             downloaded = model_path is not None
-            
+
             models.append({
                 "name": name,
                 "display_name": info["display_name"],
@@ -45,10 +46,10 @@ class ModelManager:
                 "downloaded": downloaded,
                 "path": str(model_path) if model_path else None,
             })
-        
+
         return models
-    
-    def _get_model_path(self, model_name: str) -> Optional[Path]:
+
+    def _get_model_path(self, model_name: str) -> Path | None:
         """Get the path to a downloaded model.
         
         Args:
@@ -63,13 +64,13 @@ class ModelManager:
             self.models_path / f"faster-whisper-{model_name}",
             self.models_path / f"whisper-{model_name}",
         ]
-        
+
         for path in possible_paths:
             if path.exists() and (path / "model.bin").exists():
                 return path
-        
+
         return None
-    
+
     def is_model_downloaded(self, model_name: str) -> bool:
         """Check if a model is downloaded.
         
@@ -80,8 +81,8 @@ class ModelManager:
             True if the model is downloaded.
         """
         return self._get_model_path(model_name) is not None
-    
-    async def download_model_async(self, model_name: str) -> AsyncGenerator[DownloadProgress, None]:
+
+    async def download_model_async(self, model_name: str) -> AsyncGenerator[DownloadProgress]:
         """Download a model with progress updates.
         
         Args:
@@ -95,70 +96,70 @@ class ModelManager:
         """
         if model_name not in AVAILABLE_MODELS:
             raise ModelNotFoundError(model_name)
-        
+
         model_info = AVAILABLE_MODELS[model_name]
         repo_id = model_info["repo_id"]
         total_mb = model_info["size_mb"]
-        
+
         # Use huggingface_hub for downloading
         try:
             from huggingface_hub import snapshot_download
-            
+
             target_path = self.models_path / model_name
-            
+
             yield DownloadProgress(
                 status="downloading",
                 progress=0,
                 downloaded_mb=0,
                 total_mb=total_mb,
             )
-            
+
             # Download in a thread to not block
             def _download():
                 return snapshot_download(
                     repo_id=repo_id,
                     local_dir=str(target_path),
                 )
-            
+
             loop = asyncio.get_event_loop()
-            
+
             # Start download in background
             download_task = loop.run_in_executor(None, _download)
-            
+
             # Poll for progress (simplified - huggingface_hub doesn't have great progress callbacks)
             while not download_task.done():
                 await asyncio.sleep(0.5)
-                
+
                 # Estimate progress based on downloaded files
                 if target_path.exists():
                     total_size = sum(f.stat().st_size for f in target_path.rglob("*") if f.is_file())
                     downloaded_mb = total_size / (1024 * 1024)
                     progress = min(95, (downloaded_mb / total_mb) * 100)
-                    
+
                     yield DownloadProgress(
                         status="downloading",
                         progress=progress,
                         downloaded_mb=downloaded_mb,
                         total_mb=total_mb,
                     )
-            
+
             # Get result (will raise if there was an error)
             await download_task
-            
+
             yield DownloadProgress(
                 status="complete",
                 progress=100,
                 downloaded_mb=total_mb,
                 total_mb=total_mb,
             )
-            
+
         except Exception as e:
             logger.error(f"Download failed: {e}")
             error_msg = str(e)
             yield DownloadProgress(status="error", error=error_msg)
             # Return instead of raising to avoid duplicate error messages
             return
-    
+
     def delete_model(self, model_name: str) -> bool:
         """Delete a downloaded model.
         
@@ -171,7 +172,7 @@ class ModelManager:
         model_path = self._get_model_path(model_name)
         if model_path is None:
             return False
-        
+
         try:
             shutil.rmtree(model_path)
             logger.info(f"Deleted model: {model_name}")

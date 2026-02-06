@@ -8,7 +8,6 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional
 
 from config import settings
 from constants import DEFAULT_BEAM_SIZE, DEFAULT_VAD_FILTER
@@ -27,23 +26,23 @@ def _setup_cuda_dll_paths() -> None:
     """
     if sys.platform != "win32":
         return
-    
+
     # Find the site-packages nvidia directory
     site_packages = Path(sys.prefix) / "Lib" / "site-packages" / "nvidia"
     if not site_packages.exists():
         return
-    
+
     # Add all nvidia bin directories to PATH
     nvidia_bin_paths = []
     for subdir in ["cublas", "cudnn", "cuda_runtime", "cufft", "curand"]:
         bin_path = site_packages / subdir / "bin"
         if bin_path.exists():
             nvidia_bin_paths.append(str(bin_path))
-    
+
     if nvidia_bin_paths:
         current_path = os.environ.get("PATH", "")
         new_paths = os.pathsep.join(nvidia_bin_paths)
-        
+
         # Only add if not already present
         if nvidia_bin_paths[0] not in current_path:
             os.environ["PATH"] = new_paths + os.pathsep + current_path
@@ -54,7 +53,7 @@ def _setup_cuda_dll_paths() -> None:
 _setup_cuda_dll_paths()
 
 # Thread pool for blocking operations (lazy initialization)
-_executor: Optional[ThreadPoolExecutor] = None
+_executor: ThreadPoolExecutor | None = None
 
 
 def _get_executor() -> ThreadPoolExecutor:
@@ -70,17 +69,17 @@ def _get_executor() -> ThreadPoolExecutor:
 
 class TranscriberService:
     """Transcription service using faster-whisper."""
-    
+
     def __init__(self):
         """Initialize the transcriber service."""
         self._model = None
-        self._model_name: Optional[str] = None
-        self._device: Optional[str] = None
-        self._compute_type: Optional[str] = None
+        self._model_name: str | None = None
+        self._device: str | None = None
+        self._compute_type: str | None = None
         # Override settings for device switching
-        self._device_override: Optional[str] = None
-        self._compute_type_override: Optional[str] = None
-    
+        self._device_override: str | None = None
+        self._compute_type_override: str | None = None
+
     def _resolve_device(self) -> tuple[str, str]:
         """Resolve the device and compute type to use.
         
@@ -90,7 +89,7 @@ class TranscriberService:
         # Use overrides first, then settings
         device = self._device_override or settings.device
         compute_type = self._compute_type_override or settings.compute_type
-        
+
         if device == "auto":
             # Try to detect CUDA availability
             try:
@@ -115,15 +114,15 @@ class TranscriberService:
                 except (ImportError, ModuleNotFoundError, RuntimeError, ValueError) as e:
                     logger.debug(f"ctranslate2 CUDA detection failed: {e}")
                     device = "cpu"
-        
+
         if compute_type == "auto":
             if device == "cuda":
                 compute_type = "float16"  # Best performance on GPU
             else:
                 compute_type = "int8"  # Best performance on CPU
-        
+
         return device, compute_type
-    
+
     def _get_model_path(self, model_name: str) -> str:
         """Get the path to a model.
         
@@ -136,22 +135,22 @@ class TranscriberService:
         # Check if it's a path
         if Path(model_name).exists():
             return model_name
-        
+
         # Check in models directory
         model_path = Path(settings.models_path) / model_name
         if model_path.exists():
             return str(model_path)
-        
+
         # Check for common variations
         for variant in [f"whisper-{model_name}", f"faster-whisper-{model_name}"]:
             variant_path = Path(settings.models_path) / variant
             if variant_path.exists():
                 return str(variant_path)
-        
+
         # Return the model name for download from HuggingFace
         return model_name
-    
-    async def load_model(self, model_name: Optional[str] = None) -> bool:
+
+    async def load_model(self, model_name: str | None = None) -> bool:
         """Load a transcription model.
         
         Args:
@@ -161,67 +160,67 @@ class TranscriberService:
             True if loaded successfully.
         """
         model_name = model_name or settings.default_model
-        
+
         def _load():
             try:
                 from faster_whisper import WhisperModel
-                
+
                 device, compute_type = self._resolve_device()
                 model_path = self._get_model_path(model_name)
-                
+
                 logger.info(
                     f"Loading model '{model_path}' on {device} "
                     f"with {compute_type} precision"
                 )
-                
+
                 start_time = time.time()
-                
+
                 self._model = WhisperModel(
                     model_path,
                     device=device,
                     compute_type=compute_type,
                 )
-                
+
                 self._model_name = model_name
                 self._device = device
                 self._compute_type = compute_type
-                
+
                 load_time = time.time() - start_time
                 logger.info(f"Model loaded in {load_time:.2f}s")
-                
+
                 return True
-                
+
             except Exception as e:
                 logger.error(f"Failed to load model: {e}")
-                
+
                 # Try fallback to CPU if CUDA failed
                 if settings.device in ("auto", "cuda"):
                     logger.info("Falling back to CPU...")
                     try:
                         from faster_whisper import WhisperModel
-                        
+
                         model_path = self._get_model_path(model_name)
                         self._model = WhisperModel(
                             model_path,
                             device="cpu",
                             compute_type="int8",
                         )
-                        
+
                         self._model_name = model_name
                         self._device = "cpu"
                         self._compute_type = "int8"
-                        
+
                         logger.info("Model loaded on CPU (fallback)")
                         return True
-                        
+
                     except Exception as fallback_error:
                         logger.error(f"CPU fallback also failed: {fallback_error}")
-                
+
                 return False
-        
+
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(_get_executor(), _load)
-    
+
     def unload_model(self) -> None:
         """Unload the current model."""
         self._model = None
@@ -231,25 +230,25 @@ class TranscriberService:
         self._device_override = None
         self._compute_type_override = None
         logger.info("Model unloaded")
-    
+
     def is_loaded(self) -> bool:
         """Check if a model is loaded."""
         return self._model is not None
-    
-    def get_current_model(self) -> Optional[str]:
+
+    def get_current_model(self) -> str | None:
         """Get the name of the currently loaded model."""
         return self._model_name
-    
-    def get_current_device(self) -> Optional[str]:
+
+    def get_current_device(self) -> str | None:
         """Get the current compute device."""
         return self._device
-    
+
     async def transcribe(
         self,
         audio_path: str,
         language: str = "auto",
         task: str = "transcribe",
-        initial_prompt: Optional[str] = None,
+        initial_prompt: str | None = None,
         word_timestamps: bool = False,
     ) -> TranscriptionResult:
         """Transcribe an audio file.
@@ -271,15 +270,15 @@ class TranscriberService:
                 duration_seconds=0,
                 error="Model not loaded",
             )
-        
+
         def _transcribe():
             try:
                 start_time = time.time()
-                
+
                 language_arg = None if language == "auto" else language
-                
+
                 logger.info(f"Transcribing {audio_path} (language={language}, task={task})")
-                
+
                 segments, info = self._model.transcribe(
                     str(audio_path),
                     language=language_arg,
@@ -289,9 +288,9 @@ class TranscriberService:
                     initial_prompt=initial_prompt,
                     word_timestamps=word_timestamps,
                 )
-                
+
                 text_parts = []
-                words: List[WordInfo] = []
+                words: list[WordInfo] = []
                 for segment in segments:
                     text_parts.append(segment.text)
                     # Extract word-level timestamps if requested
@@ -303,12 +302,12 @@ class TranscriberService:
                                 end=word.end,
                                 probability=word.probability,
                             ))
-                
+
                 text = "".join(text_parts).strip()
                 duration = time.time() - start_time
-                
+
                 logger.info(f"Transcription completed in {duration:.2f}s")
-                
+
                 return TranscriptionResult(
                     text=text,
                     success=True,
@@ -316,7 +315,7 @@ class TranscriberService:
                     language=info.language,
                     words=words if word_timestamps and words else None,
                 )
-                
+
             except Exception as e:
                 logger.error(f"Transcription failed: {e}")
                 return TranscriptionResult(
@@ -325,10 +324,10 @@ class TranscriberService:
                     duration_seconds=0,
                     error=str(e),
                 )
-        
+
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(_get_executor(), _transcribe)
-    
+
     async def change_device(self, device: str, compute_type: str = "auto") -> bool:
         """Change the compute device.
         
@@ -343,7 +342,7 @@ class TranscriberService:
             # Store overrides (None for "auto" to use settings defaults)
             self._device_override = device if device != "auto" else None
             self._compute_type_override = compute_type if compute_type != "auto" else None
-            
+
             current_model = self._model_name
             if current_model:
                 # Unload and reload with new device settings
@@ -352,7 +351,7 @@ class TranscriberService:
                 self._compute_type = None
                 return await self.load_model(current_model)
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to change device: {e}")
             return False

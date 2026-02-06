@@ -1,16 +1,93 @@
 version: 2
 updates:
+  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci"
 
+  # Backend Python dependencies
   - package-ecosystem: "pip"
     directory: "/src/backend"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      production-dependencies:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "pydantic*"
+          - "faster-whisper"
+        update-types:
+          - "minor"
+          - "patch"
+      development-dependencies:
+        patterns:
+          - "pytest*"
+          - "black"
+          - "ruff"
+        update-types:
+          - "minor"
+          - "patch"
 
+  # Development dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "dev-dependencies"
+    commit-message:
+      prefix: "chore(deps-dev)"
+
+  # Frontend npm dependencies
   - package-ecosystem: "npm"
     directory: "/src/frontend-electron"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      electron:
+        patterns:
+          - "electron"
+          - "electron-*"
+        update-types:
+          - "minor"
+          - "patch"
+      testing:
+        patterns:
+          - "@playwright/*"
+          - "eslint"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Ignore major version updates for electron (manual review required)
+      - dependency-name: "electron"
+        update-types: ["version-update:semver-major"]
+

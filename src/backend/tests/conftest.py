@@ -1,7 +1,8 @@
 """Pytest configuration and fixtures for VoxTether backend tests."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ def mock_transcriber():
     transcriber.get_current_device.return_value = "cpu"
     transcriber.load_model = AsyncMock(return_value=True)
     transcriber.unload_model = MagicMock()
-    
+
     # Mock transcribe method with new parameters
     async def mock_transcribe(
         audio_path,
@@ -48,9 +49,9 @@ def mock_transcriber():
             duration_seconds=1.5,
             language="en",
         )
-    
+
     transcriber.transcribe = mock_transcribe
-    
+
     return transcriber
 
 
@@ -65,9 +66,9 @@ def mock_model_manager(temp_models_dir):
         Mock ModelManager instance.
     """
     from services.model_manager import ModelManager
-    
+
     manager = ModelManager(str(temp_models_dir))
-    
+
     # Mock the download method
     async def mock_download(model_name):
         from schemas import DownloadProgress
@@ -83,9 +84,9 @@ def mock_model_manager(temp_models_dir):
             downloaded_mb=100.0,
             total_mb=100.0,
         )
-    
+
     manager.download_model_async = mock_download
-    
+
     return manager
 
 
@@ -101,7 +102,7 @@ def sample_audio_file(tmp_path):
     """
     # Create a minimal valid WAV file (44 bytes header + 1 sample)
     audio_file = tmp_path / "test.wav"
-    
+
     # Minimal WAV file header (RIFF format)
     wav_header = bytes([
         # RIFF header
@@ -121,6 +122,6 @@ def sample_audio_file(tmp_path):
         0x64, 0x61, 0x74, 0x61,  # "data"
         0x00, 0x00, 0x00, 0x00,  # Data size (0)
     ])
-    
+
     audio_file.write_bytes(wav_header)
     return audio_file

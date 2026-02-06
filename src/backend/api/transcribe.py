@@ -5,16 +5,14 @@ import os
 import tempfile
 from pathlib import Path
 
-from typing import Optional
-
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Depends
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from config import settings
 from constants import TEMP_AUDIO_SUFFIX
 from dependencies import get_transcriber
+from exceptions import ModelNotLoadedError
 from schemas import TranscriptionResponse, TranscriptionSettings
 from services.transcriber import TranscriberService
-from exceptions import ModelNotLoadedError
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +35,7 @@ async def transcribe_audio(
     file: UploadFile = File(..., description="Audio file to transcribe"),
     language: str = Form(default="auto", description="Language code or 'auto' for detection"),
     translate: bool = Form(default=False, description="Translate to English"),
-    initial_prompt: Optional[str] = Form(default=None, description="Prompt to guide transcription (e.g., domain-specific terms)"),
+    initial_prompt: str | None = Form(default=None, description="Prompt to guide transcription (e.g., domain-specific terms)"),
     word_timestamps: bool = Form(default=False, description="Return word-level timestamps"),
 ):
     """Transcribe an audio file.
@@ -59,7 +57,7 @@ async def transcribe_audio(
     """
     if not transcriber.is_loaded():
         raise ModelNotLoadedError()
-    
+
     # Validate file extension (allow files without extension for flexibility)
     if file.filename:
         ext = Path(file.filename).suffix.lower()
@@ -68,13 +66,13 @@ async def transcribe_audio(
                 status_code=400,
                 detail=f"Invalid file type: {ext}. Allowed: {', '.join(sorted(ALLOWED_AUDIO_EXTENSIONS))}"
             )
-    
+
     # Save uploaded file to temp location
     temp_path = None
     try:
         # Read file content
         content = await file.read()
-        
+
         # Check file size
         max_size = settings.max_upload_size_mb * 1024 * 1024
         if len(content) > max_size:
@@ -82,14 +80,14 @@ async def transcribe_audio(
                 status_code=413,
                 detail=f"File too large. Maximum size: {settings.max_upload_size_mb} MB"
             )
-        
+
         # Create temp file
         with tempfile.NamedTemporaryFile(suffix=TEMP_AUDIO_SUFFIX, delete=False) as temp_file:
             temp_path = temp_file.name
             temp_file.write(content)
-        
+
         logger.info(f"Transcribing uploaded audio ({len(content)} bytes)")
-        
+
         # Transcribe
         result = await transcriber.transcribe(
             audio_path=temp_path,
@@ -98,7 +96,7 @@ async def transcribe_audio(
             initial_prompt=initial_prompt,
             word_timestamps=word_timestamps,
         )
-        
+
         return TranscriptionResponse(
             text=result.text,
             language=result.language,
@@ -107,7 +105,7 @@ async def transcribe_audio(
             error=result.error,
             words=result.words,
         )
-        
+
     except HTTPException:
         # Re-raise HTTP exceptions to be handled by FastAPI
         raise
@@ -145,9 +143,9 @@ async def update_settings(
     # Update device if changed
     if settings.device != "auto" or settings.compute_type != "auto":
         await transcriber.change_device(settings.device, settings.compute_type)
-    
+
     # Load different model if specified
     if settings.model:
         await transcriber.load_model(settings.model)
-    
+
     return {"success": True}

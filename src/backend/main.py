@@ -15,7 +15,7 @@ from config import settings
 from constants import APP_VERSION
 from exceptions import VoxTetherError
 from services.transcriber import TranscriberService
-from utils.logging import setup_logging, get_logger
+from utils.logging import get_logger, setup_logging
 
 # Setup logging
 log_file = Path(settings.logs_path) / "backend.log"
@@ -37,14 +37,14 @@ async def lifespan(app: FastAPI):
     logger.info("Starting VoxTether backend...")
     logger.info(f"Host: {settings.host}:{settings.port}")
     logger.info(f"Models path: {settings.models_path}")
-    
+
     # Store start time in app state
     app.state.start_time = APP_START_TIME
-    
+
     # Initialize the transcriber service
     transcriber = TranscriberService()
     app.state.transcriber = transcriber
-    
+
     # Preload model if configured
     if settings.preload_model:
         logger.info(f"Preloading model: {settings.default_model}")
@@ -53,9 +53,9 @@ async def lifespan(app: FastAPI):
             logger.info("Model preloaded successfully")
         except Exception as e:
             logger.warning(f"Failed to preload model: {e}")
-    
+
     yield
-    
+
     # Cleanup
     logger.info("Shutting down VoxTether backend...")
     if hasattr(app.state, "transcriber"):
@@ -112,10 +112,10 @@ app.include_router(models.router, prefix="/api", tags=["Models"])
 def main():
     """Run the backend server."""
     logger.info(f"Starting server on {settings.host}:{settings.port}")
-    
+
     # Check if running as PyInstaller bundle
     is_frozen = getattr(sys, 'frozen', False)
-    
+
     if is_frozen:
         # PyInstaller bundle: must pass app object directly, reload not supported
         uvicorn.run(

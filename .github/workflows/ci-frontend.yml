@@ -37,11 +37,16 @@ jobs:
         npm install
       shell: pwsh
 
+    - name: Run npm audit
+      run: |
+        cd src/frontend-electron
+        npm audit --audit-level=moderate
+      shell: pwsh
+
     - name: Run linting
       run: |
         cd src/frontend-electron
         npm run lint
-      continue-on-error: true
       shell: pwsh
 
     - name: Build Electron app

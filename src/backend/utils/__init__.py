@@ -1,5 +1,5 @@
 """Utils package for VoxTether backend."""
 
-from .logging import setup_logging, get_logger
+from .logging import get_logger, setup_logging
 
 __all__ = ["setup_logging", "get_logger"]

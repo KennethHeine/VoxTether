@@ -11,7 +11,7 @@ import click
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import settings
-from constants import AVAILABLE_MODELS, APP_VERSION
+from constants import APP_VERSION, AVAILABLE_MODELS
 from services.model_manager import ModelManager
 
 
@@ -37,18 +37,18 @@ def list():
     """List all available models and their download status."""
     manager = ModelManager(settings.models_path)
     models = manager.list_models()
-    
+
     click.echo(f"\nModels directory: {settings.models_path}\n")
     click.echo("Available Models:")
     click.echo("-" * 80)
     click.echo(f"{'Name':<20} {'Size':<12} {'Downloaded':<12} {'Description'}")
     click.echo("-" * 80)
-    
+
     for model in models:
         status = "✓ Yes" if model["downloaded"] else "✗ No"
         size = f"{model['size_mb']} MB"
         click.echo(f"{model['name']:<20} {size:<12} {status:<12} {model['description']}")
-    
+
     click.echo("-" * 80)
     click.echo(f"\nTotal models: {len(models)}")
     downloaded = sum(1 for m in models if m["downloaded"])
@@ -67,9 +67,9 @@ def download(model_name: str, force: bool):
         click.echo(f"Error: Unknown model '{model_name}'", err=True)
         click.echo(f"Available models: {', '.join(AVAILABLE_MODELS.keys())}")
         sys.exit(1)
-    
+
     manager = ModelManager(settings.models_path)
-    
+
     if manager.is_model_downloaded(model_name):
         if not force:
             click.echo(f"Model '{model_name}' is already downloaded.")
@@ -78,7 +78,7 @@ def download(model_name: str, force: bool):
         else:
             click.echo(f"Re-downloading model '{model_name}'...")
             manager.delete_model(model_name)
-    
+
     model_info = AVAILABLE_MODELS[model_name]
     click.echo(f"\nDownloading model: {model_name}")
     click.echo(f"  Display name: {model_info.get('display_name', model_name)}")
@@ -86,7 +86,7 @@ def download(model_name: str, force: bool):
     click.echo(f"  Repository: {model_info.get('repo_id', 'N/A')}")
     click.echo(f"  Target: {settings.models_path}/{model_name}")
     click.echo()
-    
+
     async def download_model():
         last_progress = -1
         async for progress in manager.download_model_async(model_name):
@@ -107,7 +107,7 @@ def download(model_name: str, force: bool):
             elif progress.status == "error":
                 click.echo(f"\n✗ Download failed: {progress.error}", err=True)
                 sys.exit(1)
-    
+
     asyncio.run(download_model())
 
 
@@ -120,16 +120,16 @@ def delete(model_name: str, yes: bool):
     MODEL_NAME: Name of the model to delete
     """
     manager = ModelManager(settings.models_path)
-    
+
     if not manager.is_model_downloaded(model_name):
         click.echo(f"Model '{model_name}' is not downloaded.", err=True)
         sys.exit(1)
-    
+
     if not yes:
         if not click.confirm(f"Are you sure you want to delete model '{model_name}'?"):
             click.echo("Cancelled.")
             return
-    
+
     if manager.delete_model(model_name):
         click.echo(f"✓ Model '{model_name}' deleted successfully.")
     else:
@@ -167,16 +167,16 @@ def config():
 def serve(host: str, port: int, reload: bool, debug: bool):
     """Start the backend server."""
     import uvicorn
-    
+
     host = host or settings.host
     port = port or settings.port
-    
+
     click.echo("\nStarting VoxTether backend server...")
     click.echo(f"  URL: http://{host}:{port}")
     click.echo(f"  API docs: http://{host}:{port}/docs")
     click.echo(f"  Models path: {settings.models_path}")
     click.echo()
-    
+
     uvicorn.run(
         "main:app",
         host=host,
@@ -191,7 +191,7 @@ def info():
     """Show system and GPU information."""
     click.echo("\nSystem Information:")
     click.echo("-" * 50)
-    
+
     # Check for CUDA
     try:
         import torch
@@ -205,14 +205,14 @@ def info():
                 click.echo(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
     except ImportError:
         click.echo("PyTorch: Not installed")
-    
+
     # Check for faster-whisper
     import importlib.util
     if importlib.util.find_spec("faster_whisper"):
         click.echo("\nfaster-whisper: Available")
     else:
         click.echo("\nfaster-whisper: Not installed")
-    
+
     click.echo("-" * 50)
 
 
@@ -221,7 +221,7 @@ def main():
     # Print banner if no arguments provided
     if len(sys.argv) == 1:
         print_banner()
-    
+
     cli()
 
 

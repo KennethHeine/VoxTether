@@ -35,11 +35,16 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r src/backend/requirements.txt
+        pip install -r requirements-dev.txt
 
     - name: Run backend linting (ruff)
       run: |
-        pip install ruff
         ruff check src/backend/
+
+    - name: Run backend tests (pytest)
+      run: |
+        cd src/backend
+        pytest tests/ -v --tb=short
 
     - name: Test backend starts correctly
       run: |

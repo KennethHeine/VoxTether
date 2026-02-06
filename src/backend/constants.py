@@ -1,6 +1,6 @@
 """Constants and configuration values for VoxTether backend."""
 
-from typing import Dict, Any
+from typing import Any
 
 # Default transcription settings
 DEFAULT_BEAM_SIZE = 5
@@ -11,12 +11,48 @@ DEFAULT_VAD_FILTER = True
 TEMP_AUDIO_SUFFIX = ".wav"
 
 # Available Whisper models with their metadata
-AVAILABLE_MODELS: Dict[str, Dict[str, Any]] = {
+AVAILABLE_MODELS: dict[str, dict[str, Any]] = {
+    "tiny": {
+        "display_name": "Tiny",
+        "size_mb": 75,
+        "description": "Basic quality, very fast. Good for quick notes and low-resource systems.",
+        "repo_id": "Systran/faster-whisper-tiny",
+    },
+    "base": {
+        "display_name": "Base",
+        "size_mb": 142,
+        "description": "Good quality, fast. Suitable for general use.",
+        "repo_id": "Systran/faster-whisper-base",
+    },
+    "small": {
+        "display_name": "Small",
+        "size_mb": 466,
+        "description": "Better quality, moderate speed. Recommended for most users.",
+        "repo_id": "Systran/faster-whisper-small",
+    },
+    "medium": {
+        "display_name": "Medium",
+        "size_mb": 1500,
+        "description": "Great quality, slower. Good when accuracy is important.",
+        "repo_id": "Systran/faster-whisper-medium",
+    },
+    "large-v3": {
+        "display_name": "Large V3",
+        "size_mb": 3100,
+        "description": "Best quality, very slow. For when accuracy is critical.",
+        "repo_id": "Systran/faster-whisper-large-v3",
+    },
     "large-v3-turbo": {
         "display_name": "Large V3 Turbo",
         "size_mb": 1600,
-        "description": "Excellent accuracy with faster speed. Great GPU option.",
+        "description": "Excellent accuracy with faster speed. Best balance of speed and accuracy.",
         "repo_id": "deepdml/faster-whisper-large-v3-turbo-ct2",
+    },
+    "distil-large-v3": {
+        "display_name": "Distil Large V3",
+        "size_mb": 1100,
+        "description": "Excellent quality, fast. Distilled version of large-v3 for high-quality transcription.",
+        "repo_id": "Systran/faster-distil-whisper-large-v3",
     },
 }
 

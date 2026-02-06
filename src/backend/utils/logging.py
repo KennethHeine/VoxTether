@@ -6,12 +6,11 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import uuid4
 
-
 # Context variable for request ID tracking
-request_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "request_id", default=None
 )
 
@@ -28,7 +27,7 @@ class StructuredFormatter(logging.Formatter):
         Returns:
             JSON formatted log string.
         """
-        log_data: Dict[str, Any] = {
+        log_data: dict[str, Any] = {
             "timestamp": self.formatTime(record, self.datefmt),
             "level": record.levelname,
             "logger": record.name,
@@ -73,7 +72,7 @@ class ConsoleFormatter(logging.Formatter):
         """
         # Create a shallow copy to avoid mutating the original record
         record = logging.makeLogRecord(record.__dict__)
-        
+
         request_id = request_id_var.get()
         if request_id:
             # Add request ID to the message
@@ -83,7 +82,7 @@ class ConsoleFormatter(logging.Formatter):
 
 
 def setup_logging(
-    log_file: Optional[Path] = None,
+    log_file: Path | None = None,
     debug: bool = False,
     json_format: bool = False,
 ) -> None:
@@ -146,7 +145,7 @@ def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
 
-def set_request_id(request_id: Optional[str] = None) -> str:
+def set_request_id(request_id: str | None = None) -> str:
     """Set request ID for the current context.
 
     Args:
@@ -161,7 +160,7 @@ def set_request_id(request_id: Optional[str] = None) -> str:
     return request_id
 
 
-def get_request_id() -> Optional[str]:
+def get_request_id() -> str | None:
     """Get the current request ID.
 
     Returns:
@@ -189,7 +188,7 @@ class LogTimer:
         self.logger = logger
         self.operation = operation
         self.level = level
-        self.start_time: Optional[float] = None
+        self.start_time: float | None = None
 
     def __enter__(self) -> "LogTimer":
         """Start the timer."""

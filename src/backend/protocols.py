@@ -1,6 +1,7 @@
 """Protocol definitions for VoxTether backend services."""
 
-from typing import Optional, Protocol, AsyncGenerator, List
+from collections.abc import AsyncGenerator
+from typing import Protocol
 
 from schemas import DownloadProgress, WordInfo
 
@@ -13,9 +14,9 @@ class TranscriptionResult:
         text: str,
         success: bool,
         duration_seconds: float,
-        language: Optional[str] = None,
-        error: Optional[str] = None,
-        words: Optional[List[WordInfo]] = None,
+        language: str | None = None,
+        error: str | None = None,
+        words: list[WordInfo] | None = None,
     ):
         self.text = text
         self.success = success
@@ -28,7 +29,7 @@ class TranscriptionResult:
 class TranscriberProtocol(Protocol):
     """Protocol for transcription services."""
 
-    async def load_model(self, model_name: Optional[str] = None) -> bool:
+    async def load_model(self, model_name: str | None = None) -> bool:
         """Load a transcription model."""
         ...
 
@@ -40,11 +41,11 @@ class TranscriberProtocol(Protocol):
         """Check if a model is loaded."""
         ...
 
-    def get_current_model(self) -> Optional[str]:
+    def get_current_model(self) -> str | None:
         """Get the name of the currently loaded model."""
         ...
 
-    def get_current_device(self) -> Optional[str]:
+    def get_current_device(self) -> str | None:
         """Get the current compute device."""
         ...
 
@@ -53,7 +54,7 @@ class TranscriberProtocol(Protocol):
         audio_path: str,
         language: str = "auto",
         task: str = "transcribe",
-        initial_prompt: Optional[str] = None,
+        initial_prompt: str | None = None,
         word_timestamps: bool = False,
     ) -> TranscriptionResult:
         """Transcribe an audio file."""
@@ -73,7 +74,7 @@ class ModelManagerProtocol(Protocol):
 
     async def download_model_async(
         self, model_name: str
-    ) -> AsyncGenerator[DownloadProgress, None]:
+    ) -> AsyncGenerator[DownloadProgress]:
         """Download a model with progress updates."""
         ...
 

@@ -2,19 +2,18 @@
 
 import subprocess
 import time
-from typing import Optional
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends, Request
 
 from constants import APP_VERSION
 from dependencies import get_transcriber_optional
-from schemas import HealthCheckResponse, DeviceInfo
+from schemas import DeviceInfo, HealthCheckResponse
 from services.transcriber import TranscriberService
 
 router = APIRouter()
 
 
-def _detect_nvidia_gpu_via_smi() -> Optional[str]:
+def _detect_nvidia_gpu_via_smi() -> str | None:
     """Detect NVIDIA GPU using nvidia-smi command."""
     try:
         result = subprocess.run(
@@ -36,7 +35,7 @@ def _get_device_info() -> dict:
     cuda_available = False
     cuda_version = None
     device_name = None
-    
+
     try:
         import torch
         cuda_available = torch.cuda.is_available()
@@ -51,11 +50,11 @@ def _get_device_info() -> dict:
                 device_name = _detect_nvidia_gpu_via_smi()
         except (ImportError, ValueError, RuntimeError):
             pass
-    
+
     # Fallback to nvidia-smi if libraries didn't detect
     if not device_name:
         device_name = _detect_nvidia_gpu_via_smi()
-    
+
     return {
         "cuda_available": cuda_available,
         "cuda_version": cuda_version,
@@ -66,7 +65,7 @@ def _get_device_info() -> dict:
 @router.get("/health", response_model=HealthCheckResponse)
 async def health_check(
     request: Request,
-    transcriber: Optional[TranscriberService] = Depends(get_transcriber_optional),
+    transcriber: TranscriberService | None = Depends(get_transcriber_optional),
 ):
     """Enhanced health check endpoint with detailed status.
     
@@ -80,11 +79,11 @@ async def health_check(
     model_loaded = transcriber.is_loaded() if transcriber else False
     current_model = transcriber.get_current_model() if transcriber else None
     current_device = transcriber.get_current_device() if transcriber else None
-    
+
     # Calculate uptime
     start_time = getattr(request.app.state, "start_time", time.time())
     uptime_seconds = time.time() - start_time
-    
+
     # Determine overall status
     if transcriber and model_loaded:
         status = "healthy"
@@ -92,13 +91,13 @@ async def health_check(
         status = "degraded"  # Transcriber exists but no model loaded
     else:
         status = "unhealthy"  # No transcriber
-    
+
     # Component checks
     checks = {
         "transcriber": "healthy" if transcriber else "unhealthy",
         "model": "loaded" if model_loaded else "not_loaded",
     }
-    
+
     return HealthCheckResponse(
         status=status,
         version=APP_VERSION,
