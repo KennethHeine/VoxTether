@@ -90,9 +90,9 @@ Or install CUDA 12 Toolkit from NVIDIA.
 
 ### Default Hotkey
 
-**Ctrl + Shift + Space** (configurable in Settings)
+**Ctrl + Shift + R** (configurable in Settings)
 
-Press and hold the hotkey to record your voice. Release the hotkey to stop recording and transcribe.
+Press the hotkey to start recording. Press it again to stop recording and transcribe.
 
 ### Changing the Hotkey
 
@@ -139,7 +139,8 @@ Settings are stored in `%APPDATA%\VoxTether\settings.json`
 
 ```json
 {
-  "hotkey": "Ctrl+Shift+Space",
+  "windowToggleHotkey": "Ctrl+Shift+V",
+  "toggleRecordingHotkey": "Ctrl+Shift+R",
   "modelName": "small",
   "language": "auto",
   "outputMode": "ClipboardAndPaste",
@@ -277,17 +278,19 @@ This creates:
 
 The project uses GitHub Actions for continuous integration and release:
 
-- **CI Pipeline** (`.github/workflows/ci.yml`): Builds frontend, backend, and runs tests on every PR
-- **Release Pipeline** (`.github/workflows/release.yml`): Creates Windows installer and portable ZIP for releases
+- **Backend CI** (`.github/workflows/ci-backend.yml`): Linting and server tests on backend changes
+- **Frontend CI** (`.github/workflows/ci-frontend.yml`): Linting, build, and Playwright E2E tests on frontend changes
+- **Backend Release** (`.github/workflows/release-backend.yml`): Backend release workflow
+- **Frontend Release** (`.github/workflows/release-frontend.yml`): Creates Windows installer and portable ZIP
 
 ### Releases
 
 To create a new release:
 
-1. Go to Actions → Release workflow
+1. Go to Actions → Frontend Release or Backend Release workflow
 2. Click "Run workflow"
 3. Enter the version number (e.g., `2.0.0`)
-4. The workflow builds everything and creates a GitHub Release with installer and portable ZIP
+4. The workflow builds and creates a GitHub Release with installer and portable ZIP
 
 ## Privacy
 

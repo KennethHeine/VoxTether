@@ -95,12 +95,12 @@ On first launch, VoxTether will:
 
 ### Default Hotkey
 
-**Ctrl + Shift + Space** (configurable in Settings)
+**Ctrl + Shift + R** (configurable in Settings)
 
 **How to use:**
-1. Press and **hold** the hotkey
+1. Press the hotkey to **start** recording
 2. Speak into your microphone
-3. **Release** the hotkey to transcribe
+3. Press the hotkey again to **stop** recording and transcribe
 4. The text is automatically inserted at your cursor
 
 ### Changing the Hotkey
@@ -135,18 +135,19 @@ Settings are stored in:
 
 ```json
 {
-  "Hotkey": "Ctrl+Shift+Space",
-  "ModelName": "small",
-  "Language": "auto",
-  "OutputMode": "ClipboardAndPaste",
-  "ShowNotifications": true,
-  "ShowRecordingIndicator": true,
-  "AudioDeviceId": -1,
-  "ClipboardDelayMs": 50,
-  "BackendPort": 5678,
-  "StartMinimized": true,
-  "StartWithWindows": false,
-  "Theme": "System"
+  "windowToggleHotkey": "Ctrl+Shift+V",
+  "toggleRecordingHotkey": "Ctrl+Shift+R",
+  "modelName": "small",
+  "language": "auto",
+  "outputMode": "ClipboardAndPaste",
+  "showNotifications": true,
+  "showRecordingIndicator": true,
+  "audioDeviceId": -1,
+  "clipboardDelayMs": 50,
+  "backendPort": 5678,
+  "startMinimized": true,
+  "startWithWindows": false,
+  "theme": "system"
 }
 ```
 
