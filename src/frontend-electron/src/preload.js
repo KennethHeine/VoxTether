@@ -26,6 +26,9 @@ contextBridge.exposeInMainWorld('voxtether', {
     // OpenAI API
     testOpenAIConnection: (apiKey) => ipcRenderer.invoke('test-openai-connection', apiKey),
 
+    // Azure Speech Services API
+    testAzureConnection: (speechKey, speechRegion) => ipcRenderer.invoke('test-azure-connection', speechKey, speechRegion),
+
     // Recording control
     startRecordingManual: () => ipcRenderer.invoke('start-recording-manual'),
     stopRecordingManual: () => ipcRenderer.invoke('stop-recording-manual'),
