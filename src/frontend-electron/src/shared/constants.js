@@ -22,6 +22,7 @@ export const IPC_LOAD_MODEL = 'load-model';
 export const IPC_DELETE_MODEL = 'delete-model';
 export const IPC_TRANSCRIBE = 'transcribe';
 export const IPC_TEST_OPENAI_CONNECTION = 'test-openai-connection';
+export const IPC_TEST_AZURE_CONNECTION = 'test-azure-connection';
 
 // Recording control
 export const IPC_START_RECORDING_MANUAL = 'start-recording-manual';
@@ -112,9 +113,11 @@ export const DEFAULT_SETTINGS = {
     saveRecordingTranscript: false,
     showTranscriptionPreview: false,
     // Transcription Provider Settings
-    transcriptionProvider: 'local',  // 'local' or 'openai'
+    transcriptionProvider: 'local',  // 'local', 'openai', or 'azure'
     openaiApiKey: '',                 // OpenAI API key
-    openaiModel: 'whisper-1'          // OpenAI model to use
+    openaiModel: 'whisper-1',         // OpenAI model to use
+    azureSpeechKey: '',               // Azure Speech Services subscription key
+    azureSpeechRegion: ''             // Azure Speech Services region (e.g., 'eastus')
 };
 
 // ============================================================================
@@ -152,5 +155,8 @@ export const ALLOWED_EXTERNAL_URL_PATTERNS = [
     /^https:\/\/github\.com\/kennethsolberg\//i,
     /^https:\/\/github\.com\/[^/]+\/voxtether(?:\/|$)/i,
     /^https:\/\/platform\.openai\.com\//i,
-    /^https:\/\/openai\.com\//i
+    /^https:\/\/openai\.com\//i,
+    /^https:\/\/azure\.microsoft\.com\//i,
+    /^https:\/\/portal\.azure\.com\//i,
+    /^https:\/\/learn\.microsoft\.com\//i
 ];

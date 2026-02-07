@@ -26,6 +26,7 @@ const {
     IPC_DELETE_MODEL,
     IPC_TRANSCRIBE,
     IPC_TEST_OPENAI_CONNECTION,
+    IPC_TEST_AZURE_CONNECTION,
     IPC_COPY_TO_CLIPBOARD,
     IPC_OPEN_PATH,
     IPC_OPEN_EXTERNAL,
@@ -47,7 +48,7 @@ const {
     VALID_MODEL_NAMES,
     ALLOWED_EXTERNAL_URL_PATTERNS
 } = require('../shared/constants.js');
-const { testOpenAIConnection, transcribe: transcribeWithProvider } = require('./transcription-provider.js');
+const { testOpenAIConnection, testAzureConnection, transcribe: transcribeWithProvider } = require('./transcription-provider.js');
 
 /**
  * Validate model name against allowed list
@@ -283,7 +284,9 @@ function registerIpcHandlers(dependencies) {
                 language,
                 backendPort: BACKEND_PORT,
                 openaiApiKey: settings.openaiApiKey || '',
-                openaiModel: settings.openaiModel || 'whisper-1'
+                openaiModel: settings.openaiModel || 'whisper-1',
+                azureSpeechKey: settings.azureSpeechKey || '',
+                azureSpeechRegion: settings.azureSpeechRegion || ''
             });
         } catch (error) {
             return { success: false, error: error.message };
@@ -293,6 +296,11 @@ function registerIpcHandlers(dependencies) {
     // Test OpenAI Connection
     ipcMain.handle(IPC_TEST_OPENAI_CONNECTION, async (event, apiKey) => {
         return await testOpenAIConnection(apiKey);
+    });
+
+    // Test Azure Connection
+    ipcMain.handle(IPC_TEST_AZURE_CONNECTION, async (event, speechKey, speechRegion) => {
+        return await testAzureConnection(speechKey, speechRegion);
     });
 
     // Clipboard

@@ -339,12 +339,13 @@
                 <div class="setting-group">
                     <div class="setting-header">
                         <h3>Transcription Provider</h3>
-                        <p class="setting-description">Choose between local backend (free, offline) or OpenAI API (paid, cloud-based)</p>
+                        <p class="setting-description">Choose between local backend (free, offline), OpenAI API (paid, cloud-based), or Azure Speech Services (paid, cloud-based)</p>
                     </div>
                     <div class="setting-control">
                         <select id="transcription-provider-select" class="select-input">
                             <option value="local">Local Backend (faster-whisper)</option>
                             <option value="openai">OpenAI API (Cloud)</option>
+                            <option value="azure">Azure Speech Services (Cloud)</option>
                         </select>
                     </div>
                 </div>
@@ -469,6 +470,65 @@
 
                     <div class="action-buttons">
                         <button class="btn btn-primary" id="save-backend-btn">Save Settings</button>
+                    </div>
+                </div>
+
+                <!-- Azure Backend Settings -->
+                <div id="azure-backend-settings" class="hidden">
+                    <h2 class="section-title">🔷 Azure Speech Services (Cloud)</h2>
+
+                    <div class="backend-info-card azure">
+                        <div class="backend-info-header">
+                            <span class="backend-icon">🔷</span>
+                            <span class="backend-title">Azure Speech-to-Text</span>
+                        </div>
+                        <ul class="backend-features">
+                            <li>☁️ Cloud-based - requires internet</li>
+                            <li>💰 Pay-per-use Azure pricing</li>
+                            <li>🌍 100+ languages supported</li>
+                            <li>🎯 Enterprise-grade accuracy</li>
+                        </ul>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Azure Speech Key</h3>
+                            <p class="setting-description">Enter your Azure Speech Services subscription key. Get one from <a href="https://portal.azure.com/" id="azure-portal-link" class="external-link" target="_blank" rel="noopener noreferrer">Azure Portal</a></p>
+                        </div>
+                        <div class="setting-control">
+                            <input type="password" id="azure-speech-key-input" class="text-input" placeholder="Your Azure Speech key..." autocomplete="off" spellcheck="false">
+                            <button class="btn btn-secondary" id="toggle-azure-key-visibility" aria-label="Toggle Azure key visibility">Show</button>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Azure Region</h3>
+                            <p class="setting-description">The Azure region where your Speech resource is deployed (e.g., eastus, westeurope)</p>
+                        </div>
+                        <div class="setting-control">
+                            <input type="text" id="azure-speech-region-input" class="text-input" placeholder="eastus" autocomplete="off" spellcheck="false">
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Test Connection</h3>
+                            <p class="setting-description">Verify your Azure Speech key and region are valid</p>
+                        </div>
+                        <div class="setting-control">
+                            <button class="btn btn-secondary" id="test-azure-btn">🔗 Test Azure Connection</button>
+                            <span id="azure-test-status" class="test-status"></span>
+                        </div>
+                    </div>
+
+                    <div class="openai-notice">
+                        <span class="notice-icon">ℹ️</span>
+                        <span class="notice-text">When using Azure, audio is sent to Microsoft's servers for transcription. See <a href="https://azure.microsoft.com/en-us/pricing/details/cognitive-services/speech-services/" id="azure-pricing-link" class="external-link" target="_blank" rel="noopener noreferrer">Azure Speech pricing</a> for details.</span>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" id="save-azure-backend-btn">Save Settings</button>
                     </div>
                 </div>
             </div>

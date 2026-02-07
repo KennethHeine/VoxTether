@@ -89,6 +89,13 @@ export function applySettingsToUI() {
 
     const openaiModelSelect = document.getElementById('openai-model-select');
     if (openaiModelSelect) openaiModelSelect.value = settings.openaiModel || 'whisper-1';
+
+    // Azure Speech settings
+    const azureSpeechKeyInput = document.getElementById('azure-speech-key-input');
+    if (azureSpeechKeyInput) azureSpeechKeyInput.value = settings.azureSpeechKey || '';
+
+    const azureSpeechRegionInput = document.getElementById('azure-speech-region-input');
+    if (azureSpeechRegionInput) azureSpeechRegionInput.value = settings.azureSpeechRegion || '';
 }
 
 /**
@@ -158,7 +165,9 @@ export async function saveGeneralSettings() {
         // Transcription Provider settings
         transcriptionProvider: getElementValue('transcription-provider-select', 'local'),
         openaiApiKey: getElementValue('openai-api-key-input', ''),
-        openaiModel: getElementValue('openai-model-select', 'whisper-1')
+        openaiModel: getElementValue('openai-model-select', 'whisper-1'),
+        azureSpeechKey: getElementValue('azure-speech-key-input', ''),
+        azureSpeechRegion: getElementValue('azure-speech-region-input', '')
     };
 
     await saveSettings(newSettings);
@@ -201,17 +210,21 @@ export function clearRecordingFolder() {
 
 /**
  * Update backend settings visibility based on provider selection
- * @param {string} provider - The selected provider ('local' or 'openai')
+ * @param {string} provider - The selected provider ('local', 'openai', or 'azure')
  */
 export function updateBackendSettingsVisibility(provider) {
     const localSettings = document.getElementById('local-backend-settings');
     const openaiSettings = document.getElementById('openai-backend-settings');
+    const azureSettings = document.getElementById('azure-backend-settings');
 
     if (localSettings) {
         localSettings.classList.toggle('hidden', provider !== 'local');
     }
     if (openaiSettings) {
         openaiSettings.classList.toggle('hidden', provider !== 'openai');
+    }
+    if (azureSettings) {
+        azureSettings.classList.toggle('hidden', provider !== 'azure');
     }
 }
 
@@ -228,6 +241,24 @@ export function toggleApiKeyVisibility() {
             toggleBtn.textContent = 'Hide';
         } else {
             apiKeyInput.type = 'password';
+            toggleBtn.textContent = 'Show';
+        }
+    }
+}
+
+/**
+ * Toggle Azure key visibility
+ */
+export function toggleAzureKeyVisibility() {
+    const keyInput = document.getElementById('azure-speech-key-input');
+    const toggleBtn = document.getElementById('toggle-azure-key-visibility');
+
+    if (keyInput && toggleBtn) {
+        if (keyInput.type === 'password') {
+            keyInput.type = 'text';
+            toggleBtn.textContent = 'Hide';
+        } else {
+            keyInput.type = 'password';
             toggleBtn.textContent = 'Show';
         }
     }
@@ -255,6 +286,50 @@ export async function testOpenAIConnection() {
 
     try {
         const result = await window.voxtether.testOpenAIConnection(apiKey);
+        if (result.success) {
+            statusEl.textContent = '✓ Connection successful';
+            statusEl.className = 'test-status success';
+        } else {
+            statusEl.textContent = `✗ ${result.error || 'Connection failed'}`;
+            statusEl.className = 'test-status error';
+        }
+    } catch (error) {
+        statusEl.textContent = `✗ ${error.message || 'Connection failed'}`;
+        statusEl.className = 'test-status error';
+    }
+}
+
+/**
+ * Test Azure Speech Services connection
+ */
+export async function testAzureConnection() {
+    const keyInput = document.getElementById('azure-speech-key-input');
+    const regionInput = document.getElementById('azure-speech-region-input');
+    const statusEl = document.getElementById('azure-test-status');
+
+    if (!keyInput || !regionInput || !statusEl) return;
+
+    const speechKey = keyInput.value.trim();
+    const speechRegion = regionInput.value.trim();
+
+    if (!speechKey) {
+        statusEl.textContent = 'Please enter a Speech key';
+        statusEl.className = 'test-status error';
+        return;
+    }
+
+    if (!speechRegion) {
+        statusEl.textContent = 'Please enter a region';
+        statusEl.className = 'test-status error';
+        return;
+    }
+
+    // Show testing state
+    statusEl.textContent = 'Testing...';
+    statusEl.className = 'test-status testing';
+
+    try {
+        const result = await window.voxtether.testAzureConnection(speechKey, speechRegion);
         if (result.success) {
             statusEl.textContent = '✓ Connection successful';
             statusEl.className = 'test-status success';
@@ -313,5 +388,42 @@ export function initializeOpenAISettings() {
     const saveBackendBtn = document.getElementById('save-backend-btn');
     if (saveBackendBtn) {
         saveBackendBtn.addEventListener('click', saveGeneralSettings);
+    }
+
+    // --- Azure Settings ---
+
+    // Azure key visibility toggle
+    const toggleAzureKeyBtn = document.getElementById('toggle-azure-key-visibility');
+    if (toggleAzureKeyBtn) {
+        toggleAzureKeyBtn.addEventListener('click', toggleAzureKeyVisibility);
+    }
+
+    // Test Azure connection button
+    const testAzureBtn = document.getElementById('test-azure-btn');
+    if (testAzureBtn) {
+        testAzureBtn.addEventListener('click', testAzureConnection);
+    }
+
+    // Azure external links
+    const azurePortalLink = document.getElementById('azure-portal-link');
+    if (azurePortalLink) {
+        azurePortalLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.voxtether.openExternal('https://portal.azure.com/');
+        });
+    }
+
+    const azurePricingLink = document.getElementById('azure-pricing-link');
+    if (azurePricingLink) {
+        azurePricingLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.voxtether.openExternal('https://azure.microsoft.com/en-us/pricing/details/cognitive-services/speech-services/');
+        });
+    }
+
+    // Save Azure backend settings button
+    const saveAzureBackendBtn = document.getElementById('save-azure-backend-btn');
+    if (saveAzureBackendBtn) {
+        saveAzureBackendBtn.addEventListener('click', saveGeneralSettings);
     }
 }
