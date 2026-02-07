@@ -333,7 +333,7 @@ async function transcribeAzure(audioPath, language, speechKey, speechRegion) {
                 'hu': 'hu-HU', 'bg': 'bg-BG', 'hr': 'hr-HR', 'sk': 'sk-SK',
                 'sl': 'sl-SI', 'ca': 'ca-ES', 'ta': 'ta-IN'
             };
-            azureLanguage = langMap[language] || `${language}-${language.toUpperCase()}`;
+            azureLanguage = langMap[language] || 'en-US';
         }
 
         const queryParams = `language=${encodeURIComponent(azureLanguage)}&format=detailed`;
