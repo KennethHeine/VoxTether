@@ -345,7 +345,7 @@ async function transcribeAzure(audioPath, language, speechKey, speechRegion) {
             timeout: REQUEST_TIMEOUT_MS,
             headers: {
                 'Ocp-Apim-Subscription-Key': speechKey,
-                'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+                'Content-Type': 'audio/wav; codecs=audio/pcm',
                 'Content-Length': audioData.length
             }
         };

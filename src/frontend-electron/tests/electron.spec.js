@@ -551,6 +551,50 @@ test.describe('New Features', () => {
     await expect(modal).toHaveClass(/hidden/);
   });
 
+  test('should have Azure provider option on Backend page', async () => {
+    // Navigate to Backend page
+    const modelsNav = window.locator('[data-page="models"]');
+    await modelsNav.click();
+
+    // Check that Azure option exists in the provider dropdown
+    const providerSelect = window.locator('#transcription-provider-select');
+    await expect(providerSelect).toBeVisible();
+
+    const azureOption = window.locator('#transcription-provider-select option[value="azure"]');
+    await expect(azureOption).toHaveText('Azure Speech Services (Cloud)');
+  });
+
+  test('should show Azure settings panel when Azure provider is selected', async () => {
+    // Navigate to Backend page
+    const modelsNav = window.locator('[data-page="models"]');
+    await modelsNav.click();
+
+    // Azure settings should be hidden by default
+    const azureSettings = window.locator('#azure-backend-settings');
+    await expect(azureSettings).toHaveClass(/hidden/);
+
+    // Select Azure provider
+    const providerSelect = window.locator('#transcription-provider-select');
+    await providerSelect.selectOption('azure');
+
+    // Azure settings should now be visible
+    await expect(azureSettings).not.toHaveClass(/hidden/);
+
+    // Local backend settings should be hidden
+    const localSettings = window.locator('#local-backend-settings');
+    await expect(localSettings).toHaveClass(/hidden/);
+
+    // Check for Azure key input, region input, and test button
+    const azureKeyInput = window.locator('#azure-speech-key-input');
+    await expect(azureKeyInput).toBeVisible();
+
+    const azureRegionInput = window.locator('#azure-speech-region-input');
+    await expect(azureRegionInput).toBeVisible();
+
+    const testAzureBtn = window.locator('#test-azure-btn');
+    await expect(testAzureBtn).toBeVisible();
+  });
+
   test('should show Backend Offline status when backend is not running', async () => {
     // Since tests run without the backend, the status indicator should show "Backend Offline"
     // Wait for the status text to update (avoid explicit timeout waits)
