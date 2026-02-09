@@ -185,13 +185,8 @@ app.whenReady().then(async () => {
     console.log('VoxTether Electron ready');
 });
 
-// Prevent app from quitting when all windows are closed
-app.on('window-all-closed', () => {
-    // On Windows, keep the app running in the tray
-    if (process.platform !== 'darwin') {
-        // Don't quit, just hide
-    }
-});
+// Prevent app from quitting when all windows are closed (keep running in tray)
+app.on('window-all-closed', () => {});
 
 app.on('activate', () => {
     // On macOS, re-create window when dock icon is clicked

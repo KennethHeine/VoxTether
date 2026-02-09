@@ -198,8 +198,6 @@ class TranscriberService:
                 if settings.device in ("auto", "cuda"):
                     logger.info("Falling back to CPU...")
                     try:
-                        from faster_whisper import WhisperModel
-                        
                         model_path = self._get_model_path(model_name)
                         self._model = WhisperModel(
                             model_path,

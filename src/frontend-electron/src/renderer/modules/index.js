@@ -385,14 +385,6 @@ function startHealthMonitoring() {
     scheduleNextHealthCheck();
 }
 
-// Note: _stopHealthMonitoring is available for cleanup but not currently used
-function _stopHealthMonitoring() {
-    if (healthCheckTimeoutId) {
-        clearTimeout(healthCheckTimeoutId);
-        healthCheckTimeoutId = null;
-    }
-}
-
 // ============================================================================
 // Initialization
 // ============================================================================

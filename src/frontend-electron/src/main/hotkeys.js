@@ -23,46 +23,57 @@ function convertToElectronHotkey(hotkey) {
 }
 
 /**
+ * Generic helper to register a global hotkey
+ * @param {string} hotkey - Hotkey string from settings
+ * @param {Function} callback - Function to call when hotkey is pressed
+ * @param {string} label - Human-readable label for logging
+ * @param {string|null} previousHotkey - Previously registered hotkey to unregister
+ * @returns {{ success: boolean, registeredHotkey: string|null }}
+ */
+function registerHotkey(hotkey, callback, label, previousHotkey) {
+    // Unregister previous hotkey if exists
+    if (previousHotkey) {
+        try {
+            globalShortcut.unregister(previousHotkey);
+        } catch (error) {
+            console.warn(`Failed to unregister previous ${label} hotkey:`, error);
+        }
+    }
+
+    if (!hotkey) {
+        console.log(`No ${label} hotkey configured`);
+        return { success: false, registeredHotkey: null };
+    }
+
+    try {
+        const electronHotkey = convertToElectronHotkey(hotkey);
+        console.log(`Registering ${label} hotkey: ${hotkey} -> ${electronHotkey}`);
+
+        const success = globalShortcut.register(electronHotkey, callback);
+
+        if (success) {
+            console.log(`${label} hotkey registered successfully`);
+            return { success: true, registeredHotkey: electronHotkey };
+        } else {
+            console.error(`Failed to register ${label} hotkey`);
+            return { success: false, registeredHotkey: null };
+        }
+    } catch (error) {
+        console.error(`Error registering ${label} hotkey:`, error);
+        return { success: false, registeredHotkey: null };
+    }
+}
+
+/**
  * Register the window toggle global hotkey
  * @param {string} hotkey - Hotkey string from settings
  * @param {Function} callback - Function to call when hotkey is pressed
  * @returns {boolean} True if registration successful
  */
 function registerWindowToggleHotkey(hotkey, callback) {
-    // Unregister previous hotkey if exists
-    if (registeredWindowToggleHotkey) {
-        try {
-            globalShortcut.unregister(registeredWindowToggleHotkey);
-        } catch (error) {
-            console.warn('Failed to unregister previous window toggle hotkey:', error);
-        }
-        registeredWindowToggleHotkey = null;
-    }
-
-    if (!hotkey) {
-        console.log('No window toggle hotkey configured');
-        return false;
-    }
-
-    try {
-        // Convert our hotkey format to Electron's format
-        const electronHotkey = convertToElectronHotkey(hotkey);
-        console.log(`Registering window toggle hotkey: ${hotkey} -> ${electronHotkey}`);
-
-        const success = globalShortcut.register(electronHotkey, callback);
-
-        if (success) {
-            registeredWindowToggleHotkey = electronHotkey;
-            console.log('Window toggle hotkey registered successfully');
-            return true;
-        } else {
-            console.error('Failed to register window toggle hotkey');
-            return false;
-        }
-    } catch (error) {
-        console.error('Error registering window toggle hotkey:', error);
-        return false;
-    }
+    const result = registerHotkey(hotkey, callback, 'window toggle', registeredWindowToggleHotkey);
+    registeredWindowToggleHotkey = result.registeredHotkey;
+    return result.success;
 }
 
 /**
@@ -72,40 +83,9 @@ function registerWindowToggleHotkey(hotkey, callback) {
  * @returns {boolean} True if registration successful
  */
 function registerToggleRecordingHotkey(hotkey, callback) {
-    // Unregister previous hotkey if exists
-    if (registeredToggleRecordingHotkey) {
-        try {
-            globalShortcut.unregister(registeredToggleRecordingHotkey);
-        } catch (error) {
-            console.warn('Failed to unregister previous toggle recording hotkey:', error);
-        }
-        registeredToggleRecordingHotkey = null;
-    }
-
-    if (!hotkey) {
-        console.log('No toggle recording hotkey configured');
-        return false;
-    }
-
-    try {
-        // Convert our hotkey format to Electron's format
-        const electronHotkey = convertToElectronHotkey(hotkey);
-        console.log(`Registering toggle recording hotkey: ${hotkey} -> ${electronHotkey}`);
-
-        const success = globalShortcut.register(electronHotkey, callback);
-
-        if (success) {
-            registeredToggleRecordingHotkey = electronHotkey;
-            console.log('Toggle recording hotkey registered successfully');
-            return true;
-        } else {
-            console.error('Failed to register toggle recording hotkey');
-            return false;
-        }
-    } catch (error) {
-        console.error('Error registering toggle recording hotkey:', error);
-        return false;
-    }
+    const result = registerHotkey(hotkey, callback, 'toggle recording', registeredToggleRecordingHotkey);
+    registeredToggleRecordingHotkey = result.registeredHotkey;
+    return result.success;
 }
 
 /**
