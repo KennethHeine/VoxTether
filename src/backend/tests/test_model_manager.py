@@ -7,6 +7,8 @@ from services.model_manager import ModelManager
 from constants import AVAILABLE_MODELS
 from exceptions import ModelNotFoundError
 
+TEST_MODEL_NAME = next(iter(AVAILABLE_MODELS))
+
 
 class TestModelManager:
     """Test suite for ModelManager."""
@@ -37,46 +39,46 @@ class TestModelManager:
         manager = ModelManager(str(temp_models_dir))
         
         # Create a fake model directory with model.bin
-        model_dir = temp_models_dir / "small"
+        model_dir = temp_models_dir / TEST_MODEL_NAME
         model_dir.mkdir()
         (model_dir / "model.bin").touch()
         
         models = manager.list_models()
         
-        # Find the small model
-        small_model = next(m for m in models if m["name"] == "small")
-        assert small_model["downloaded"]
-        assert small_model["path"] == str(model_dir)
+        # Find the downloaded model
+        downloaded_model = next(m for m in models if m["name"] == TEST_MODEL_NAME)
+        assert downloaded_model["downloaded"]
+        assert downloaded_model["path"] == str(model_dir)
 
     def test_is_model_downloaded(self, temp_models_dir):
         """Test checking if a model is downloaded."""
         manager = ModelManager(str(temp_models_dir))
         
         # Model not downloaded
-        assert not manager.is_model_downloaded("small")
+        assert not manager.is_model_downloaded(TEST_MODEL_NAME)
         
         # Create the model
-        model_dir = temp_models_dir / "small"
+        model_dir = temp_models_dir / TEST_MODEL_NAME
         model_dir.mkdir()
         (model_dir / "model.bin").touch()
         
         # Now it should be downloaded
-        assert manager.is_model_downloaded("small")
+        assert manager.is_model_downloaded(TEST_MODEL_NAME)
 
     def test_get_model_path(self, temp_models_dir):
         """Test _get_model_path method."""
         manager = ModelManager(str(temp_models_dir))
         
         # Model not found
-        assert manager._get_model_path("small") is None
+        assert manager._get_model_path(TEST_MODEL_NAME) is None
         
         # Create the model
-        model_dir = temp_models_dir / "small"
+        model_dir = temp_models_dir / TEST_MODEL_NAME
         model_dir.mkdir()
         (model_dir / "model.bin").touch()
         
         # Now it should be found
-        path = manager._get_model_path("small")
+        path = manager._get_model_path(TEST_MODEL_NAME)
         assert path == model_dir
 
     def test_delete_model(self, temp_models_dir):
@@ -84,12 +86,12 @@ class TestModelManager:
         manager = ModelManager(str(temp_models_dir))
         
         # Create a model
-        model_dir = temp_models_dir / "small"
+        model_dir = temp_models_dir / TEST_MODEL_NAME
         model_dir.mkdir()
         (model_dir / "model.bin").touch()
         
         # Delete it
-        result = manager.delete_model("small")
+        result = manager.delete_model(TEST_MODEL_NAME)
         
         assert result is True
         assert not model_dir.exists()
@@ -118,7 +120,7 @@ class TestModelManager:
         
         with patch("huggingface_hub.snapshot_download") as mock_download:
             # Mock successful download
-            target_path = temp_models_dir / "small"
+            target_path = temp_models_dir / TEST_MODEL_NAME
             mock_download.return_value = str(target_path)
             
             # Create the directory to simulate download
@@ -126,7 +128,7 @@ class TestModelManager:
             (target_path / "model.bin").touch()
             
             statuses = []
-            async for progress in manager.download_model_async("small"):
+            async for progress in manager.download_model_async(TEST_MODEL_NAME):
                 statuses.append(progress.status)
             
             # Should have downloading and complete statuses
@@ -144,7 +146,7 @@ class TestModelManager:
             
             statuses = []
             try:
-                async for progress in manager.download_model_async("small"):
+                async for progress in manager.download_model_async(TEST_MODEL_NAME):
                     statuses.append(progress.status)
             except Exception:
                 pass  # Expected
