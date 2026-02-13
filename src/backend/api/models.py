@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from config import settings
+from constants import AVAILABLE_MODELS
 from dependencies import get_transcriber
 from exceptions import ModelNotFoundError
 from schemas import ModelListResponse, ModelInfo, ModelActionResponse
@@ -111,7 +112,13 @@ async def load_model(
         
     Returns:
         Action response indicating success or failure.
+        
+    Raises:
+        ModelNotFoundError: If model name is not recognized.
     """
+    if model_name not in AVAILABLE_MODELS:
+        raise ModelNotFoundError(model_name)
+    
     await transcriber.load_model(model_name)
     return ModelActionResponse(
         success=True,

@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Depends
 
 from config import settings
-from constants import TEMP_AUDIO_SUFFIX
+from constants import TEMP_AUDIO_SUFFIX, SUPPORTED_LANGUAGES, MAX_INITIAL_PROMPT_LENGTH
 from dependencies import get_transcriber
 from schemas import TranscriptionResponse, TranscriptionSettings
 from services.transcriber import TranscriberService
@@ -68,6 +68,24 @@ async def transcribe_audio(
                 status_code=400,
                 detail=f"Invalid file type: {ext}. Allowed: {', '.join(sorted(ALLOWED_AUDIO_EXTENSIONS))}"
             )
+    
+    # Validate content type
+    if file.content_type and file.content_type not in ALLOWED_CONTENT_TYPES:
+        logger.warning(f"Unexpected content type: {file.content_type}")
+    
+    # Validate language code
+    if language and language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid language code: '{language}'. Use 'auto' for automatic detection or a valid ISO 639-1 code."
+        )
+    
+    # Validate initial_prompt length
+    if initial_prompt and len(initial_prompt) > MAX_INITIAL_PROMPT_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Initial prompt too long. Maximum length: {MAX_INITIAL_PROMPT_LENGTH} characters."
+        )
     
     # Save uploaded file to temp location
     temp_path = None

@@ -36,17 +36,20 @@ class TestModelManager:
         """Test listing models when some are downloaded."""
         manager = ModelManager(str(temp_models_dir))
         
+        # Use a model name from AVAILABLE_MODELS
+        model_name = next(iter(AVAILABLE_MODELS))
+        
         # Create a fake model directory with model.bin
-        model_dir = temp_models_dir / "small"
+        model_dir = temp_models_dir / model_name
         model_dir.mkdir()
         (model_dir / "model.bin").touch()
         
         models = manager.list_models()
         
-        # Find the small model
-        small_model = next(m for m in models if m["name"] == "small")
-        assert small_model["downloaded"]
-        assert small_model["path"] == str(model_dir)
+        # Find the model
+        downloaded_model = next(m for m in models if m["name"] == model_name)
+        assert downloaded_model["downloaded"]
+        assert downloaded_model["path"] == str(model_dir)
 
     def test_is_model_downloaded(self, temp_models_dir):
         """Test checking if a model is downloaded."""
@@ -116,9 +119,12 @@ class TestModelManager:
         """Test successful model download."""
         manager = ModelManager(str(temp_models_dir))
         
+        # Use a model name from AVAILABLE_MODELS
+        model_name = next(iter(AVAILABLE_MODELS))
+        
         with patch("huggingface_hub.snapshot_download") as mock_download:
             # Mock successful download
-            target_path = temp_models_dir / "small"
+            target_path = temp_models_dir / model_name
             mock_download.return_value = str(target_path)
             
             # Create the directory to simulate download
@@ -126,7 +132,7 @@ class TestModelManager:
             (target_path / "model.bin").touch()
             
             statuses = []
-            async for progress in manager.download_model_async("small"):
+            async for progress in manager.download_model_async(model_name):
                 statuses.append(progress.status)
             
             # Should have downloading and complete statuses
@@ -138,16 +144,16 @@ class TestModelManager:
         """Test model download failure."""
         manager = ModelManager(str(temp_models_dir))
         
+        # Use a model name from AVAILABLE_MODELS
+        model_name = next(iter(AVAILABLE_MODELS))
+        
         with patch("huggingface_hub.snapshot_download") as mock_download:
             # Mock download failure
             mock_download.side_effect = Exception("Network error")
             
             statuses = []
-            try:
-                async for progress in manager.download_model_async("small"):
-                    statuses.append(progress.status)
-            except Exception:
-                pass  # Expected
+            async for progress in manager.download_model_async(model_name):
+                statuses.append(progress.status)
             
             # Should have error status
             assert any(s == "error" for s in statuses)

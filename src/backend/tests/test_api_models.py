@@ -112,3 +112,12 @@ def test_delete_model_not_found(client):
     response = client.delete("/api/models/nonexistent")
     
     assert response.status_code == 404
+
+
+def test_load_invalid_model_name(client, mock_transcriber):
+    """Test loading a model with an invalid name."""
+    response = client.post("/api/models/nonexistent-model/load")
+    
+    assert response.status_code == 404
+    data = response.json()
+    assert "not found" in data["detail"]

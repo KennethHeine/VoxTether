@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from config import settings
+from constants import MAX_INITIAL_PROMPT_LENGTH
 from main import app
 
 
@@ -160,3 +161,48 @@ def test_transcribe_with_word_timestamps(client, mock_transcriber, sample_audio_
     data = response.json()
     assert data["success"] is True
     # Note: words may be None if mock doesn't return them
+
+
+def test_transcribe_invalid_language(client, mock_transcriber, sample_audio_file):
+    """Test transcription with invalid language code."""
+    with open(sample_audio_file, "rb") as f:
+        response = client.post(
+            "/api/transcribe",
+            files={"file": ("test.wav", f, "audio/wav")},
+            data={"language": "invalid_lang"},
+        )
+    
+    assert response.status_code == 400
+    data = response.json()
+    assert "Invalid language code" in data["detail"]
+
+
+def test_transcribe_valid_language_codes(client, mock_transcriber, sample_audio_file):
+    """Test transcription accepts valid language codes."""
+    valid_codes = ["auto", "en", "de", "fr", "es", "zh", "ja"]
+    
+    for code in valid_codes:
+        with open(sample_audio_file, "rb") as f:
+            response = client.post(
+                "/api/transcribe",
+                files={"file": ("test.wav", f, "audio/wav")},
+                data={"language": code},
+            )
+        
+        assert response.status_code == 200, f"Failed for language code '{code}'"
+
+
+def test_transcribe_initial_prompt_too_long(client, mock_transcriber, sample_audio_file):
+    """Test transcription rejects overly long initial prompts."""
+    long_prompt = "x" * (MAX_INITIAL_PROMPT_LENGTH + 1)
+    
+    with open(sample_audio_file, "rb") as f:
+        response = client.post(
+            "/api/transcribe",
+            files={"file": ("test.wav", f, "audio/wav")},
+            data={"initial_prompt": long_prompt},
+        )
+    
+    assert response.status_code == 400
+    data = response.json()
+    assert "Initial prompt too long" in data["detail"]
