@@ -160,7 +160,7 @@ class ModelManager:
                 try:
                     shutil.rmtree(target_path)
                     logger.info(f"Cleaned up partial download: {target_path}")
-                except OSError as cleanup_error:
+                except Exception as cleanup_error:
                     logger.warning(f"Failed to clean up partial download: {cleanup_error}")
             yield DownloadProgress(status="error", error=error_msg)
             # Return instead of raising to avoid duplicate error messages
