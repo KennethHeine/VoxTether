@@ -10,7 +10,10 @@ from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Depends
 
 from config import settings
-from constants import TEMP_AUDIO_SUFFIX, SUPPORTED_LANGUAGES, MAX_INITIAL_PROMPT_LENGTH
+from constants import (
+    TEMP_AUDIO_SUFFIX, SUPPORTED_LANGUAGES, MAX_INITIAL_PROMPT_LENGTH,
+    AVAILABLE_MODELS, VALID_DEVICES, VALID_COMPUTE_TYPES,
+)
 from dependencies import get_transcriber
 from schemas import TranscriptionResponse, TranscriptionSettings
 from services.transcriber import TranscriberService
@@ -159,7 +162,31 @@ async def update_settings(
         
     Returns:
         Success response.
+        
+    Raises:
+        HTTPException: If device, compute_type, or model name is invalid.
     """
+    # Validate device
+    if settings.device not in VALID_DEVICES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid device: '{settings.device}'. Must be one of: {', '.join(VALID_DEVICES)}"
+        )
+    
+    # Validate compute type
+    if settings.compute_type not in VALID_COMPUTE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid compute type: '{settings.compute_type}'. Must be one of: {', '.join(VALID_COMPUTE_TYPES)}"
+        )
+    
+    # Validate model name if specified
+    if settings.model and settings.model not in AVAILABLE_MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid model: '{settings.model}'. Must be one of: {', '.join(AVAILABLE_MODELS.keys())}"
+        )
+    
     # Update device if changed
     if settings.device != "auto" or settings.compute_type != "auto":
         await transcriber.change_device(settings.device, settings.compute_type)
