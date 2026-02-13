@@ -12,47 +12,11 @@ TEMP_AUDIO_SUFFIX = ".wav"
 
 # Available Whisper models with their metadata
 AVAILABLE_MODELS: Dict[str, Dict[str, Any]] = {
-    "tiny": {
-        "display_name": "Tiny",
-        "size_mb": 75,
-        "description": "Fastest, lowest accuracy. Good for quick testing.",
-        "repo_id": "Systran/faster-whisper-tiny",
-    },
-    "base": {
-        "display_name": "Base",
-        "size_mb": 145,
-        "description": "Fast with reasonable accuracy. Good for general use.",
-        "repo_id": "Systran/faster-whisper-base",
-    },
-    "small": {
-        "display_name": "Small",
-        "size_mb": 465,
-        "description": "Balanced speed and accuracy. Recommended for CPU.",
-        "repo_id": "Systran/faster-whisper-small",
-    },
-    "medium": {
-        "display_name": "Medium",
-        "size_mb": 1460,
-        "description": "High accuracy, moderate speed. Good for GPU.",
-        "repo_id": "Systran/faster-whisper-medium",
-    },
-    "large-v3": {
-        "display_name": "Large V3",
-        "size_mb": 2950,
-        "description": "Best accuracy. Requires GPU for reasonable speed.",
-        "repo_id": "Systran/faster-whisper-large-v3",
-    },
     "large-v3-turbo": {
         "display_name": "Large V3 Turbo",
         "size_mb": 1600,
         "description": "Excellent accuracy with faster speed. Great GPU option.",
         "repo_id": "deepdml/faster-whisper-large-v3-turbo-ct2",
-    },
-    "distil-large-v3": {
-        "display_name": "Distil Large V3",
-        "size_mb": 1510,
-        "description": "Distilled large model. Fast with near-large accuracy.",
-        "repo_id": "Systran/faster-distil-whisper-large-v3",
     },
 }
 

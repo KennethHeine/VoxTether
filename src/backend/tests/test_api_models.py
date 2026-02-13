@@ -55,20 +55,20 @@ def test_list_models_no_model_loaded(client, mock_transcriber):
 
 def test_load_model(client, mock_transcriber):
     """Test loading a model."""
-    response = client.post("/api/models/small/load")
+    response = client.post("/api/models/large-v3-turbo/load")
     
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert data["model"] == "small"
+    assert data["model"] == "large-v3-turbo"
     assert "loaded successfully" in data["message"]
 
 
 def test_load_model_calls_transcriber(client, mock_transcriber):
     """Test that loading a model calls the transcriber service."""
-    client.post("/api/models/medium/load")
+    client.post("/api/models/large-v3-turbo/load")
     
-    mock_transcriber.load_model.assert_called_once_with("medium")
+    mock_transcriber.load_model.assert_called_once_with("large-v3-turbo")
 
 
 def test_unload_model(client, mock_transcriber):
