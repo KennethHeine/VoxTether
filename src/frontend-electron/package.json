@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "electron-updater": "^6.7.3",
-    "semver": "^7.7.3"
+    "semver": "^7.7.4"
   },
   "build": {
     "appId": "com.voxtether.app",
