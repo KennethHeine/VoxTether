@@ -6,8 +6,11 @@ This guide covers installation and setup for VoxTether, a voice dictation applic
 
 - **OS**: Windows 10/11 (64-bit)
 - **RAM**: 4 GB minimum, 8 GB recommended
-- **Disk**: 500 MB for application + 75 MB - 3 GB per model
-- **GPU** (optional): NVIDIA GPU with CUDA 12 support for acceleration
+- **Disk**: 500 MB for application
+
+## Backend Server
+
+VoxTether requires the backend server to be running. See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) for backend setup.
 
 ---
 
@@ -34,38 +37,13 @@ This guide covers installation and setup for VoxTether, a voice dictation applic
 git clone https://github.com/KennethHeine/VoxTether.git
 cd VoxTether
 
-# --- Backend (Python) ---
-cd src/backend
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-# Run backend server
-python -m uvicorn main:app --port 5678
-
-# --- Frontend (Electron) --- (in a new terminal)
+# Frontend (Electron)
 cd src/frontend-electron
 npm install
 npm start
 ```
 
----
-
-## GPU Acceleration Setup (Optional)
-
-For NVIDIA GPU acceleration:
-
-```powershell
-# Install CUDA libraries (in the backend virtual environment)
-cd src/backend
-.\venv\Scripts\Activate.ps1
-pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
-```
-
-Or install the full [CUDA Toolkit 12](https://developer.nvidia.com/cuda-downloads) from NVIDIA.
-
-**Verify GPU detection:**
-The About page in Settings will show your GPU status and device information.
+> **Note**: The backend must be running separately. See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend).
 
 ---
 
@@ -73,21 +51,9 @@ The About page in Settings will show your GPU status and device information.
 
 On first launch, VoxTether will:
 
-1. **Start Backend**: The Python transcription backend starts automatically
+1. **Connect to Backend**: Connects to the transcription backend server
 2. **GPU Detection**: VoxTether detects your hardware capabilities
 3. **Model Download**: Choose and download a speech recognition model
-
-### Recommended Models
-
-| Model | Size | Price | Quality | Speed | Best For |
-|-------|------|-------|---------|-------|----------|
-| tiny | ~75 MB | Free (local) | Basic | Very Fast | Quick notes, testing |
-| base | ~142 MB | Free (local) | Good | Fast | General use |
-| **small** | ~466 MB | Free (local) | Better | Moderate | **Recommended for most users** |
-| medium | ~1.5 GB | Free (local) | Great | Slow | When accuracy matters |
-| large-v3 | ~3 GB | Free (local) | Best | Very Slow | Maximum accuracy |
-| large-v3-turbo | ~1.6 GB | Free (local) | Excellent | Fast | Best speed/accuracy balance |
-| distil-large-v3 | ~1.1 GB | Free (local) | Excellent | Fast | Fast high-quality transcription |
 
 ---
 
@@ -175,15 +141,10 @@ Settings are stored in:
 
 ### Backend Issues
 
-**Backend not starting:**
-1. Check if port 5678 is available
-2. Look at the logs in `%APPDATA%\VoxTether\logs\`
-3. Try restarting the application
-
-**Slow transcription:**
-1. Try a smaller model (tiny or base)
-2. Enable GPU acceleration if you have an NVIDIA GPU
-3. Close resource-intensive applications
+**Backend not connecting:**
+1. Ensure the [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) is running
+2. Check the backend URL in Settings (default: localhost:5678)
+3. Look at the logs in `%APPDATA%\VoxTether\logs\`
 
 ### Hotkey Issues
 
@@ -194,13 +155,6 @@ Settings are stored in:
 
 **Need to dictate into elevated apps:**
 Run VoxTether as Administrator (right-click → Run as administrator)
-
-### GPU / Performance Issues
-
-**GPU not detected:**
-1. Install CUDA packages: See GPU Acceleration section above
-2. Update NVIDIA drivers
-3. Check the About page for device status
 
 ### Text Insertion Issues
 
@@ -261,29 +215,18 @@ Remove-Item -Recurse "$env:APPDATA\VoxTether"
 ### Prerequisites
 
 - Windows 10/11 (64-bit)
-- Python 3.13+
 - Node.js 20.x+
 - (Optional) Inno Setup 6 for creating installers
 
 ### Build Commands
 
 ```powershell
-# Build both frontend and backend
 cd build
-.\build.ps1
-
-# Build for release
 .\build.ps1 -Release -Version "2.0.0"
 
 # Build with installer
 .\build.ps1 -Release -CreateInstaller -Version "2.0.0"
 ```
-
-### Output
-
-- `build/output/` - Built application files
-- `build/installer/` - Windows installer (if created)
-- `build/VoxTether-x.x.x-win-x64.zip` - Portable ZIP (if release)
 
 ---
 
@@ -291,5 +234,6 @@ cd build
 
 - [README](../README.md) - Project overview
 - [Architecture](ARCHITECTURE.md) - Technical architecture
+- [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) - Backend repository
 - [GitHub Releases](https://github.com/KennethHeine/VoxTether/releases) - Download builds
 - [Issues](https://github.com/KennethHeine/VoxTether/issues) - Report bugs

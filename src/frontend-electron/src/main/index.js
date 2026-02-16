@@ -158,8 +158,8 @@ app.whenReady().then(async () => {
     try {
         const backendAvailable = await checkBackendConnection();
         if (!backendAvailable) {
-            console.warn('Backend server not available. Please ensure the Python backend is running.');
-            console.warn('Start it with: cd src/backend && python -m uvicorn main:app --port 5678');
+            console.warn('Backend server not available. Please ensure the backend is running.');
+            console.warn('See https://github.com/KennethHeine/VoxTether-backend for setup instructions.');
         }
     } catch (error) {
         console.error('Failed to check backend connection:', error);

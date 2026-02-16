@@ -103,12 +103,8 @@ The entire frontend has been rewritten from WinUI 3 (.NET) to Electron.js for a 
 | electron-builder | 26.5.0 | Build and packaging |
 | eslint | 9.18.0 | Code linting |
 
-#### Backend (Unchanged)
-| Package | Version | Purpose |
-|---------|---------|---------|
-| FastAPI | 0.109+ | REST API framework |
-| faster-whisper | 1.0+ | Speech-to-text |
-| uvicorn | 0.27+ | ASGI server |
+#### Backend
+Backend has been moved to a separate repository: [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend)
 
 ### 🔄 Migration Guide
 

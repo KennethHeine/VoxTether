@@ -2,6 +2,8 @@
 
 This document describes how the VoxTether frontend (Electron) communicates with the backend (Python FastAPI), including all APIs and how audio is sent for transcription.
 
+> **Note**: The backend is maintained in a separate repository: [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend)
+
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
@@ -523,7 +525,7 @@ ipcMain.handle('transcribe', async (event, audioPath, language) => {
 The backend receives and processes audio:
 
 ```python
-# From src/backend/api/transcribe.py
+# From VoxTether-backend api/transcribe.py
 @router.post("/transcribe", response_model=TranscriptionResponse)
 async def transcribe_audio(
     request: Request,
@@ -690,5 +692,5 @@ All error responses follow this format:
 
 - [Frontend Features](FRONTEND-FEATURES.md) - Complete frontend feature documentation
 - [Architecture Documentation](ARCHITECTURE.md) - System architecture overview
-- [Backend API Documentation](BACKEND-API.md) - Detailed API reference
+- [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) - Backend repository and API reference
 - [Installation Guide](INSTALLATION.md) - Setup instructions

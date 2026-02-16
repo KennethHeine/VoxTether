@@ -56,9 +56,7 @@ Name: "startupicon"; Description: "Start {#MyAppName} when Windows starts"; Grou
 
 [Files]
 ; Frontend files
-Source: "..\build\output\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "backend"
-; Backend files
-Source: "..\build\output\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\build\output\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; License and readme
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; DestName: "README.txt"; Flags: ignoreversion

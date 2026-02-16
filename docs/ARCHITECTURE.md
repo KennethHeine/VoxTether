@@ -6,15 +6,13 @@ This document describes the client-server architecture of VoxTether, a voice dic
 
 VoxTether uses a **client-server architecture** with complete separation of frontend and backend:
 
-- **Client (Frontend)**: Electron 40.x - Desktop application with UI and system tray
-- **Server (Backend)**: Python FastAPI - Speech-to-text transcription service
+- **Client (Frontend)**: Electron 40.x - Desktop application with UI and system tray (this repo)
+- **Server (Backend)**: Python FastAPI - Speech-to-text transcription service ([VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend))
 
-The backend runs as a standalone Python server. It does NOT require PyInstaller or any executable bundling - just Python with the required packages.
-
-| Component | Technology | Deployment |
+| Component | Technology | Repository |
 |-----------|------------|------------|
-| **Client** | Electron 40.x | Windows desktop application |
-| **Server** | Python / FastAPI | Python script on any machine |
+| **Client** | Electron 40.x | [VoxTether](https://github.com/KennethHeine/VoxTether) (this repo) |
+| **Server** | Python / FastAPI | [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) |
 | **Transcription** | faster-whisper (CTranslate2) | Runs on server |
 | **GPU Support** | CUDA 12 (native) | Server-side only |
 
@@ -43,7 +41,7 @@ The backend runs as a standalone Python server. It does NOT require PyInstaller 
                       │ (localhost:5678 or network)
                       ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                         SERVER (Same machine or remote)                      │
+│                 SERVER (https://github.com/KennethHeine/VoxTether-backend)   │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │   ┌─────────────────────────────────────────┐                               │
@@ -78,27 +76,20 @@ The server runs on a dedicated machine (with GPU), and multiple clients connect 
 
 ## Component Responsibilities
 
-### Client (Electron)
+### Client (Electron) - This Repository
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `main.js` | `src/frontend-electron/src/` | Electron main process, window management |
+| `main/index.js` | `src/frontend-electron/src/` | Electron main process, window management |
 | `preload.js` | `src/frontend-electron/src/` | Secure IPC bridge to renderer |
 | `renderer/` | `src/frontend-electron/src/` | UI (HTML/CSS/JS) |
-| System Tray | `main.js` | Tray icon and context menu |
-| Backend Client | `main.js` | HTTP client for backend API |
-| Settings Service | `main.js` | Load/save user preferences |
+| System Tray | `main/` | Tray icon and context menu |
+| Backend Client | `main/` | HTTP client for backend API |
+| Settings Service | `main/` | Load/save user preferences |
 
-### Server (Python / FastAPI)
+### Server (Python / FastAPI) - [Separate Repository](https://github.com/KennethHeine/VoxTether-backend)
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `main.py` | `src/backend/` | FastAPI application entry point |
-| `TranscriberService` | `services/transcriber.py` | faster-whisper integration |
-| `ModelManager` | `services/model_manager.py` | Model download and management |
-| `health.py` | `api/health.py` | Health check endpoints |
-| `transcribe.py` | `api/transcribe.py` | Transcription endpoints |
-| `models.py` | `api/models.py` | Model management endpoints |
+See the [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) repository for backend component details.
 
 ---
 
@@ -119,124 +110,42 @@ The frontend communicates with the backend via HTTP REST API on `localhost:5678`
 | `DELETE` | `/api/models/{name}` | Delete a model |
 | `POST` | `/api/settings` | Update transcription settings |
 
-### Example: Transcription Request
-
-```http
-POST /api/transcribe
-Content-Type: multipart/form-data
-
-file: <audio.wav>
-language: auto
-translate: false
-```
-
-**Response:**
-```json
-{
-  "text": "Hello, this is a test.",
-  "language": "en",
-  "duration": 0.82,
-  "success": true
-}
-```
-
----
-
-## Core Workflow
-
-```
-User holds hotkey              User releases hotkey
-       │                              │
-       ▼                              ▼
-┌─────────────┐               ┌──────────────┐
-│ Start Audio │               │ Stop Audio   │
-│  Recording  │──────────────▶│  Recording   │
-│(Web Audio)  │               │ (Web Audio)  │
-└─────────────┘               └──────┬───────┘
-                                     │
-                                     ▼
-                              ┌──────────────┐
-                              │ Save to WAV  │
-                              │    File      │
-                              └──────┬───────┘
-                                     │
-                                     ▼
-                              ┌──────────────┐
-                              │  HTTP POST   │
-                              │  to Backend  │
-                              │ /api/transcribe
-                              └──────┬───────┘
-                                     │
-                                     ▼
-                              ┌──────────────┐
-                              │ Backend runs │
-                              │faster-whisper│
-                              └──────┬───────┘
-                                     │
-                                     ▼
-                              ┌──────────────┐
-                              │ Return JSON  │
-                              │  with text   │
-                              └──────┬───────┘
-                                     │
-                                     ▼
-                              ┌──────────────┐
-                              │ Inject Text  │
-                              │ (Clipboard + │
-                              │  Ctrl+V)     │
-                              └──────────────┘
-```
+See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) for full API documentation.
 
 ---
 
 ## Project Structure
 
 ```
-VoxTether/
+VoxTether/                              # This repository (frontend)
 ├── src/
-│   ├── frontend-electron/           # Electron Frontend
-│   │   ├── src/
-│   │   │   ├── main.js              # Electron main process
-│   │   │   ├── preload.js           # Secure IPC bridge
-│   │   │   └── renderer/            # UI files
-│   │   │       ├── index.html       # Main HTML
-│   │   │       ├── styles.css       # Styles
-│   │   │       └── renderer.js      # UI logic
-│   │   ├── assets/                  # Icons and resources
-│   │   └── package.json             # Dependencies and build config
-│   │
-│   ├── backend/                     # Python Backend
-│   │   ├── api/
-│   │   │   ├── __init__.py
-│   │   │   ├── health.py
-│   │   │   ├── transcribe.py
-│   │   │   └── models.py
-│   │   ├── services/
-│   │   │   ├── __init__.py
-│   │   │   ├── transcriber.py
-│   │   │   └── model_manager.py
-│   │   ├── main.py                  # FastAPI entry point
-│   │   ├── config.py                # Configuration
-│   │   └── requirements.txt
+│   └── frontend-electron/              # Electron Frontend
+│       ├── src/
+│       │   ├── main/                   # Electron main process
+│       │   ├── preload.js              # Secure IPC bridge
+│       │   └── renderer/              # UI files
+│       ├── assets/                     # Icons and resources
+│       └── package.json               # Dependencies and build config
 │
 ├── installer/
-│   └── VoxTether.iss                # Inno Setup script
+│   └── VoxTether.iss                   # Inno Setup script
 │
 ├── build/
-│   └── build.ps1                    # Build script
+│   └── build.ps1                       # Build script
 │
-├── docs/
-│   ├── ARCHITECTURE.md              # This document
-│   ├── INSTALLATION.md              # Installation guide
-│   └── CHANGELOG.md                 # Version history
+├── docs/                               # Documentation
 │
 ├── .github/workflows/
-│   ├── ci-backend.yml               # Backend CI pipeline
-│   ├── ci-frontend.yml              # Frontend CI pipeline
-│   ├── release-backend.yml          # Backend release
-│   └── release-frontend.yml         # Frontend release
+│   ├── ci-frontend.yml                 # Frontend CI pipeline
+│   └── release-frontend.yml           # Frontend release
 │
 └── README.md
+
+VoxTether-backend/                      # Separate repository
+├── api/                                # REST API endpoints
+├── services/                           # Business logic
+├── main.py                             # FastAPI entry point
+└── requirements.txt                    # Python dependencies
 ```
 
 ---
@@ -252,40 +161,6 @@ VoxTether/
 
 ---
 
-## Backend Technologies
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Python | 3.13+ | Runtime |
-| FastAPI | 0.109+ | Web framework |
-| faster-whisper | 1.0+ | Transcription |
-| uvicorn | 0.27+ | ASGI server |
-| huggingface-hub | 0.20+ | Model downloads |
-
----
-
-## Process Management
-
-The frontend manages the backend process lifecycle:
-
-1. **Startup**: Frontend starts → Launches `backend/vox-backend.exe` → Waits for health check
-2. **Runtime**: Frontend sends HTTP requests to backend
-3. **Shutdown**: Frontend terminates → Kills backend process
-
-```javascript
-// main.js - Backend process management
-async function startBackend() {
-    backendProcess = spawn(backendPath, [], {
-        stdio: isDebug ? 'inherit' : 'ignore',
-        detached: false
-    });
-    
-    await waitForBackend(30000);  // Wait up to 30 seconds
-}
-```
-
----
-
 ## Data Storage
 
 | Data | Location |
@@ -293,69 +168,6 @@ async function startBackend() {
 | Settings | `%APPDATA%\VoxTether\settings.json` |
 | Models | `%APPDATA%\VoxTether\models\` |
 | Logs | `%APPDATA%\VoxTether\logs\` |
-
-### Settings Structure
-
-```json
-{
-  "windowToggleHotkey": "Ctrl+Shift+V",
-  "toggleRecordingHotkey": "Ctrl+Shift+R",
-  "modelName": "small",
-  "language": "auto",
-  "outputMode": "ClipboardAndPaste",
-  "showNotifications": true,
-  "showRecordingIndicator": true,
-  "audioDeviceId": -1,
-  "clipboardDelayMs": 50,
-  "backendPort": 5678,
-  "startMinimized": true,
-  "startWithWindows": false,
-  "theme": "system"
-}
-```
-
----
-
-## Build and Release
-
-### Local Development
-
-```powershell
-# Build backend
-cd src/backend
-pip install -r requirements.txt
-python -m uvicorn main:app --port 5678
-
-# Build frontend (new terminal)
-cd src/frontend-electron
-npm install
-npm start
-```
-
-### Release Build
-
-```powershell
-# Build everything + create installer
-cd build
-.\build.ps1 -Release -CreateInstaller -Version "2.0.0"
-```
-
-### CI/CD Pipeline
-
-```
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ Test Backend │    │Build Frontend│    │ Test E2E     │
-│   (Python)   │    │  (Electron)  │    │ (Playwright) │
-└──────┬───────┘    └──────┬───────┘    └──────┬───────┘
-       │                   │                   │
-       └───────────────────┴───────────────────┘
-                           │
-                           ▼
-                  ┌──────────────────┐
-                  │  Build Complete  │
-                  │ (verify + upload)│
-                  └──────────────────┘
-```
 
 ---
 
@@ -368,22 +180,8 @@ cd build
 
 ---
 
-## Performance Targets
-
-| Metric | Target |
-|--------|--------|
-| Frontend startup | < 1 second |
-| Backend startup | < 5 seconds |
-| Model loading | < 30 seconds |
-| Recording latency | < 100ms |
-| Transcription (8s audio, GPU) | < 1 second |
-| Transcription (8s audio, CPU) | < 8 seconds |
-| Idle memory (frontend + backend) | < 150 MB |
-| Active memory (with model) | < 1.5 GB |
-
----
-
 ## See Also
 
 - [Installation Guide](INSTALLATION.md) - Setup instructions
 - [README](../README.md) - Project overview
+- [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) - Backend repository

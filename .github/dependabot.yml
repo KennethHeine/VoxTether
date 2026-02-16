@@ -5,11 +5,6 @@ updates:
     schedule:
       interval: "weekly"
 
-  - package-ecosystem: "pip"
-    directory: "/src/backend"
-    schedule:
-      interval: "weekly"
-
   - package-ecosystem: "npm"
     directory: "/src/frontend-electron"
     schedule:

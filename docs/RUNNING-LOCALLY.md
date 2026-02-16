@@ -5,10 +5,8 @@ This guide explains how to run VoxTether from source for development purposes.
 ## Architecture Overview
 
 VoxTether uses a client-server architecture:
-- **Server (Backend)**: Python FastAPI service that handles transcription
-- **Client (Frontend)**: Electron desktop application
-
-The backend runs as a standalone Python server (no PyInstaller or exe bundling needed).
+- **Client (Frontend)**: Electron desktop application (this repo)
+- **Server (Backend)**: Python FastAPI service ([VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend))
 
 ## Prerequisites
 
@@ -16,28 +14,18 @@ The backend runs as a standalone Python server (no PyInstaller or exe bundling n
 
 | Software | Version | Purpose |
 |----------|---------|---------|
-| Python | 3.13+ | Backend server |
 | Node.js | 20.x+ | Frontend client |
 | npm | 10.x+ | Package management |
 | Git | Latest | Source control |
 
 **Check installations:**
 ```powershell
-python --version   # Should be 3.13+
 node --version     # Should be 20.x+
 npm --version      # Should be 10.x+
 git --version
 ```
 
 ### Hardware Requirements
-
-**Server (Backend):**
-| Requirement | Minimum | Recommended |
-|------------|---------|-------------|
-| OS | Any (Windows, Linux, macOS) | Linux/Windows |
-| RAM | 4 GB | 8 GB |
-| Disk Space | 2 GB | 4 GB |
-| GPU | None (CPU works) | NVIDIA with CUDA 12 |
 
 **Client (Frontend):**
 | Requirement | Minimum |
@@ -58,63 +46,11 @@ cd VoxTether
 
 ## Step 2: Set Up the Backend Server
 
-The backend is a Python FastAPI server that handles transcription. It runs independently from the client.
-
-```powershell
-# Navigate to backend
-cd src/backend
-
-# Create virtual environment
-python -m venv venv
-
-# Verify venv was created
-if (Test-Path "venv\Scripts\Activate.ps1") { 
-    Write-Host "Virtual environment created successfully" 
-} else { 
-    Write-Error "Failed to create virtual environment" 
-}
-
-# Activate virtual environment
-.\venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-
-### Troubleshooting: PowerShell Execution Policy
-
-If you get an error about script execution being disabled:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+The backend is in a separate repository. See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) for setup instructions.
 
 ---
 
-## Step 3: Run the Backend
-
-With the virtual environment active:
-
-```powershell
-# Start the backend server
-python -m uvicorn main:app --host 127.0.0.1 --port 5678 --reload
-```
-
-The backend will start and listen on `http://127.0.0.1:5678`.
-
-**Verify it's running:**
-```powershell
-curl http://127.0.0.1:5678/api/health
-```
-
-You should see: `{"status":"ok",...}`
-
----
-
-## Step 4: Set Up the Frontend
-
-Open a **new terminal** (keep the backend running).
+## Step 3: Set Up the Frontend
 
 ```powershell
 # Navigate to frontend
@@ -126,7 +62,7 @@ npm install
 
 ---
 
-## Step 5: Run the Frontend
+## Step 4: Run the Frontend
 
 ```powershell
 # Run the Electron application
@@ -137,21 +73,6 @@ npm run dev
 ```
 
 VoxTether will start and appear in your system tray.
-
----
-
-## GPU Acceleration (Optional)
-
-For faster transcription with NVIDIA GPUs:
-
-```powershell
-# In the backend virtual environment
-cd src/backend
-.\venv\Scripts\Activate.ps1
-pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
-```
-
-Restart the backend after installing.
 
 ---
 
@@ -180,26 +101,6 @@ Right-click the VoxTether tray icon to access:
 
 ## Development Workflow
 
-### Running Both Components
-
-**Terminal 1 (Backend):**
-```powershell
-cd src/backend
-.\venv\Scripts\Activate.ps1
-python -m uvicorn main:app --host 127.0.0.1 --port 5678 --reload
-```
-
-**Terminal 2 (Frontend):**
-```powershell
-cd src/frontend-electron
-npm start
-```
-
-### Hot Reload
-
-- **Backend**: The `--reload` flag enables automatic reloading when Python files change
-- **Frontend**: Restart the Electron app to pick up changes (or use DevTools reload)
-
 ### Running Tests
 
 ```powershell
@@ -211,36 +112,17 @@ npm test
 npm run lint
 ```
 
-### Linting
-
-```powershell
-# Backend linting
-cd src/backend
-pip install ruff
-ruff check .
-
-# Frontend linting
-cd src/frontend-electron
-npm run lint
-```
-
 ---
 
 ## Building for Release
 
 ```powershell
-# Build everything
 cd build
 .\build.ps1 -Release -Version "2.0.0"
 
 # Build with installer
 .\build.ps1 -Release -CreateInstaller -Version "2.0.0"
 ```
-
-Output:
-- `build/output/` - Application files
-- `build/VoxTether-x.x.x-win-x64.zip` - Portable ZIP
-- `build/installer/VoxTether-x.x.x-Setup.exe` - Windows installer
 
 ---
 
@@ -249,39 +131,26 @@ Output:
 ```
 VoxTether/
 ├── src/
-│   ├── frontend-electron/ # Electron frontend
-│   │   ├── src/
-│   │   │   ├── main.js    # Main process
-│   │   │   ├── preload.js # IPC bridge
-│   │   │   └── renderer/  # UI files
-│   │   └── package.json
-│   └── backend/           # Python FastAPI
-│       ├── api/           # REST endpoints
-│       ├── services/      # Business logic
-│       └── main.py        # Entry point
+│   └── frontend-electron/ # Electron frontend
+│       ├── src/
+│       │   ├── main/      # Main process
+│       │   ├── preload.js # IPC bridge
+│       │   └── renderer/  # UI files
+│       └── package.json
 ├── build/                 # Build scripts
 ├── installer/             # Inno Setup script
 └── docs/                  # Documentation
 ```
 
+> **Backend**: See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend)
+
 ---
 
 ## Troubleshooting
 
-### Backend won't start
-
-1. Check if port 5678 is in use:
-   ```powershell
-   netstat -ano | findstr 5678
-   ```
-2. Try a different port:
-   ```powershell
-   python -m uvicorn main:app --port 5679
-   ```
-
 ### Frontend can't connect to backend
 
-1. Ensure backend is running on port 5678
+1. Ensure the [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) is running
 2. Check the backend URL in Settings
 
 ### "node: command not found"
@@ -308,3 +177,4 @@ Install Node.js 20.x from [nodejs.org](https://nodejs.org/).
 - [Installation Guide](INSTALLATION.md) - End-user installation
 - [Architecture](ARCHITECTURE.md) - Technical architecture
 - [Changelog](CHANGELOG.md) - Version history
+- [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) - Backend repository
