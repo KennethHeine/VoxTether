@@ -1,9 +1,9 @@
 # Build script for VoxTether
-# Builds the Electron frontend. Backend is deployed as Python source.
+# Builds the Electron frontend.
+# Backend is in a separate repository: https://github.com/KennethHeine/VoxTether-backend
 
 param(
     [switch]$Release,
-    [switch]$FrontendOnly,
     [switch]$CreateInstaller,
     [string]$Version = "2.0.0"
 )
@@ -18,9 +18,8 @@ Write-Host "VoxTether Build Script" -ForegroundColor Cyan
 Write-Host "======================" -ForegroundColor Cyan
 Write-Host "Version: $Version" -ForegroundColor Gray
 Write-Host ""
-Write-Host "Architecture: Client-Server" -ForegroundColor Gray
-Write-Host "  - Frontend: Electron (client)" -ForegroundColor Gray
-Write-Host "  - Backend: Python FastAPI (server on localhost)" -ForegroundColor Gray
+Write-Host "Building Electron frontend (client)" -ForegroundColor Gray
+Write-Host "Backend: https://github.com/KennethHeine/VoxTether-backend" -ForegroundColor Gray
 Write-Host ""
 
 # Create output directory
@@ -79,28 +78,22 @@ if ($Release) {
     
     # Create README
     @"
-VoxTether Client $Version
+VoxTether $Version
 ==========================
 
-Push-to-talk dictation for Windows. Fully offline speech-to-text.
-
-This is the CLIENT application. The backend server must be running separately.
+Push-to-talk dictation for Windows.
 
 Getting Started:
-1. Ensure the Python backend server is running on your server/localhost
+1. Ensure the VoxTether backend server is running
+   (see https://github.com/KennethHeine/VoxTether-backend)
 2. Run VoxTether.exe
 3. On first run, configure the backend server address if needed
 4. Press Ctrl+Shift+Space (default hotkey) to record
 5. Release to transcribe and paste the text
 
-Backend Server Setup:
-  cd src/backend
-  pip install -r requirements.txt
-  python -m uvicorn main:app --host 0.0.0.0 --port 5678
-
 Requirements:
 - Windows 10/11 (64-bit)
-- Network access to the backend server
+- VoxTether backend server running (localhost or network)
 
 For more information, visit:
 https://github.com/KennethHeine/VoxTether

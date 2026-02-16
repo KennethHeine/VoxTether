@@ -13,7 +13,7 @@ The VoxTether frontend is an Electron desktop application that provides:
 ## Prerequisites
 
 - Windows 10/11 (64-bit)
-- VoxTether backend server running (see [BACKEND-SETUP.md](BACKEND-SETUP.md))
+- VoxTether backend server running (see [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend))
 
 ---
 
@@ -172,7 +172,7 @@ The application runs in the system tray. Right-click the tray icon for options:
 2. Click "Load Model" on a downloaded model
 3. The model will be loaded on the backend
 
-**Note:** Models are downloaded using the backend CLI. See [BACKEND-SETUP.md](BACKEND-SETUP.md).
+**Note:** Models are managed through the backend. See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend).
 
 ---
 
@@ -211,13 +211,7 @@ The application runs in the system tray. Right-click the tray icon for options:
 
 ### No models available
 
-Models are managed via the backend CLI:
-
-```bash
-cd src/backend
-python cli.py list           # List available models
-python cli.py download small # Download the 'small' model
-```
+Models are managed via the backend. See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) for model management.
 
 ---
 
@@ -298,6 +292,5 @@ npm run build
 
 - [FRONTEND-FEATURES.md](FRONTEND-FEATURES.md) - Complete feature documentation
 - [FRONTEND-TESTING.md](FRONTEND-TESTING.md) - Testing guide
-- [BACKEND-SETUP.md](BACKEND-SETUP.md) - Backend server setup
-- [BACKEND-API.md](BACKEND-API.md) - API documentation
+- [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) - Backend server setup and API documentation
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture

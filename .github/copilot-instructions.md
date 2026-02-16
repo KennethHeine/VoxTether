@@ -2,37 +2,17 @@
 
 ## Project Overview
 
-VoxTether is a push-to-talk dictation application for Windows 10/11. It uses a client-server architecture with an Electron frontend and Python FastAPI backend using faster-whisper for fully offline speech-to-text.
+VoxTether is a push-to-talk dictation application for Windows 10/11. This repository contains the Electron frontend client. The Python FastAPI backend is maintained separately at https://github.com/KennethHeine/VoxTether-backend.
 
 **Key characteristics:**
 - Windows-only desktop application
-- Electron frontend + Python FastAPI backend
-- Uses faster-whisper for transcription (native CUDA 12 support)
+- Electron frontend (this repo)
+- Backend is in a separate repository
 - MIT License
 
 ## Build and Test Commands
 
-**Run backend commands from `src/backend/` directory, frontend commands from `src/frontend-electron/`.**
-
-### Backend Setup
-
-```bash
-# Navigate to backend
-cd src/backend
-
-# Create virtual environment (first time only)
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install dev dependencies (for linting)
-pip install -r ../../requirements-dev.txt
-
-# Run backend server
-python -m uvicorn main:app --host 127.0.0.1 --port 5678
-```
+**Run frontend commands from `src/frontend-electron/`.**
 
 ### Frontend Setup
 
@@ -53,27 +33,9 @@ npm run lint
 npm test
 ```
 
-### Running Linting
-
-```bash
-# Backend linting
-ruff check src/backend/
-
-# Frontend linting
-cd src/frontend-electron && npm run lint
-```
-
-### Important Notes
-
-- **Windows only**: The application uses Windows-specific features for keyboard hooks and system tray.
-- **Linting**: Use ruff for backend, ESLint for frontend.
-- **Testing**: Backend server health check, Playwright E2E for frontend.
-- **GPU optional**: CUDA 12 support is optional; the app falls back to CPU mode.
-
 ### Building for Release
 
 ```bash
-# Build both frontend and backend
 cd build
 .\build.ps1 -Release -Version "2.0.0"
 ```
@@ -83,48 +45,23 @@ cd build
 ```
 VoxTether/
 ├── src/
-│   ├── backend/                 # Python Backend (FastAPI)
-│   │   ├── api/                 # REST API endpoints
-│   │   │   ├── health.py        # Health check endpoint
-│   │   │   ├── models.py        # Model management endpoints
-│   │   │   └── transcribe.py    # Transcription endpoint
-│   │   ├── services/            # Business logic
-│   │   │   ├── model_manager.py # Model download/management
-│   │   │   └── transcriber.py   # faster-whisper integration
-│   │   ├── main.py              # FastAPI entry point
-│   │   ├── cli.py               # CLI for model management
-│   │   ├── config.py            # Configuration settings
-│   │   └── requirements.txt     # Python dependencies
-│   │
 │   └── frontend-electron/       # Electron Frontend
 │       ├── src/
-│       │   ├── main.js          # Electron main process
-│       │   ├── preload.js       # Secure IPC bridge
-│       │   └── renderer/        # UI (HTML/CSS/JS)
+│       │   ├── main/             # Electron main process
+│       │   ├── preload.js        # Secure IPC bridge
+│       │   └── renderer/         # UI (HTML/CSS/JS)
 │       ├── tests/               # Playwright E2E tests
 │       └── package.json
 │
 ├── build/                       # Build scripts
 ├── assets/                      # Application assets (icons)
 ├── docs/                        # Documentation
-├── installer/                   # Installer scripts
-├── tests/                       # Backend test scripts
-└── requirements-dev.txt         # Development dependencies
+└── installer/                   # Installer scripts
 ```
 
-## Key Components
+> **Backend**: The Python FastAPI backend is at https://github.com/KennethHeine/VoxTether-backend
 
-### Backend (FastAPI)
-| Component | File | Purpose |
-|-----------|------|---------|
-| **main.py** | `src/backend/main.py` | FastAPI application entry point |
-| **cli.py** | `src/backend/cli.py` | CLI tool for model management and server control |
-| **config.py** | `src/backend/config.py` | Configuration settings (pydantic-settings) |
-| **api/health.py** | `src/backend/api/health.py` | Health check endpoint |
-| **api/models.py** | `src/backend/api/models.py` | Model management endpoints (list, download, delete, load) |
-| **api/transcribe.py** | `src/backend/api/transcribe.py` | Transcription endpoint |
-| **services/transcriber.py** | `src/backend/services/transcriber.py` | faster-whisper integration |
-| **services/model_manager.py** | `src/backend/services/model_manager.py` | Model download/management |
+## Key Components
 
 ### Frontend (Electron)
 | Component | File | Purpose |
@@ -138,45 +75,21 @@ VoxTether/
 
 CI/CD workflows are defined in `.github/workflows/`:
 
-### Backend CI (`.github/workflows/ci-backend.yml`)
-- Runs on PRs/pushes to `main` that modify `src/backend/**`
-- Tests: Linting (ruff), server startup test
-
 ### Frontend CI (`.github/workflows/ci-frontend.yml`)
 - Runs on PRs/pushes to `main` that modify `src/frontend-electron/**`
 - Tests: Linting (ESLint), Electron build, Playwright E2E tests
 
-### Release Workflows
-- `release-backend.yml` - Backend release
+### Release Workflow
 - `release-frontend.yml` - Frontend release (creates Windows installer and portable ZIP)
-
-## Code Style Guidelines
-
-- **Python**: Follow PEP 8 style guidelines
-- **Type hints**: Use type hints where appropriate
-- **Linting**: Use ruff for Python, ESLint for JavaScript
-- **Formatting**: Use black for Python formatting (optional)
 
 ## Configuration Files
 
 | File | Purpose |
 |------|---------|
-| `src/backend/requirements.txt` | Backend Python dependencies |
-| `src/backend/config.py` | Backend configuration settings |
-| `requirements-dev.txt` | Development dependencies |
 | `src/frontend-electron/package.json` | Frontend dependencies |
-| `.github/workflows/ci-backend.yml` | Backend CI pipeline |
 | `.github/workflows/ci-frontend.yml` | Frontend CI pipeline |
 
 ## Dependency Management
-
-### Backend (Python)
-Dependencies are declared in `src/backend/requirements.txt`:
-- **fastapi**: Web framework
-- **uvicorn**: ASGI server
-- **faster-whisper**: Speech-to-text engine
-- **pydantic**: Data validation
-- **huggingface-hub**: Model downloads
 
 ### Frontend (Node.js)
 Dependencies are declared in `src/frontend-electron/package.json`:
@@ -185,20 +98,13 @@ Dependencies are declared in `src/frontend-electron/package.json`:
 
 ## Testing
 
-- **Backend**: Health check endpoint test (CI tests server startup)
 - **Frontend**: Playwright E2E tests (`npm test`)
-- **Linting**: `ruff check src/backend/` and `npm run lint`
+- **Linting**: `cd src/frontend-electron && npm run lint`
 
 ## Troubleshooting
 
-### Backend won't start
-Make sure you're in `src/backend/` and have installed requirements.txt.
-
-### CUDA not available
-Install CUDA packages: `pip install nvidia-cublas-cu12 nvidia-cudnn-cu12`
-
 ### Frontend can't connect to backend
-Ensure backend is running on port 5678.
+Ensure the backend is running (see https://github.com/KennethHeine/VoxTether-backend).
 
 ## Trust These Instructions
 

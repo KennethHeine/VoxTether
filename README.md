@@ -5,7 +5,6 @@ Voice dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 ## Features
 
 - **Toggle recording**: Press a global hotkey to start/stop recording
-- **GPU acceleration**: Native CUDA 12 support with automatic fallback to CPU
 - **Fully offline**: Uses faster-whisper for local speech-to-text, no internet required after model download
 - **Modern UI**: Built with Electron for a clean, Windows 11 Fluent-inspired interface
 - **Text insertion**: Automatically types transcribed text at your cursor position
@@ -17,8 +16,8 @@ Voice dictation for Windows 10/11. Fully offline, no cloud, no telemetry.
 ## Architecture
 
 VoxTether uses a client-server architecture:
-- **Client (Frontend)**: Electron 40.x - Desktop application with UI and system tray
-- **Server (Backend)**: Python FastAPI - Speech-to-text transcription service running on localhost
+- **Client (Frontend)**: Electron 40.x - Desktop application with UI and system tray (this repo)
+- **Server (Backend)**: Python FastAPI - Speech-to-text transcription service ([VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend))
 
 The backend runs as a separate Python server, which can be on the same machine (localhost) or on a different server on your network.
 
@@ -30,21 +29,15 @@ See [Architecture Documentation](docs/ARCHITECTURE.md) for details.
 - Windows 10/11 (64-bit)
 
 ### Server (Python Backend)
-- Python 3.13+
-- NVIDIA GPU with CUDA 12 support (optional, for GPU acceleration)
+- See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) for backend requirements
 
 ## Installation
 
 ### Quick Start (Development)
 
 **Terminal 1 - Start Backend Server:**
-```powershell
-cd src/backend
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python -m uvicorn main:app --host 127.0.0.1 --port 5678
-```
+
+See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) for backend setup instructions.
 
 **Terminal 2 - Start Frontend Client:**
 ```powershell
@@ -55,36 +48,16 @@ npm start
 
 ### Production Deployment
 
-**Server Setup (one machine with GPU):**
-```bash
-# Clone repo and setup backend
-git clone https://github.com/KennethHeine/VoxTether.git
-cd VoxTether/src/backend
-pip install -r requirements.txt
+**Server Setup:**
 
-# Optional: GPU acceleration
-pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
-
-# Run server (accessible on local network)
-python -m uvicorn main:app --host 0.0.0.0 --port 5678
-```
+See [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) for server setup.
 
 **Client Setup (any Windows machine):**
 1. Download the Electron client from [Releases](https://github.com/KennethHeine/VoxTether/releases)
 2. Configure the backend server address in Settings
 3. Start using push-to-talk!
 
-### GPU Acceleration (Optional)
-
-For GPU acceleration with NVIDIA GPUs (on the server):
-
-```powershell
-pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
-```
-
-Or install CUDA 12 Toolkit from NVIDIA.
-
-> 📖 **For detailed installation options, GPU setup, and troubleshooting, see [Installation Guide](docs/INSTALLATION.md).**
+> 📖 **For detailed installation options and troubleshooting, see [Installation Guide](docs/INSTALLATION.md).**
 
 ## Usage
 
@@ -119,18 +92,6 @@ On first launch, VoxTether will:
 2. Prompt you to download a speech recognition model
 3. Show the default hotkey configuration
 
-## Available Models
-
-| Model | Size | Quality | Speed | Recommended For |
-|-------|------|---------|-------|-----------------|
-| tiny | ~75 MB | Basic | Very Fast | Quick notes, low-resource systems |
-| base | ~142 MB | Good | Fast | General use |
-| small | ~466 MB | Better | Moderate | **Recommended for most users** |
-| medium | ~1.5 GB | Great | Slow | When accuracy is important |
-| large-v3 | ~3 GB | Best | Very Slow | When accuracy is critical |
-| large-v3-turbo | ~1.6 GB | Excellent | Fast | Best balance of speed and accuracy |
-| distil-large-v3 | ~1.1 GB | Excellent | Fast | Fast high-quality transcription |
-
 ## Configuration
 
 Settings are stored in `%APPDATA%\VoxTether\settings.json`
@@ -152,19 +113,6 @@ Settings are stored in `%APPDATA%\VoxTether\settings.json`
 }
 ```
 
-### Device Options
-
-- `auto` - Automatically detect and use GPU if available
-- `cuda` - Force NVIDIA GPU usage
-- `cpu` - Force CPU usage
-
-### Compute Type Options
-
-- `auto` - Use optimal precision for device (float16 for GPU, int8 for CPU)
-- `float16` - Half precision (faster on GPU)
-- `int8` - Integer quantization (faster on CPU)
-- `float32` - Full precision (highest accuracy)
-
 ### Language Codes
 
 Use "auto" for automatic detection, or specify a language code:
@@ -182,12 +130,6 @@ Use "auto" for automatic detection, or specify a language code:
 
 ## Troubleshooting
 
-### GPU Not Detected
-
-1. Ensure NVIDIA drivers are up to date
-2. Install CUDA packages: `pip install nvidia-cublas-cu12 nvidia-cudnn-cu12`
-3. Check backend logs for CUDA availability
-
 ### Audio Not Recording
 
 1. Check Windows Sound settings → Recording
@@ -200,6 +142,11 @@ Use "auto" for automatic detection, or specify a language code:
 2. Try a different key combination in Settings
 3. Run as Administrator if targeting elevated apps
 
+### Frontend can't connect to backend
+
+1. Ensure the [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) is running
+2. Check the backend URL in Settings (default: localhost:5678)
+
 ### Antivirus False Positives
 
 VoxTether uses low-level keyboard hooks for global hotkey detection. Some antivirus software may flag this as suspicious.
@@ -208,17 +155,6 @@ To resolve:
 1. Add VoxTether to your antivirus exclusions
 2. Verify the download hash matches the release
 
-## Performance Targets
-
-| Metric | Target |
-|--------|--------|
-| Startup time | < 3 seconds |
-| Recording latency | < 100ms |
-| Transcription (8s audio, small model, GPU) | < 1 second |
-| Transcription (8s audio, small model, CPU) | < 8 seconds |
-| Idle memory usage | < 100 MB |
-| Active memory usage (with model) | < 1 GB |
-
 ## Development
 
 ### Project Structure
@@ -226,23 +162,19 @@ To resolve:
 ```
 VoxTether/
 ├── src/
-│   ├── frontend-electron/       # Electron Frontend
-│   │   ├── src/
-│   │   │   ├── main.js          # Electron main process
-│   │   │   ├── preload.js       # Secure IPC bridge
-│   │   │   └── renderer/        # UI (HTML/CSS/JS)
-│   │   └── package.json
-│   │
-│   └── backend/                 # Python Backend (FastAPI)
-│       ├── api/                 # REST API endpoints
-│       ├── services/            # Business logic
-│       ├── main.py              # FastAPI entry point
-│       └── requirements.txt     # Python dependencies
+│   └── frontend-electron/       # Electron Frontend
+│       ├── src/
+│       │   ├── main/             # Electron main process
+│       │   ├── preload.js        # Secure IPC bridge
+│       │   └── renderer/         # UI (HTML/CSS/JS)
+│       └── package.json
 │
 ├── build/                       # Build scripts
 ├── docs/                        # Documentation
 └── assets/                      # Application assets
 ```
+
+> **Backend**: The backend is maintained in a separate repository: [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend)
 
 ### Running Tests
 
@@ -253,15 +185,12 @@ npm test
 
 # Frontend linting
 npm run lint
-
-# Backend linting
-ruff check src/backend/
 ```
 
 ### Building for Release
 
 ```powershell
-# Build both frontend and backend
+# Build frontend
 cd build
 .\build.ps1 -Release -Version "2.0.0"
 
@@ -278,19 +207,8 @@ This creates:
 
 The project uses GitHub Actions for continuous integration and release:
 
-- **Backend CI** (`.github/workflows/ci-backend.yml`): Linting and server tests on backend changes
 - **Frontend CI** (`.github/workflows/ci-frontend.yml`): Linting, build, and Playwright E2E tests on frontend changes
-- **Backend Release** (`.github/workflows/release-backend.yml`): Backend release workflow
 - **Frontend Release** (`.github/workflows/release-frontend.yml`): Creates Windows installer and portable ZIP
-
-### Releases
-
-To create a new release:
-
-1. Go to Actions → Frontend Release or Backend Release workflow
-2. Click "Run workflow"
-3. Enter the version number (e.g., `2.0.0`)
-4. The workflow builds and creates a GitHub Release with installer and portable ZIP
 
 ## Privacy
 
@@ -305,6 +223,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Credits
 
+- [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend) - Python FastAPI backend
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper) - Fast Whisper transcription
 - [CTranslate2](https://github.com/OpenNMT/CTranslate2) - Efficient inference engine
 - [Electron](https://www.electronjs.org/) - Cross-platform desktop framework

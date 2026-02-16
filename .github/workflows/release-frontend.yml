@@ -81,7 +81,7 @@ jobs:
           
           ### First Run
           
-          1. Ensure the VoxTether Backend is running (look for `backend-v*` releases on the [Releases page](https://github.com/KennethHeine/VoxTether/releases))
+          1. Ensure the VoxTether Backend is running (see [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend))
           2. On first launch, you'll be prompted to download a speech recognition model (recommended: "small" model)
           3. Press Ctrl+Shift+Space (default hotkey) to record
           4. Release to transcribe and paste the text
@@ -99,7 +99,7 @@ jobs:
           - Automatic text pasting after transcription
           - Settings management (hotkey, model selection)
           
-          > **Note:** For speech-to-text transcription, you also need the VoxTether Backend (look for `backend-v*` releases on the [Releases page](https://github.com/KennethHeine/VoxTether/releases)).
+          > **Note:** For speech-to-text transcription, you also need the VoxTether Backend (see [VoxTether-backend](https://github.com/KennethHeine/VoxTether-backend)).
           
           See [Installation Guide](https://github.com/KennethHeine/VoxTether/blob/main/docs/INSTALLATION.md) for detailed setup instructions.
         files: |
