@@ -21,7 +21,7 @@ export function showNotification(message, type = 'info', duration = 4000) {
     toast.className = `toast toast-${type}`;
 
     // Icon based on type
-    let icon = '';
+    let icon;
     switch (type) {
     case 'success':
         icon = '✓';

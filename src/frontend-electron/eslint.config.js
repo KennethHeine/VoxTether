@@ -56,9 +56,9 @@ export default [
         },
         rules: sharedRules
     },
-    // ES Modules (renderer modules)
+    // ES Modules (renderer modules and shared constants)
     {
-        files: ["src/renderer/**/*.js"],
+        files: ["src/renderer/**/*.js", "src/shared/**/*.js"],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: "module",

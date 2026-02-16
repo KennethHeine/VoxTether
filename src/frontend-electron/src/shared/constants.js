@@ -3,10 +3,24 @@
  *
  * Centralized constants for IPC channel names, events, and configuration.
  * Used by both main process and renderer process to ensure consistency.
+ *
+ * IMPORTANT FOR AI AGENTS:
+ * This file is the single source of truth for all IPC channel names.
+ * It is imported by:
+ *   - src/preload.js (IPC bridge between renderer and main)
+ *   - src/main/ipc-handlers.js (main process handler registration)
+ *   - src/main/index.js, recording.js, overlay.js, etc. (event senders)
+ *
+ * When adding a new IPC channel:
+ *   1. Add the constant here
+ *   2. Register the handler in main/ipc-handlers.js
+ *   3. Expose the bridge method in preload.js
+ *   4. Call from renderer via window.voxtether.<method>()
  */
 
 // ============================================================================
 // IPC Channel Names (Invoke/Handle)
+// Used with ipcMain.handle() in main process and ipcRenderer.invoke() in preload
 // ============================================================================
 
 // Settings
@@ -61,6 +75,7 @@ export const IPC_INSTALL_UPDATE = 'install-update';
 
 // ============================================================================
 // Event Channel Names (On/Send)
+// Used with mainWindow.webContents.send() in main and ipcRenderer.on() in preload
 // ============================================================================
 
 // Download progress
