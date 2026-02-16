@@ -67,7 +67,7 @@ jobs:
         run: gh pr merge --auto --squash "$PR_NUMBER" --repo "${{ github.repository }}"
         env:
           PR_NUMBER: ${{ steps.pr-info.outputs.pr-number }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summary
         run: |
