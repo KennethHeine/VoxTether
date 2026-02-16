@@ -15,6 +15,30 @@ npm install
 npm start
 ```
 
+## AI Agent Quick Start (Recommended Order)
+
+1. **Scope check**: This repository contains the Electron frontend only. Backend changes belong in `VoxTether-backend`.
+2. **Install deps once**:
+   ```bash
+   cd src/frontend-electron
+   npm install
+   ```
+3. **Validate before edits**:
+   ```bash
+   npm run lint
+   xvfb-run --auto-servernum npm test
+   ```
+4. **Make minimal changes** in the smallest relevant file(s).
+5. **Re-run targeted checks** for touched areas, then run full frontend tests if needed.
+
+## High-Signal Files for Faster Navigation
+
+- `src/frontend-electron/src/main/index.js` - Electron lifecycle, window, tray, startup
+- `src/frontend-electron/src/main/transcription-provider.js` - Backend/provider routing
+- `src/frontend-electron/src/shared/constants.js` - Shared defaults and configuration values
+- `src/frontend-electron/src/preload.js` - Secure IPC surface to renderer
+- `src/frontend-electron/tests/electron.spec.js` - Main end-to-end behavior coverage
+
 ## Architecture
 
 ```
