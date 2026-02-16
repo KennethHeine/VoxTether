@@ -10,6 +10,7 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const crypto = require('crypto');
+const { BACKEND_HOST, BACKEND_PORT } = require('../shared/constants.js');
 
 // OpenAI file size limit (25 MB)
 const OPENAI_MAX_FILE_SIZE_MB = 25;
@@ -73,7 +74,7 @@ async function transcribeLocal(audioPath, language, backendPort) {
         ]);
 
         const options = {
-            hostname: '127.0.0.1',
+            hostname: BACKEND_HOST,
             port: backendPort,
             path: '/api/transcribe',
             method: 'POST',
@@ -506,7 +507,7 @@ async function transcribe(audioPath, options = {}) {
     const {
         provider = 'local',
         language = 'auto',
-        backendPort = 5678,
+        backendPort = BACKEND_PORT,
         openaiApiKey = '',
         openaiModel = 'whisper-1',
         azureSpeechKey = '',

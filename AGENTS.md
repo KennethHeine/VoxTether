@@ -44,6 +44,23 @@ VoxTether/
 - `renderer/` - UI components (HTML/CSS/JS)
 - `tests/` - Playwright E2E tests
 
+### High-Value Code Context for AI Agents
+
+When loading context, prioritize these files first:
+
+1. `src/frontend-electron/src/shared/constants.js` (IPC channel names, backend defaults, default settings)
+2. `src/frontend-electron/src/main/ipc-handlers.js` (main process orchestration and security validation)
+3. `src/frontend-electron/src/main/backend-client.js` (backend HTTP communication)
+4. `src/frontend-electron/src/main/transcription-provider.js` (provider routing: local/OpenAI/Azure)
+5. `src/frontend-electron/src/main/settings-manager.js` (persistent settings behavior)
+6. `src/frontend-electron/src/renderer/modules/settings.js` (renderer settings UI wiring)
+7. `src/frontend-electron/src/renderer/index.html` (UI structure and element IDs used by tests)
+8. `src/frontend-electron/tests/electron.spec.js` (behavioral expectations)
+9. `src/frontend-electron/tests/screenshots.spec.js` (visual smoke checks / screenshots)
+10. `.github/workflows/ci-frontend.yml` (CI requirements and quality gates)
+
+Use this order to quickly recover architecture and avoid duplicating constants or IPC names.
+
 ## Dependency Management
 
 ### Frontend (npm)
