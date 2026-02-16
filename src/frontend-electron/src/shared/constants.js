@@ -1,12 +1,39 @@
 /**
  * VoxTether Electron - Shared Constants
  *
- * Centralized constants for IPC channel names, events, and configuration.
- * Used by both main process and renderer process to ensure consistency.
+ * Single source of truth for IPC channel names, events, and configuration.
+ * Used by main process (via require), preload script (via require), and
+ * renderer process (via import) to ensure consistency.
+ *
+ * ## Module Format
+ * This file uses ES module `export` syntax but is compatible with both
+ * `require()` (CommonJS, used by main/preload) and `import` (ESM, used by renderer).
+ *
+ * ## Naming Conventions
+ * - `IPC_*`    → Invoke/Handle channels (renderer calls main via ipcRenderer.invoke)
+ *               Registered in: ipc-handlers.js (ipcMain.handle)
+ *               Called from:   preload.js (ipcRenderer.invoke)
+ * - `EVENT_*`  → One-way event channels (main sends to renderer via webContents.send)
+ *               Sent from:     main process modules (e.g., recording.js, updater.js)
+ *               Listened in:   preload.js (ipcRenderer.on)
+ *
+ * ## How to Add a New IPC Channel
+ * 1. Add the constant here with the appropriate prefix (IPC_ or EVENT_)
+ * 2. For IPC_ channels: add handler in ipc-handlers.js, add bridge method in preload.js
+ * 3. For EVENT_ channels: send from main process, add listener in preload.js
+ * 4. The renderer accesses everything through window.voxtether (defined in preload.js)
+ *
+ * ## File Dependencies
+ * This file is imported by:
+ * - src/main/index.js, ipc-handlers.js, backend-client.js, recording.js,
+ *   overlay.js, settings-manager.js, updater.js (via require)
+ * - src/preload.js (via require)
+ * - src/renderer/modules/* (via import, indirectly through preload bridge)
  */
 
 // ============================================================================
 // IPC Channel Names (Invoke/Handle)
+// Used with ipcMain.handle() in ipc-handlers.js and ipcRenderer.invoke() in preload.js
 // ============================================================================
 
 // Settings
@@ -61,6 +88,7 @@ export const IPC_INSTALL_UPDATE = 'install-update';
 
 // ============================================================================
 // Event Channel Names (On/Send)
+// Sent from main process via webContents.send(), received in preload.js via ipcRenderer.on()
 // ============================================================================
 
 // Download progress
@@ -82,6 +110,7 @@ export const EVENT_UPDATE_DOWNLOADED = 'update-downloaded';
 
 // ============================================================================
 // Backend Configuration
+// The Python FastAPI backend runs separately (see github.com/KennethHeine/VoxTether-backend)
 // ============================================================================
 
 export const BACKEND_PORT = 5678;
@@ -90,6 +119,8 @@ export const BACKEND_URL = `http://${BACKEND_HOST}:${BACKEND_PORT}`;
 
 // ============================================================================
 // Default Settings
+// Persisted to userData/settings.json by settings-manager.js
+// All settings keys must be listed here with their default values
 // ============================================================================
 
 export const DEFAULT_SETTINGS = {
@@ -122,6 +153,7 @@ export const DEFAULT_SETTINGS = {
 
 // ============================================================================
 // Overlay States
+// Used by overlay.js for the recording indicator bar at the top of the screen
 // ============================================================================
 
 export const OVERLAY_STATE_HIDDEN = 'hidden';
@@ -135,6 +167,7 @@ export const VALID_OVERLAY_STATES = [
 
 // ============================================================================
 // Valid Model Names
+// Used by ipc-handlers.js to validate model name parameters before passing to backend
 // ============================================================================
 
 export const VALID_MODEL_NAMES = [
@@ -149,6 +182,7 @@ export const VALID_MODEL_NAMES = [
 
 // ============================================================================
 // Allowed External URLs (whitelist for security)
+// Used by ipc-handlers.js to validate URLs before opening with shell.openExternal()
 // ============================================================================
 
 export const ALLOWED_EXTERNAL_URL_PATTERNS = [
