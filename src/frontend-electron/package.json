@@ -33,6 +33,7 @@
     "eslint": "^10.0.0"
   },
   "dependencies": {
+    "@eslint/js": "^10.0.1",
     "electron-updater": "^6.7.3",
     "semver": "^7.7.4"
   },
@@ -56,18 +57,24 @@
       {
         "from": "assets",
         "to": "assets",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico"
