@@ -88,7 +88,7 @@ Getting Started:
    (see https://github.com/KennethHeine/VoxTether-backend)
 2. Run VoxTether.exe
 3. On first run, configure the backend server address if needed
-4. Press Ctrl+Shift+Space (default hotkey) to record
+4. Press Ctrl+Shift+R (default hotkey) to record
 5. Release to transcribe and paste the text
 
 Requirements:
