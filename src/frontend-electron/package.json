@@ -33,7 +33,7 @@
     "eslint": "^10.0.0"
   },
   "dependencies": {
-    "electron-updater": "^6.7.3",
+    "electron-updater": "^6.8.3",
     "semver": "^7.7.4"
   },
   "build": {
