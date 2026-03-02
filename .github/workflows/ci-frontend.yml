@@ -51,7 +51,7 @@ jobs:
       shell: pwsh
 
     - name: Upload frontend artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: frontend-build
         path: src/frontend-electron/dist/
@@ -82,7 +82,7 @@ jobs:
         xvfb-run --auto-servernum npm test
 
     - name: Upload screenshots
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: playwright-screenshots
@@ -90,7 +90,7 @@ jobs:
         retention-days: 7
 
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: playwright-test-results
