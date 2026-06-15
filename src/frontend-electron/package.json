@@ -29,7 +29,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "electron": "^42.3.3",
-    "electron-builder": "^26.15.2",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.4.1"
   },
   "dependencies": {
