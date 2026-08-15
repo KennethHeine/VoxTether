@@ -60,7 +60,7 @@ jobs:
       shell: pwsh
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: frontend-v${{ steps.version.outputs.VERSION }}
         name: VoxTether Frontend v${{ steps.version.outputs.VERSION }}
